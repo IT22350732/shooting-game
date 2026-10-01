@@ -1,0 +1,238 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { GameEngine, HUDStats } from './game/core/GameEngine';
+import {
+  GameMode,
+  GameState,
+  ArenaId,
+  WeaponId,
+  PowerupActiveState,
+  HitMarkerInfo,
+  FloatingDamageNumber,
+  GameSettings
+} from './types/game';
+import { saveManager } from './game/managers/SaveManager';
+import { HUD } from './ui/HUD';
+import { MainMenu } from './ui/MainMenu';
+import { ArmoryMenu } from './ui/ArmoryMenu';
+import { UpgradesMenu } from './ui/UpgradesMenu';
+import { SettingsModal } from './ui/SettingsModal';
+import { GameOverModal } from './ui/GameOverModal';
+import { PauseModal } from './ui/PauseModal';
+import { TutorialModal } from './ui/TutorialModal';
+
+export const App: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const engineRef = useRef<GameEngine | null>(null);
+
+  // Game State
+  const [gameState, setGameState] = useState<GameState>('MENU');
+  const [coins, setCoins] = useState<number>(() => saveManager.getData().coins);
+  const [settings, setSettings] = useState<GameSettings>(() => saveManager.getData().settings);
+
+  // HUD stats
+  const [stats, setStats] = useState<HUDStats>({
+    health: 100,
+    maxHealth: 100,
+    armor: 50,
+    maxArmor: 50,
+    ammo: 30,
+    maxAmmo: 30,
+    isReloading: false,
+    reloadProgress: 0,
+    score: 0,
+    combo: 0,
+    comboTimer: 0,
+    coins: 0,
+    wave: 1,
+    enemiesRemaining: 0,
+    timeRemaining: undefined,
+    activeWeaponId: 'assault_rifle'
+  });
+
+  const [hitMarker, setHitMarker] = useState<HitMarkerInfo | null>(null);
+  const [damageNumbers, setDamageNumbers] = useState<FloatingDamageNumber[]>([]);
+  const [boss, setBoss] = useState<{ name: string; health: number; maxHealth: number; phase: number; isAlive: boolean } | null>(null);
+  const [powerups, setPowerups] = useState<PowerupActiveState[]>([]);
+
+  // Modals
+  const [showArmory, setShowArmory] = useState(false);
+  const [showUpgrades, setShowUpgrades] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // Run statistics for game over modal
+  const [endStats, setEndStats] = useState({
+    score: 0,
+    wave: 1,
+    kills: 0,
+    headshots: 0,
+    highestCombo: 0,
+    coinsEarned: 0
+  });
+
+  const refreshCoins = () => {
+    setCoins(saveManager.getData().coins);
+  };
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Instantiate Core Game Engine
+    const engine = new GameEngine(containerRef.current, {
+      onStatsUpdate: (s) => setStats(s),
+      onHitMarker: (hm) => setHitMarker(hm),
+      onDamageNumber: (dmg) => {
+        setDamageNumbers((prev: FloatingDamageNumber[]) => [...prev.slice(-15), dmg]);
+        setTimeout(() => {
+          setDamageNumbers((prev: FloatingDamageNumber[]) => prev.filter((d: FloatingDamageNumber) => d.id !== dmg.id));
+        }, 700);
+      },
+      onBossUpdate: (b) => setBoss(b),
+      onPowerupChange: (p) => setPowerups(p),
+      onGameStateChange: (newState) => {
+        setGameState(newState);
+        if (newState === 'GAME_OVER' || newState === 'VICTORY') {
+          const currentP = engine.player.stats;
+          setEndStats({
+            score: currentP.score,
+            wave: currentP.wave,
+            kills: currentP.kills,
+            headshots: currentP.headshots,
+            highestCombo: currentP.highestCombo,
+            coinsEarned: currentP.coins
+          });
+          refreshCoins();
+        }
+      }
+    });
+
+    engineRef.current = engine;
+
+    return () => {
+      engine.destroy();
+    };
+  }, []);
+
+  const handleStartGame = (mode: GameMode, arena: ArenaId) => {
+    if (engineRef.current) {
+      engineRef.current.startNewGame(mode, arena);
+    }
+  };
+
+  const handleSwitchWeapon = (id: WeaponId) => {
+    if (engineRef.current) {
+      engineRef.current.switchWeapon(id);
+    }
+  };
+
+  const isAimingSniper = (stats.activeWeaponId === 'sniper' && (engineRef.current?.currentWeapon?.isAiming ?? false));
+
+  return (
+    <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      {/* 3D WebGL Canvas Container */}
+      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+
+      {/* Atmospheric Scanlines & Vignette */}
+      <div className="scanlines" />
+      <div className="vignette" />
+
+      {/* IN-GAME HUD */}
+      {gameState === 'PLAYING' && (
+        <HUD
+          stats={stats}
+          hitMarker={hitMarker}
+          damageNumbers={damageNumbers}
+          boss={boss}
+          powerups={powerups}
+          settings={settings}
+          isAimingSniper={isAimingSniper}
+          onSwitchWeapon={handleSwitchWeapon}
+        />
+      )}
+
+      {/* MAIN MENU */}
+      {gameState === 'MENU' && (
+        <MainMenu
+          onStartGame={handleStartGame}
+          onOpenArmory={() => setShowArmory(true)}
+          onOpenUpgrades={() => setShowUpgrades(true)}
+          onOpenSettings={() => setShowSettings(true)}
+          onOpenTutorial={() => setShowTutorial(true)}
+          coins={coins}
+        />
+      )}
+
+      {/* PAUSE MODAL */}
+      {gameState === 'PAUSED' && (
+        <PauseModal
+          onResume={() => engineRef.current?.resumeGame()}
+          onRestart={() => {
+            if (engineRef.current) {
+              engineRef.current.startNewGame(engineRef.current.mode, engineRef.current.currentArenaId);
+            }
+          }}
+          onOpenSettings={() => setShowSettings(true)}
+          onMainMenu={() => {
+            setGameState('MENU');
+            engineRef.current?.exitPointerLock();
+          }}
+        />
+      )}
+
+      {/* GAME OVER / VICTORY MODAL */}
+      {(gameState === 'GAME_OVER' || gameState === 'VICTORY') && (
+        <GameOverModal
+          score={endStats.score}
+          wave={endStats.wave}
+          kills={endStats.kills}
+          headshots={endStats.headshots}
+          highestCombo={endStats.highestCombo}
+          coinsEarned={endStats.coinsEarned}
+          isVictory={gameState === 'VICTORY'}
+          onRestart={() => {
+            if (engineRef.current) {
+              engineRef.current.startNewGame(engineRef.current.mode, engineRef.current.currentArenaId);
+            }
+          }}
+          onOpenUpgrades={() => setShowUpgrades(true)}
+          onMainMenu={() => setGameState('MENU')}
+        />
+      )}
+
+      {/* MODALS */}
+      {showArmory && (
+        <ArmoryMenu
+          onClose={() => setShowArmory(false)}
+          coins={coins}
+          onRefreshCoins={refreshCoins}
+        />
+      )}
+
+      {showUpgrades && (
+        <UpgradesMenu
+          onClose={() => setShowUpgrades(false)}
+          coins={coins}
+          onRefreshCoins={refreshCoins}
+        />
+      )}
+
+      {showSettings && (
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
+          onSettingsChanged={(newSettings) => {
+            setSettings(newSettings);
+            engineRef.current?.updateSettings(newSettings.mouseSensitivity);
+          }}
+        />
+      )}
+
+      {showTutorial && (
+        <TutorialModal
+          onClose={() => setShowTutorial(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default App;
