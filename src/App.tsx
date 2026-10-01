@@ -144,9 +144,9 @@ export const App: React.FC = () => {
   const isAimingSniper = stats.activeWeaponId === 'sniper' && stats.isAiming;
 
   return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100dvh', overflow: 'hidden' }}>
       {/* 3D WebGL Canvas Container */}
-      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      <div ref={containerRef} style={{ width: '100%', height: '100%', touchAction: 'none' }} />
 
       {/* Atmospheric Scanlines & Vignette */}
       <div className="scanlines" />

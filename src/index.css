@@ -42,7 +42,7 @@ html, body, #root {
   background-color: var(--bg-light);
   color: var(--text-main);
   font-family: var(--font-body);
-  touch-action: none;
+  touch-action: manipulation;
   overscroll-behavior: none;
 }
 
@@ -273,12 +273,23 @@ canvas {
   }
 
   .hud-top-wave {
-    max-width: calc(100vw - 110px) !important;
+    top: calc(var(--safe-top) + 10px) !important;
+    max-width: calc(100vw - 120px) !important;
+  }
+
+  .hud-top-wave .glass-panel {
+    padding: 6px 12px !important;
+    gap: 10px !important;
   }
 
   .hud-top-score {
-    top: calc(var(--safe-top) + 14px) !important;
-    right: calc(var(--safe-right) + 12px) !important;
+    top: calc(var(--safe-top) + 10px) !important;
+    right: calc(var(--safe-right) + 10px) !important;
+  }
+
+  .hud-top-score .glass-panel {
+    padding: 6px 10px !important;
+    gap: 1px !important;
   }
 }
 
@@ -314,6 +325,159 @@ canvas {
   button, .btn-cyber {
     min-height: 40px;
     touch-action: manipulation;
+  }
+}
+
+/* ==========================================================
+   MENU RESPONSIVE & SCROLLABLE LAYOUT
+   ========================================================== */
+.menu-scroll-container {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: calc(var(--safe-top) + 14px) calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + 16px) calc(var(--safe-left) + 16px);
+  min-height: 100%;
+  width: 100%;
+}
+
+.menu-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.menu-center-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin: auto 0;
+  padding: 24px 0;
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
+}
+
+.menu-bottom-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  width: 100%;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.menu-bottom-dock {
+  display: flex;
+  gap: 10px;
+}
+
+.menu-bottom-deploy {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Mobile Alignment (< 768px) */
+@media (max-width: 768px) {
+  .menu-scroll-container {
+    padding: calc(var(--safe-top) + 10px) calc(var(--safe-right) + 12px) calc(var(--safe-bottom) + 14px) calc(var(--safe-left) + 12px);
+    justify-content: flex-start;
+    gap: 16px;
+  }
+
+  .menu-top-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .menu-top-profile {
+    padding: 6px 10px !important;
+    gap: 8px !important;
+  }
+
+  .menu-top-profile-badge {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .menu-top-profile-stats {
+    gap: 6px !important;
+  }
+
+  .menu-center-hero {
+    margin: 12px 0 !important;
+    padding: 10px 0 !important;
+  }
+
+  .menu-bottom-container {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    max-width: 480px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .menu-bottom-dock {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .menu-bottom-dock .btn-cyber {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 10px 8px !important;
+    font-size: 0.82rem !important;
+  }
+
+  .menu-bottom-deploy {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 10px !important;
+  }
+
+  .menu-mission-card {
+    width: 100% !important;
+    justify-content: space-between !important;
+    padding: 10px 14px !important;
+  }
+
+  .menu-deploy-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 13px 20px !important;
+    font-size: 1.05rem !important;
+  }
+}
+
+/* Very Small Mobile (< 400px) */
+@media (max-width: 400px) {
+  .menu-top-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .menu-top-actions {
+    justify-content: flex-end;
   }
 }
 

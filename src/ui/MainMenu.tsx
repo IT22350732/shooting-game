@@ -111,71 +111,52 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   };
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        pointerEvents: 'none',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        padding: 'calc(var(--safe-top) + 14px) calc(var(--safe-right) + 16px) calc(var(--safe-bottom) + 14px) calc(var(--safe-left) + 16px)',
-        zIndex: 50,
-        overflow: 'hidden'
-      }}
-    >
-      {/* CINEMATIC LOBBY VIGNETTES (Subtle top & bottom shadows, 100% visible center) */}
+    <div className="menu-scroll-container">
+      {/* CINEMATIC LOBBY VIGNETTES */}
       <div
         style={{
-          position: 'absolute',
+          position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           height: 120,
           background: 'linear-gradient(to bottom, rgba(15, 23, 42, 0.45) 0%, transparent 100%)',
-          pointerEvents: 'none'
+          pointerEvents: 'none',
+          zIndex: 1
         }}
       />
       <div
         style={{
-          position: 'absolute',
+          position: 'fixed',
           bottom: 0,
           left: 0,
           right: 0,
           height: 140,
           background: 'linear-gradient(to top, rgba(15, 23, 42, 0.55) 0%, transparent 100%)',
-          pointerEvents: 'none'
+          pointerEvents: 'none',
+          zIndex: 1
         }}
       />
 
       {/* TOP BAR: OPERATIVE STATUS & RESOURCE HUD */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          gap: 12,
-          position: 'relative',
-          zIndex: 10
-        }}
-      >
+      <div className="menu-top-bar">
         {/* Operative Profile Pill */}
         <div
-          className="glass-panel"
+          className="glass-panel menu-top-profile"
           style={{
             padding: '8px 14px',
             display: 'flex',
             alignItems: 'center',
             gap: 12,
             border: '1.5px solid rgba(2, 132, 199, 0.4)',
-            background: 'rgba(255, 255, 255, 0.88)',
+            background: 'rgba(255, 255, 255, 0.9)',
             boxShadow: '0 4px 20px rgba(15, 23, 42, 0.15)',
-            pointerEvents: 'auto',
             backdropFilter: 'blur(12px)',
             WebkitBackdropFilter: 'blur(12px)'
           }}
         >
           <div
+            className="menu-top-profile-badge"
             style={{
               width: 36,
               height: 36,
@@ -185,7 +166,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               color: '#ffffff',
-              boxShadow: '0 2px 8px rgba(2, 132, 199, 0.4)'
+              boxShadow: '0 2px 8px rgba(2, 132, 199, 0.4)',
+              flexShrink: 0
             }}
           >
             <ShieldCheck size={20} strokeWidth={2.4} />
@@ -211,7 +193,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
+            <div className="menu-top-profile-stats" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
               <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'var(--font-sub)', fontWeight: 600 }}>
                 RECORD: <strong style={{ color: '#0284c7' }}>{savedData.highestScore.toLocaleString()}</strong>
               </span>
@@ -224,7 +206,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         </div>
 
         {/* Currency & Quick Settings Hub */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'auto' }}>
+        <div className="menu-top-actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* Coins Balance Pill */}
           <div
             className="glass-panel"
@@ -234,7 +216,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               alignItems: 'center',
               gap: 8,
               border: '1.5px solid rgba(217, 119, 6, 0.35)',
-              background: 'rgba(255, 255, 255, 0.88)',
+              background: 'rgba(255, 255, 255, 0.9)',
               boxShadow: '0 4px 15px rgba(217, 119, 6, 0.15)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)'
@@ -261,7 +243,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               border: '1.5px solid rgba(15, 23, 42, 0.15)',
-              background: 'rgba(255, 255, 255, 0.88)',
+              background: 'rgba(255, 255, 255, 0.9)',
               color: '#0f172a',
               cursor: 'pointer',
               boxShadow: '0 4px 12px rgba(15, 23, 42, 0.1)',
@@ -285,7 +267,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               border: '1.5px solid rgba(15, 23, 42, 0.15)',
-              background: 'rgba(255, 255, 255, 0.88)',
+              background: 'rgba(255, 255, 255, 0.9)',
               color: '#0f172a',
               cursor: 'pointer',
               boxShadow: '0 4px 12px rgba(15, 23, 42, 0.1)',
@@ -299,19 +281,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         </div>
       </div>
 
-      {/* CENTER WATERMARK: WIDE OPEN CINEMATIC 3D VIEW */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
-          pointerEvents: 'none',
-          userSelect: 'none',
-          margin: 'auto 0'
-        }}
-      >
+      {/* CENTER HERO: WIDE OPEN CINEMATIC 3D VIEW */}
+      <div className="menu-center-hero">
         <div
           style={{
             display: 'flex',
@@ -350,7 +321,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           style={{
             fontFamily: 'var(--font-sub)',
             fontSize: 'clamp(0.75rem, 1.8vw, 0.92rem)',
-            color: 'rgba(255, 255, 255, 0.8)',
+            color: 'rgba(255, 255, 255, 0.85)',
             marginTop: 4,
             fontWeight: 600,
             textShadow: '0 1px 8px rgba(0, 0, 0, 0.6)'
@@ -360,27 +331,17 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         </p>
       </div>
 
-      {/* BOTTOM HUB: DOCK (LEFT) & MISSION DEPLOY (RIGHT) */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-end',
-          flexWrap: 'wrap',
-          gap: 16,
-          position: 'relative',
-          zIndex: 10
-        }}
-      >
-        {/* BOTTOM-LEFT: QUICK ACTION DOCK (ARMORY & UPGRADES) */}
-        <div style={{ display: 'flex', gap: 10, pointerEvents: 'auto' }}>
+      {/* BOTTOM CONTAINER: TACTICAL DOCK & DEPLOY HUB */}
+      <div className="menu-bottom-container">
+        {/* QUICK ACTION DOCK (ARMORY & UPGRADES) */}
+        <div className="menu-bottom-dock">
           <button
             onClick={onOpenArmory}
             className="btn-cyber"
             style={{
               padding: '10px 18px',
               fontSize: '0.85rem',
-              background: 'rgba(255, 255, 255, 0.9)',
+              background: 'rgba(255, 255, 255, 0.92)',
               boxShadow: '0 6px 20px rgba(15, 23, 42, 0.15)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)'
@@ -406,20 +367,12 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           </button>
         </div>
 
-        {/* BOTTOM-RIGHT: TACTICAL MISSION DEPLOYMENT PANEL */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            pointerEvents: 'auto',
-            flexWrap: 'wrap'
-          }}
-        >
+        {/* TACTICAL MISSION DEPLOYMENT PANEL */}
+        <div className="menu-bottom-deploy">
           {/* Mission & Arena Info Card */}
           <div
             onClick={() => setShowMissionSelect(true)}
-            className="glass-panel"
+            className="glass-panel menu-mission-card"
             style={{
               padding: '8px 14px',
               display: 'flex',
@@ -427,11 +380,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               gap: 12,
               cursor: 'pointer',
               border: '1.5px solid rgba(2, 132, 199, 0.45)',
-              background: 'rgba(255, 255, 255, 0.9)',
+              background: 'rgba(255, 255, 255, 0.92)',
               boxShadow: '0 4px 18px rgba(15, 23, 42, 0.15)',
               backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              transition: 'transform 0.15s ease'
+              WebkitBackdropFilter: 'blur(12px)'
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -457,7 +409,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#0284c7'
+                color: '#0284c7',
+                flexShrink: 0
               }}
             >
               <Layers size={16} />
@@ -467,7 +420,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           {/* MAIN DEPLOY BUTTON */}
           <button
             onClick={() => onStartGame(selectedMode, selectedArena)}
-            className="btn-cyber btn-cyber-primary pulse-glow"
+            className="btn-cyber btn-cyber-primary pulse-glow menu-deploy-btn"
             style={{
               padding: '12px 28px',
               fontSize: 'clamp(0.95rem, 2vw, 1.15rem)',
@@ -485,16 +438,16 @@ export const MainMenu: React.FC<MainMenuProps> = ({
       {showMissionSelect && (
         <div
           style={{
-            position: 'absolute',
+            position: 'fixed',
             inset: 0,
             background: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
             display: 'flex',
             alignItems: 'flex-end',
             justifyContent: 'center',
             zIndex: 100,
-            pointerEvents: 'auto'
+            overflowY: 'auto'
           }}
           onClick={() => setShowMissionSelect(false)}
         >
@@ -506,7 +459,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               maxWidth: 720,
               maxHeight: '85vh',
               borderRadius: '20px 20px 0 0',
-              background: 'rgba(255, 255, 255, 0.96)',
+              background: 'rgba(255, 255, 255, 0.98)',
               border: '2px solid rgba(2, 132, 199, 0.4)',
               boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.3)',
               display: 'flex',
@@ -514,6 +467,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               padding: '20px 24px calc(var(--safe-bottom) + 20px) 24px',
               overflowY: 'auto',
               WebkitOverflowScrolling: 'touch',
+              touchAction: 'pan-y',
               animation: 'slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
@@ -627,7 +581,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                             background: `${m.color}18`,
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center'
+                            justifyContent: 'center',
+                            flexShrink: 0
                           }}
                         >
                           {m.icon}
