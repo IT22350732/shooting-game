@@ -25,7 +25,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 24
+        padding: 'clamp(10px, 2.5vw, 24px)'
       }}
     >
       <div
@@ -33,21 +33,24 @@ export const PauseModal: React.FC<PauseModalProps> = ({
         style={{
           width: '100%',
           maxWidth: 420,
+          maxHeight: '92dvh',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
           border: '1.5px solid rgba(2, 132, 199, 0.35)',
           background: 'rgba(255, 255, 255, 0.96)',
           boxShadow: '0 20px 50px rgba(15, 23, 42, 0.15)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          padding: 32,
-          gap: 20
+          padding: 'clamp(20px, 4vw, 32px)',
+          gap: 16
         }}
       >
         <div style={{ textAlign: 'center' }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', color: '#0f172a', letterSpacing: '0.08em', fontWeight: 900 }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.4rem, 4vw, 1.8rem)', color: '#0f172a', letterSpacing: '0.08em', fontWeight: 900 }}>
             TACTICAL PAUSE
           </h2>
-          <p style={{ fontFamily: 'var(--font-sub)', fontSize: '0.9rem', color: '#64748b', marginTop: 4, fontWeight: 600 }}>
+          <p style={{ fontFamily: 'var(--font-sub)', fontSize: '0.85rem', color: '#64748b', marginTop: 4, fontWeight: 600 }}>
             Combat simulation currently suspended
           </p>
         </div>

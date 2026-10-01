@@ -41,7 +41,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 24
+        padding: 'clamp(10px, 2.5vw, 24px)'
       }}
     >
       <div
@@ -49,22 +49,25 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         style={{
           width: '100%',
           maxWidth: 680,
+          maxHeight: '92dvh',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
           border: isVictory ? '2px solid rgba(5, 150, 105, 0.5)' : '2px solid rgba(244, 63, 94, 0.5)',
           background: 'rgba(255, 255, 255, 0.96)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          padding: 36,
-          gap: 24,
+          padding: 'clamp(18px, 3vw, 32px)',
+          gap: 18,
           boxShadow: isVictory ? '0 20px 50px rgba(5, 150, 105, 0.2)' : '0 20px 50px rgba(244, 63, 94, 0.2)'
         }}
       >
         {/* Title */}
-        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
           <span
             style={{
               fontFamily: 'var(--font-display)',
-              fontSize: '0.85rem',
+              fontSize: '0.8rem',
               letterSpacing: '0.2em',
               fontWeight: 800,
               color: isVictory ? '#059669' : '#e11d48'
@@ -75,7 +78,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           <h1
             style={{
               fontFamily: 'var(--font-display)',
-              fontSize: '2.8rem',
+              fontSize: 'clamp(1.8rem, 5vw, 2.8rem)',
               fontWeight: 900,
               color: isVictory ? '#059669' : '#e11d48',
               letterSpacing: '0.04em'
@@ -95,7 +98,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
                 borderRadius: 20,
                 color: '#b45309',
                 fontFamily: 'var(--font-display)',
-                fontSize: '0.85rem',
+                fontSize: '0.8rem',
                 fontWeight: 800
               }}
             >
@@ -106,41 +109,41 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         </div>
 
         {/* Stats Grid */}
-        <div style={{ width: '100%', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
-          <StatBox label="FINAL SCORE" value={score.toLocaleString()} icon={<Award size={20} color="#0284c7" />} />
-          <StatBox label="WAVE REACHED" value={wave} icon={<Award size={20} color="#0ea5e9" />} />
-          <StatBox label="BOUNTY COINS" value={`+${coinsEarned}`} icon={<Coins size={20} color="#d97706" />} />
-          <StatBox label="ENEMIES KILLED" value={kills} icon={<Skull size={20} color="#e11d48" />} />
-          <StatBox label="CRITICAL HEADSHOTS" value={headshots} icon={<Crosshair size={20} color="#b45309" />} />
-          <StatBox label="MAX COMBO STREAK" value={`x${highestCombo}`} icon={<Flame size={20} color="#f97316" />} />
+        <div style={{ width: '100%', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 'clamp(8px, 1.5vw, 14px)' }}>
+          <StatBox label="FINAL SCORE" value={score.toLocaleString()} icon={<Award size={18} color="#0284c7" />} />
+          <StatBox label="WAVE REACHED" value={wave} icon={<Award size={18} color="#0ea5e9" />} />
+          <StatBox label="BOUNTY COINS" value={`+${coinsEarned}`} icon={<Coins size={18} color="#d97706" />} />
+          <StatBox label="ENEMIES KILLED" value={kills} icon={<Skull size={18} color="#e11d48" />} />
+          <StatBox label="CRITICAL HEADSHOTS" value={headshots} icon={<Crosshair size={18} color="#b45309" />} />
+          <StatBox label="MAX COMBO STREAK" value={`x${highestCombo}`} icon={<Flame size={18} color="#f97316" />} />
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: 'flex', gap: 14, width: '100%', marginTop: 8 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, width: '100%', marginTop: 4 }}>
           <button
             onClick={onRestart}
             className="btn-cyber btn-cyber-primary"
-            style={{ flex: 1, padding: '14px 20px', fontSize: '1rem' }}
+            style={{ flex: '1 1 140px', padding: '12px 18px', fontSize: '0.92rem' }}
           >
-            <RotateCcw size={20} />
+            <RotateCcw size={18} />
             PLAY AGAIN
           </button>
 
           <button
             onClick={onOpenUpgrades}
             className="btn-cyber btn-cyber-gold"
-            style={{ flex: 1, padding: '14px 20px', fontSize: '1rem' }}
+            style={{ flex: '1 1 140px', padding: '12px 18px', fontSize: '0.92rem' }}
           >
-            <Zap size={20} />
-            UPGRADES BAY
+            <Zap size={18} />
+            UPGRADES
           </button>
 
           <button
             onClick={onMainMenu}
             className="btn-cyber"
-            style={{ padding: '14px 20px', background: 'rgba(255,255,255,0.9)', borderColor: 'rgba(15, 23, 42, 0.15)', color: '#0f172a' }}
+            style={{ flex: '1 1 80px', padding: '12px 18px', background: 'rgba(255,255,255,0.9)', borderColor: 'rgba(15, 23, 42, 0.15)', color: '#0f172a' }}
           >
-            <Home size={20} />
+            <Home size={18} />
           </button>
         </div>
       </div>

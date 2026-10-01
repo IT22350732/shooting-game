@@ -6,7 +6,8 @@ import {
   Coins,
   Clock,
   Sparkles,
-  Award
+  Award,
+  Pause
 } from 'lucide-react';
 import { WeaponId, PowerupActiveState, HitMarkerInfo, FloatingDamageNumber, GameSettings } from '../types/game';
 import { BASE_WEAPONS } from '../game/entities/Weapon';
@@ -37,6 +38,7 @@ interface HUDProps {
   settings: GameSettings;
   isAimingSniper: boolean;
   onSwitchWeapon: (id: WeaponId) => void;
+  onPause?: () => void;
 }
 
 export const HUD: React.FC<HUDProps> = ({
@@ -47,7 +49,8 @@ export const HUD: React.FC<HUDProps> = ({
   powerups,
   settings,
   isAimingSniper,
-  onSwitchWeapon
+  onSwitchWeapon,
+  onPause
 }) => {
   const [showHitmarker, setShowHitmarker] = useState(false);
   const [hitmarkerCrit, setHitmarkerCrit] = useState(false);
@@ -197,18 +200,54 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       ))}
 
+      {/* TOP-LEFT: TACTICAL PAUSE BUTTON */}
+      {onPause && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(env(safe-area-inset-top, 0px) + 16px)',
+            left: 'calc(env(safe-area-inset-left, 0px) + 16px)',
+            zIndex: 45,
+            pointerEvents: 'auto'
+          }}
+        >
+          <button
+            onClick={onPause}
+            className="glass-panel"
+            style={{
+              width: 44,
+              height: 44,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 10,
+              border: '1.5px solid rgba(2, 132, 199, 0.45)',
+              background: 'rgba(255, 255, 255, 0.94)',
+              color: '#0284c7',
+              cursor: 'pointer',
+              boxShadow: '0 4px 15px rgba(2, 132, 199, 0.2)'
+            }}
+            aria-label="Pause Combat Simulation"
+          >
+            <Pause size={20} />
+          </button>
+        </div>
+      )}
+
       {/* TOP BAR: WAVE / BOSS HEALTH */}
       <div
+        className="hud-top-wave"
         style={{
           position: 'absolute',
-          top: 24,
+          top: 'calc(env(safe-area-inset-top, 0px) + 16px)',
           left: '50%',
           transform: 'translateX(-50%)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: 6,
-          zIndex: 25
+          zIndex: 25,
+          maxWidth: 'calc(100vw - 120px)'
         }}
       >
         {boss && boss.isAlive ? (
@@ -216,8 +255,8 @@ export const HUD: React.FC<HUDProps> = ({
           <div
             className="glass-panel"
             style={{
-              padding: '12px 28px',
-              minWidth: 460,
+              padding: '10px 20px',
+              width: 'min(90vw, 460px)',
               border: '1.5px solid rgba(244, 63, 94, 0.5)',
               display: 'flex',
               flexDirection: 'column',
@@ -225,14 +264,14 @@ export const HUD: React.FC<HUDProps> = ({
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: '#e11d48', letterSpacing: '0.08em', fontWeight: 800 }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem', color: '#e11d48', letterSpacing: '0.08em', fontWeight: 800 }}>
                 ⚠️ {boss.name} [PHASE {boss.phase}]
               </span>
-              <span style={{ fontFamily: 'var(--font-sub)', fontSize: '1.1rem', color: '#0f172a', fontWeight: 800 }}>
-                {Math.max(0, boss.health)} <span style={{ color: '#64748b', fontSize: '0.85rem' }}>/ {boss.maxHealth}</span>
+              <span style={{ fontFamily: 'var(--font-sub)', fontSize: '1rem', color: '#0f172a', fontWeight: 800 }}>
+                {Math.max(0, boss.health)} <span style={{ color: '#64748b', fontSize: '0.8rem' }}>/ {boss.maxHealth}</span>
               </span>
             </div>
-            <div style={{ width: '100%', height: 10, background: 'rgba(15, 23, 42, 0.1)', borderRadius: 5, overflow: 'hidden' }}>
+            <div style={{ width: '100%', height: 8, background: 'rgba(15, 23, 42, 0.1)', borderRadius: 4, overflow: 'hidden' }}>
               <div
                 style={{
                   width: `${Math.max(0, (boss.health / boss.maxHealth) * 100)}%`,
@@ -314,36 +353,37 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* TOP RIGHT: SCORE, COMBO & COINS */}
       <div
+        className="hud-top-score"
         style={{
           position: 'absolute',
-          top: 24,
-          right: 28,
+          top: 'calc(env(safe-area-inset-top, 0px) + 16px)',
+          right: 'calc(env(safe-area-inset-right, 0px) + 16px)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'flex-end',
-          gap: 10,
+          gap: 8,
           zIndex: 25
         }}
       >
         <div
           className="glass-panel"
           style={{
-            padding: '12px 20px',
+            padding: '10px 16px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-end',
-            gap: 4
+            gap: 2
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: '0.75rem', color: '#64748b', fontFamily: 'var(--font-display)', fontWeight: 700 }}>SCORE</span>
-            <span style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: '#0f172a' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'var(--font-display)', fontWeight: 700 }}>SCORE</span>
+            <span style={{ fontSize: '1.35rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: '#0f172a' }}>
               {stats.score.toLocaleString()}
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#d97706', fontSize: '0.95rem', fontFamily: 'var(--font-display)', fontWeight: 800 }}>
-            <Coins size={16} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#d97706', fontSize: '0.85rem', fontFamily: 'var(--font-display)', fontWeight: 800 }}>
+            <Coins size={14} />
             <span>{stats.coins}</span>
           </div>
         </div>
@@ -353,7 +393,7 @@ export const HUD: React.FC<HUDProps> = ({
           <div
             className="glass-panel"
             style={{
-              padding: '8px 18px',
+              padding: '6px 14px',
               border: '1.5px solid #d97706',
               background: 'linear-gradient(135deg, rgba(254, 243, 199, 0.95), rgba(255, 255, 255, 0.9))',
               display: 'flex',
@@ -363,12 +403,12 @@ export const HUD: React.FC<HUDProps> = ({
               animation: 'pulseGlow 1.5s infinite alternate'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#b45309', fontWeight: 900, fontFamily: 'var(--font-display)', fontSize: '1.15rem' }}>
-              <Flame size={18} color="#d97706" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#b45309', fontWeight: 900, fontFamily: 'var(--font-display)', fontSize: '1rem' }}>
+              <Flame size={16} color="#d97706" />
               <span>COMBO x{Math.min(5, 1 + Math.floor(stats.combo / 3) * 0.5)}</span>
-              <span style={{ fontSize: '0.85rem', color: '#92400e' }}>({stats.combo} Kills)</span>
+              <span style={{ fontSize: '0.78rem', color: '#92400e' }}>({stats.combo})</span>
             </div>
-            <div style={{ width: 120, height: 4, background: 'rgba(217, 119, 6, 0.2)', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ width: 100, height: 3, background: 'rgba(217, 119, 6, 0.2)', borderRadius: 2, overflow: 'hidden' }}>
               <div
                 style={{
                   width: `${(stats.comboTimer / 4.5) * 100}%`,
@@ -383,32 +423,27 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* BOTTOM LEFT: HEALTH & ARMOR BARS */}
       <div
-        className="glass-panel"
+        className="glass-panel hud-health-panel"
         style={{
-          position: 'absolute',
-          bottom: 24,
-          left: 28,
-          padding: '16px 22px',
-          minWidth: 260,
+          padding: '14px 18px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 12,
-          zIndex: 25
+          gap: 10
         }}
       >
         {/* Health */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#e11d48', fontFamily: 'var(--font-display)', fontSize: '0.85rem', fontWeight: 800 }}>
-              <Heart size={16} fill="#e11d48" />
-              <span>HEALTH</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#e11d48', fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 800 }}>
+              <Heart size={15} fill="#e11d48" />
+              <span className="stat-label">HEALTH</span>
             </div>
-            <span style={{ fontFamily: 'var(--font-sub)', fontSize: '1.15rem', fontWeight: 900, color: '#0f172a' }}>
-              {stats.health} <span style={{ color: '#64748b', fontSize: '0.8rem' }}>/ {stats.maxHealth}</span>
+            <span className="stat-val" style={{ fontFamily: 'var(--font-sub)', fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>
+              {stats.health} <span style={{ color: '#64748b', fontSize: '0.75rem' }}>/ {stats.maxHealth}</span>
             </span>
           </div>
 
-          <div style={{ width: '100%', height: 10, background: 'rgba(15, 23, 42, 0.08)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ width: '100%', height: 8, background: 'rgba(15, 23, 42, 0.08)', borderRadius: 4, overflow: 'hidden' }}>
             <div
               style={{
                 width: `${hpPercent}%`,
@@ -424,16 +459,16 @@ export const HUD: React.FC<HUDProps> = ({
         {/* Armor */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0284c7', fontFamily: 'var(--font-display)', fontSize: '0.85rem', fontWeight: 800 }}>
-              <Shield size={16} fill="#0284c7" />
-              <span>ARMOR</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0284c7', fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 800 }}>
+              <Shield size={15} fill="#0284c7" />
+              <span className="stat-label">ARMOR</span>
             </div>
-            <span style={{ fontFamily: 'var(--font-sub)', fontSize: '1.15rem', fontWeight: 900, color: '#0f172a' }}>
-              {stats.armor} <span style={{ color: '#64748b', fontSize: '0.8rem' }}>/ {stats.maxArmor}</span>
+            <span className="stat-val" style={{ fontFamily: 'var(--font-sub)', fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>
+              {stats.armor} <span style={{ color: '#64748b', fontSize: '0.75rem' }}>/ {stats.maxArmor}</span>
             </span>
           </div>
 
-          <div style={{ width: '100%', height: 8, background: 'rgba(15, 23, 42, 0.08)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ width: '100%', height: 7, background: 'rgba(15, 23, 42, 0.08)', borderRadius: 4, overflow: 'hidden' }}>
             <div
               style={{
                 width: `${armorPercent}%`,
@@ -448,20 +483,9 @@ export const HUD: React.FC<HUDProps> = ({
       </div>
 
       {/* BOTTOM RIGHT: WEAPONS INVENTORY & AMMO */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 24,
-          right: 28,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: 12,
-          zIndex: 25
-        }}
-      >
+      <div className="hud-weapon-panel">
         {/* Weapon Slots Selector Cards (1 to 5) */}
-        <div style={{ display: 'flex', gap: 6, pointerEvents: 'auto' }}>
+        <div className="hud-weapon-slots" style={{ display: 'flex', gap: 6, pointerEvents: 'auto' }}>
           {(['assault_rifle', 'shotgun', 'smg', 'sniper', 'plasma_rifle'] as WeaponId[]).map((wId, idx) => {
             const w = BASE_WEAPONS[wId];
             const isCurrent = (wId === stats.activeWeaponId);
@@ -493,18 +517,18 @@ export const HUD: React.FC<HUDProps> = ({
 
         {/* Current Weapon Stats & Ammo Counter Card */}
         <div
-          className="glass-panel"
+          className="glass-panel hud-weapon-card"
           style={{
-            padding: '16px 24px',
-            minWidth: 240,
+            padding: '14px 20px',
+            minWidth: 220,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-end',
-            gap: 6
+            gap: 4
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+            <span className="hud-weapon-name" style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
               {activeWeapon.name}
             </span>
           </div>
@@ -512,9 +536,10 @@ export const HUD: React.FC<HUDProps> = ({
           {/* Ammo display */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
             <span
+              className="hud-ammo-big"
               style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: '2.8rem',
+                fontSize: '2.5rem',
                 fontWeight: 900,
                 color: stats.ammo <= 5 ? '#e11d48' : '#0284c7',
                 lineHeight: 1
@@ -522,7 +547,7 @@ export const HUD: React.FC<HUDProps> = ({
             >
               {stats.ammo}
             </span>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: '#94a3b8', fontWeight: 700 }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: '#94a3b8', fontWeight: 700 }}>
               / {stats.maxAmmo}
             </span>
           </div>
@@ -530,7 +555,7 @@ export const HUD: React.FC<HUDProps> = ({
           {/* Reload Progress or Warning */}
           {stats.isReloading ? (
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-              <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-display)', color: '#d97706', fontWeight: 800 }}>RELOADING...</span>
+              <span style={{ fontSize: '0.72rem', fontFamily: 'var(--font-display)', color: '#d97706', fontWeight: 800 }}>RELOADING...</span>
               <div style={{ width: '100%', height: 4, background: 'rgba(15, 23, 42, 0.1)', borderRadius: 2 }}>
                 <div style={{ width: `${stats.reloadProgress * 100}%`, height: '100%', background: '#d97706' }} />
               </div>
@@ -538,14 +563,14 @@ export const HUD: React.FC<HUDProps> = ({
           ) : stats.ammo === 0 ? (
             <span
               style={{
-                fontSize: '0.8rem',
+                fontSize: '0.78rem',
                 fontFamily: 'var(--font-display)',
                 color: '#e11d48',
                 animation: 'pulseGlow 0.8s infinite alternate',
                 fontWeight: 800
               }}
             >
-              PRESS [R] TO RELOAD
+              RELOAD NEEDED [R]
             </span>
           ) : null}
         </div>

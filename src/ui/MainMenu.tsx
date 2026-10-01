@@ -93,34 +93,36 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        padding: '36px 48px',
+        padding: 'calc(var(--safe-top) + 20px) calc(var(--safe-right) + 20px) calc(var(--safe-bottom) + 20px) calc(var(--safe-left) + 20px)',
         overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
         zIndex: 50
       }}
     >
       {/* Top Bar: Title & Stats */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ background: '#0284c7', width: 4, height: 28, borderRadius: 2 }} />
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem', color: '#0284c7', letterSpacing: '0.25em', fontWeight: 800 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ background: '#0284c7', width: 4, height: 22, borderRadius: 2 }} />
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.78rem', color: '#0284c7', letterSpacing: '0.2em', fontWeight: 800 }}>
               NEXT-GEN ARCADE PROTOCOL
             </span>
           </div>
           <h1
             style={{
               fontFamily: 'var(--font-display)',
-              fontSize: '3.4rem',
+              fontSize: 'clamp(1.8rem, 5vw, 3.2rem)',
               fontWeight: 900,
               color: '#0f172a',
               letterSpacing: '0.04em',
-              margin: '6px 0 0 0',
-              textShadow: '0 2px 15px rgba(2, 132, 199, 0.15)'
+              margin: '4px 0 0 0',
+              textShadow: '0 2px 15px rgba(2, 132, 199, 0.15)',
+              lineHeight: 1.1
             }}
           >
             CYBERSTRIKE<span style={{ color: '#0284c7' }}>:</span> APEX
           </h1>
-          <p style={{ fontFamily: 'var(--font-sub)', fontSize: '1.05rem', color: '#64748b', marginTop: 4, fontWeight: 600 }}>
+          <p style={{ fontFamily: 'var(--font-sub)', fontSize: 'clamp(0.85rem, 2vw, 1.05rem)', color: '#64748b', marginTop: 4, fontWeight: 600 }}>
             Fast-paced first-person tactical arcade combat simulation
           </p>
         </div>
@@ -129,43 +131,44 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         <div
           className="glass-panel"
           style={{
-            padding: '14px 22px',
+            padding: '10px 16px',
             display: 'flex',
             alignItems: 'center',
-            gap: 24,
-            border: '1.5px solid rgba(2, 132, 199, 0.3)'
+            gap: 'clamp(10px, 2.5vw, 20px)',
+            border: '1.5px solid rgba(2, 132, 199, 0.3)',
+            flexWrap: 'wrap'
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-            <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-display)', color: '#64748b', fontWeight: 700 }}>HIGH SCORE</span>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: '#0f172a', fontWeight: 900 }}>
+            <span style={{ fontSize: '0.7rem', fontFamily: 'var(--font-display)', color: '#64748b', fontWeight: 700 }}>HIGH SCORE</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#0f172a', fontWeight: 900 }}>
               {savedData.highestScore.toLocaleString()}
             </span>
           </div>
 
-          <div style={{ width: 1.5, height: 32, background: 'rgba(15, 23, 42, 0.1)' }} />
+          <div style={{ width: 1.5, height: 26, background: 'rgba(15, 23, 42, 0.1)' }} />
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-            <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-display)', color: '#64748b', fontWeight: 700 }}>BEST WAVE</span>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: '#0284c7', fontWeight: 900 }}>
+            <span style={{ fontSize: '0.7rem', fontFamily: 'var(--font-display)', color: '#64748b', fontWeight: 700 }}>BEST WAVE</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#0284c7', fontWeight: 900 }}>
               WAVE {savedData.highestWave}
             </span>
           </div>
 
-          <div style={{ width: 1.5, height: 32, background: 'rgba(15, 23, 42, 0.1)' }} />
+          <div style={{ width: 1.5, height: 26, background: 'rgba(15, 23, 42, 0.1)' }} />
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-            <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-display)', color: '#64748b', fontWeight: 700 }}>COINS</span>
+            <span style={{ fontSize: '0.7rem', fontFamily: 'var(--font-display)', color: '#64748b', fontWeight: 700 }}>COINS</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#d97706', fontFamily: 'var(--font-display)', fontWeight: 900 }}>
-              <Coins size={18} />
-              <span style={{ fontSize: '1.3rem' }}>{coins}</span>
+              <Coins size={16} />
+              <span style={{ fontSize: '1.15rem' }}>{coins}</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Middle: Selection Panels (Modes & Arenas) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.4fr', gap: 28, margin: '24px 0' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'clamp(14px, 2.5vw, 24px)', margin: '18px 0' }}>
         {/* Game Mode Selection */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#0f172a', fontFamily: 'var(--font-display)', fontSize: '0.9rem', fontWeight: 800 }}>
@@ -216,7 +219,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             <span>DEPLOYMENT ARENA</span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
             {ARENAS.map((a) => {
               const isSelected = (a.id === selectedArena);
               return (
@@ -257,16 +260,16 @@ export const MainMenu: React.FC<MainMenuProps> = ({
       </div>
 
       {/* Bottom Action Controls */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 16, borderTop: '1px solid rgba(15, 23, 42, 0.1)' }}>
-        <div style={{ display: 'flex', gap: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, paddingTop: 14, borderTop: '1px solid rgba(15, 23, 42, 0.1)' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, flex: '1 1 300px' }}>
           <button onClick={onOpenArmory} className="btn-cyber">
             <Crosshair size={18} />
-            WEAPONS ARMORY
+            ARMORY
           </button>
 
           <button onClick={onOpenUpgrades} className="btn-cyber btn-cyber-gold">
             <Zap size={18} />
-            UPGRADES BAY
+            UPGRADES
           </button>
 
           <button onClick={onOpenSettings} className="btn-cyber" style={{ background: 'rgba(255,255,255,0.85)', borderColor: 'rgba(15, 23, 42, 0.15)', color: '#0f172a' }}>
@@ -276,7 +279,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
           <button onClick={onOpenTutorial} className="btn-cyber" style={{ background: 'rgba(255,255,255,0.85)', borderColor: 'rgba(15, 23, 42, 0.15)', color: '#0f172a' }}>
             <HelpCircle size={18} />
-            HOW TO PLAY
+            MANUAL
           </button>
         </div>
 
@@ -285,11 +288,12 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           onClick={() => onStartGame(selectedMode, selectedArena)}
           className="btn-cyber btn-cyber-primary"
           style={{
-            padding: '16px 42px',
-            fontSize: '1.25rem'
+            flex: '1 1 240px',
+            padding: '14px 28px',
+            fontSize: 'clamp(1rem, 2vw, 1.2rem)'
           }}
         >
-          <Play size={24} fill="#ffffff" />
+          <Play size={22} fill="#ffffff" />
           ENTER COMBAT ARENA
         </button>
       </div>

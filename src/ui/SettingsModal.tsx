@@ -34,7 +34,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onSetting
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 24
+        padding: 'clamp(10px, 2.5vw, 24px)'
       }}
     >
       <div
@@ -42,6 +42,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onSetting
         style={{
           width: '100%',
           maxWidth: 620,
+          maxHeight: '92dvh',
           border: '1.5px solid rgba(2, 132, 199, 0.35)',
           background: 'rgba(255, 255, 255, 0.96)',
           boxShadow: '0 20px 50px rgba(15, 23, 42, 0.15)',
@@ -53,7 +54,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onSetting
         {/* Header */}
         <div
           style={{
-            padding: '18px 24px',
+            padding: '16px 20px',
             borderBottom: '1px solid rgba(15, 23, 42, 0.1)',
             display: 'flex',
             alignItems: 'center',
@@ -61,22 +62,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onSetting
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Sliders size={24} color="#0284c7" />
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: '#0f172a', fontWeight: 900 }}>
+            <Sliders size={22} color="#0284c7" />
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', color: '#0f172a', fontWeight: 900 }}>
               SYSTEM CONFIGURATION
             </h2>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
-            <X size={24} />
+            <X size={22} />
           </button>
         </div>
 
         {/* Settings Body */}
-        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ padding: 'clamp(14px, 3vw, 24px)', display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          {/* Touch Sensitivity (for mobile) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 700 }}>
+              <span style={{ color: '#0f172a' }}>📱 TOUCH LOOK SENSITIVITY</span>
+              <span style={{ color: '#0284c7', fontWeight: 900 }}>{settings.touchSensitivity ?? 50}</span>
+            </div>
+            <input
+              type="range"
+              min="10"
+              max="100"
+              value={settings.touchSensitivity ?? 50}
+              onChange={(e) => updateSetting('touchSensitivity', Number(e.target.value))}
+              style={{ width: '100%', accentColor: '#0284c7', cursor: 'pointer' }}
+            />
+          </div>
+
           {/* Mouse Sensitivity */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-display)', fontSize: '0.85rem', fontWeight: 700 }}>
-              <span style={{ color: '#0f172a' }}>MOUSE LOOK SENSITIVITY</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 700 }}>
+              <span style={{ color: '#0f172a' }}>🖱️ MOUSE LOOK SENSITIVITY</span>
               <span style={{ color: '#0284c7', fontWeight: 900 }}>{settings.mouseSensitivity}</span>
             </div>
             <input

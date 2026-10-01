@@ -88,9 +88,10 @@ export const ArmoryMenu: React.FC<ArmoryMenuProps> = ({ onClose, coins, onRefres
         </div>
 
         {/* Content Body */}
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <div className="armory-body" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           {/* Weapon List (Left Column) */}
           <div
+            className="armory-weapon-list"
             style={{
               width: 320,
               borderRight: '1px solid rgba(15, 23, 42, 0.1)',
@@ -110,23 +111,24 @@ export const ArmoryMenu: React.FC<ArmoryMenuProps> = ({ onClose, coins, onRefres
                 <div
                   key={wId}
                   onClick={() => setSelectedWeaponId(wId)}
-                  className="glass-panel"
+                  className="glass-panel armory-weapon-item"
                   style={{
-                    padding: '14px 16px',
+                    padding: '12px 14px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     cursor: 'pointer',
                     border: isSelected ? '2px solid #0284c7' : '1px solid rgba(15, 23, 42, 0.08)',
                     background: isSelected ? 'rgba(2, 132, 199, 0.12)' : 'rgba(255, 255, 255, 0.7)',
-                    transition: 'all 0.15s ease'
+                    transition: 'all 0.15s ease',
+                    flexShrink: 0
                   }}
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', color: isSelected ? '#0284c7' : '#0f172a', fontWeight: 800 }}>
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem', color: isSelected ? '#0284c7' : '#0f172a', fontWeight: 800 }}>
                       {w.name}
                     </span>
-                    <span style={{ fontFamily: 'var(--font-sub)', fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
+                    <span style={{ fontFamily: 'var(--font-sub)', fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>
                       {w.category}
                     </span>
                   </div>
@@ -145,11 +147,11 @@ export const ArmoryMenu: React.FC<ArmoryMenuProps> = ({ onClose, coins, onRefres
           </div>
 
           {/* Weapon Details (Right Column) */}
-          <div style={{ flex: 1, padding: 28, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div className="armory-weapon-details" style={{ flex: 1, padding: 'clamp(16px, 3vw, 28px)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                  <span style={{ fontSize: '0.85rem', color: '#0284c7', fontFamily: 'var(--font-display)', fontWeight: 800 }}>
+                  <span style={{ fontSize: '0.8rem', color: '#0284c7', fontFamily: 'var(--font-display)', fontWeight: 800 }}>
                     {currentConfig.category.toUpperCase()}
                   </span>
                   {isUnlocked && (
@@ -158,16 +160,16 @@ export const ArmoryMenu: React.FC<ArmoryMenuProps> = ({ onClose, coins, onRefres
                     </span>
                   )}
                 </div>
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: '#0f172a', fontWeight: 900 }}>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.3rem, 3vw, 2rem)', color: '#0f172a', fontWeight: 900 }}>
                   {currentConfig.name}
                 </h3>
-                <p style={{ fontFamily: 'var(--font-sub)', fontSize: '1rem', color: '#475569', marginTop: 6, lineHeight: 1.4, fontWeight: 500 }}>
+                <p style={{ fontFamily: 'var(--font-sub)', fontSize: '0.95rem', color: '#475569', marginTop: 4, lineHeight: 1.35, fontWeight: 500 }}>
                   {currentConfig.description}
                 </p>
               </div>
 
               {/* Stat Bars */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 'clamp(8px, 2vw, 16px)' }}>
                 <StatBar label="DAMAGE" value={currentConfig.damage * (currentConfig.pellets || 1)} max={200} color="#e11d48" />
                 <StatBar label="FIRE RATE" value={currentConfig.fireRate} max={20} unit="rps" color="#0284c7" />
                 <StatBar label="MAGAZINE" value={currentConfig.magSize} max={50} color="#d97706" />

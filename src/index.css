@@ -18,6 +18,11 @@
   --border-panel-glow: rgba(14, 165, 233, 0.5);
   --text-main: #0f172a;
   --text-muted: #64748b;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 }
 
 * {
@@ -26,15 +31,19 @@
   padding: 0;
   user-select: none;
   -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 html, body, #root {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background-color: var(--bg-light);
   color: var(--text-main);
   font-family: var(--font-body);
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 canvas {
@@ -42,6 +51,7 @@ canvas {
   width: 100%;
   height: 100%;
   outline: none;
+  touch-action: none;
 }
 
 /* Custom Sleek Scrollbar */
@@ -183,3 +193,122 @@ canvas {
 .pulse-glow {
   animation: pulseGlow 2s infinite ease-in-out;
 }
+
+/* ==========================================================
+   MOBILE RESPONSIVE STYLES & LAYOUT OPTIMIZATIONS
+   ========================================================== */
+
+/* HUD Default Positioning */
+.hud-health-panel {
+  position: absolute;
+  bottom: calc(var(--safe-bottom) + 24px);
+  left: calc(var(--safe-left) + 28px);
+  min-width: 250px;
+  z-index: 25;
+}
+
+.hud-weapon-panel {
+  position: absolute;
+  bottom: calc(var(--safe-bottom) + 24px);
+  right: calc(var(--safe-right) + 28px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  z-index: 25;
+}
+
+/* Tablets and Mobile Phones (< 840px) */
+@media (max-width: 840px) {
+  .btn-cyber {
+    padding: 0.65rem 1.1rem;
+    font-size: 0.82rem;
+    gap: 0.35rem;
+  }
+
+  .hud-health-panel {
+    bottom: calc(var(--safe-bottom) + 165px) !important;
+    left: calc(var(--safe-left) + 14px) !important;
+    min-width: 160px !important;
+    max-width: 190px !important;
+    padding: 8px 12px !important;
+    gap: 6px !important;
+  }
+
+  .hud-health-panel .stat-label {
+    font-size: 0.72rem !important;
+  }
+
+  .hud-health-panel .stat-val {
+    font-size: 0.95rem !important;
+  }
+
+  .hud-weapon-panel {
+    bottom: calc(var(--safe-bottom) + 165px) !important;
+    right: calc(var(--safe-right) + 14px) !important;
+    gap: 6px !important;
+  }
+
+  .hud-weapon-card {
+    min-width: 160px !important;
+    padding: 8px 14px !important;
+    gap: 2px !important;
+  }
+
+  .hud-ammo-big {
+    font-size: 1.85rem !important;
+  }
+
+  .hud-weapon-name {
+    font-size: 0.82rem !important;
+  }
+
+  .hud-weapon-slots {
+    display: none !important;
+  }
+
+  .hud-top-wave {
+    max-width: calc(100vw - 110px) !important;
+  }
+
+  .hud-top-score {
+    top: calc(var(--safe-top) + 14px) !important;
+    right: calc(var(--safe-right) + 12px) !important;
+  }
+}
+
+/* Compact Landscape View (Landscape Mobile, e.g. height <= 520px) */
+@media (max-height: 520px) {
+  .hud-health-panel {
+    bottom: calc(var(--safe-bottom) + 130px) !important;
+    left: calc(var(--safe-left) + 14px) !important;
+    min-width: 150px !important;
+    max-width: 180px !important;
+    padding: 6px 10px !important;
+    gap: 4px !important;
+  }
+
+  .hud-weapon-panel {
+    bottom: calc(var(--safe-bottom) + 130px) !important;
+    right: calc(var(--safe-right) + 14px) !important;
+    gap: 4px !important;
+  }
+
+  .hud-weapon-card {
+    min-width: 140px !important;
+    padding: 6px 10px !important;
+  }
+
+  .hud-ammo-big {
+    font-size: 1.6rem !important;
+  }
+}
+
+/* Touch Device Target Sizing */
+@media (pointer: coarse) {
+  button, .btn-cyber {
+    min-height: 40px;
+    touch-action: manipulation;
+  }
+}
+

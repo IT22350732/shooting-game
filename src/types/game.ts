@@ -79,6 +79,7 @@ export interface UpgradeLevels {
 
 export interface GameSettings {
   mouseSensitivity: number;
+  touchSensitivity: number;
   soundVolume: number;
   musicVolume: number;
   screenShake: boolean;

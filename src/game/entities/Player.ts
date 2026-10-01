@@ -175,7 +175,8 @@ export class Player {
     keys: { forward: boolean; backward: boolean; left: boolean; right: boolean; jump: boolean; sprint: boolean },
     obstacles: ArenaObstacle[],
     arenaSize: number,
-    screenShakeEnabled: boolean = true
+    screenShakeEnabled: boolean = true,
+    analogMove?: { x: number; y: number; sprint?: boolean }
   ): { isMoving: boolean; walkTime: number } {
     // Hurt cooldown & damage flash
     if (this.hurtCooldown > 0) this.hurtCooldown -= delta;
@@ -205,16 +206,25 @@ export class Player {
     const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw)).normalize();
 
     const moveDir = new THREE.Vector3();
-    if (keys.forward) moveDir.add(forward);
-    if (keys.backward) moveDir.sub(forward);
-    if (keys.right) moveDir.add(right);
-    if (keys.left) moveDir.sub(right);
+    const hasAnalog = analogMove && (Math.abs(analogMove.x) > 0.05 || Math.abs(analogMove.y) > 0.05);
+
+    if (hasAnalog) {
+      // y > 0 is forward, y < 0 is backward; x > 0 is right, x < 0 is left
+      moveDir.addScaledVector(forward, analogMove.y);
+      moveDir.addScaledVector(right, analogMove.x);
+    } else {
+      if (keys.forward) moveDir.add(forward);
+      if (keys.backward) moveDir.sub(forward);
+      if (keys.right) moveDir.add(right);
+      if (keys.left) moveDir.sub(right);
+    }
 
     const isMoving = moveDir.lengthSq() > 0.01;
     if (isMoving) moveDir.normalize();
 
     // Speed calculation
-    const baseSpeed = keys.sprint ? 14.0 : 8.5;
+    const isSprinting = keys.sprint || !!analogMove?.sprint;
+    const baseSpeed = isSprinting ? 14.0 : 8.5;
     const accel = this.isGrounded ? 45.0 : 18.0;
     const friction = this.isGrounded ? 14.0 : 2.5;
 

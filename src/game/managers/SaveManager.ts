@@ -30,6 +30,7 @@ const DEFAULT_SAVE: SaveData = {
   },
   settings: {
     mouseSensitivity: 50,
+    touchSensitivity: 50,
     soundVolume: 80,
     musicVolume: 40,
     screenShake: true,

@@ -17,14 +17,15 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 24
+        padding: 'clamp(10px, 2.5vw, 24px)'
       }}
     >
       <div
         className="glass-panel"
         style={{
           width: '100%',
-          maxWidth: 720,
+          maxWidth: 760,
+          maxHeight: '92dvh',
           border: '1.5px solid rgba(2, 132, 199, 0.35)',
           background: 'rgba(255, 255, 255, 0.96)',
           boxShadow: '0 20px 50px rgba(15, 23, 42, 0.15)',
@@ -36,7 +37,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
         {/* Header */}
         <div
           style={{
-            padding: '18px 24px',
+            padding: '16px 20px',
             borderBottom: '1px solid rgba(15, 23, 42, 0.1)',
             display: 'flex',
             alignItems: 'center',
@@ -44,34 +45,56 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Crosshair size={24} color="#0284c7" />
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: '#0f172a', fontWeight: 900 }}>
+            <Crosshair size={22} color="#0284c7" />
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1rem, 2.5vw, 1.25rem)', color: '#0f172a', fontWeight: 900 }}>
               COMBAT OPERATIVE FIELD MANUAL
             </h2>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
-            <X size={24} />
+            <X size={22} />
           </button>
         </div>
 
         {/* Content */}
-        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20, maxHeight: '75vh', overflowY: 'auto' }}>
-          {/* Keybinds Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-            <KeybindCard keyLabel="W / A / S / D" action="Omni-Directional Movement" />
-            <KeybindCard keyLabel="MOUSE AIM" action="Target Acquisition & Pitch/Yaw" />
-            <KeybindCard keyLabel="LEFT CLICK" action="Fire Weapon Munitions" />
-            <KeybindCard keyLabel="RIGHT CLICK" action="Aim Down Sights (ADS) / Sniper Zoom" />
-            <KeybindCard keyLabel="R" action="Reload Magazine" />
-            <KeybindCard keyLabel="SHIFT" action="High-Velocity Sprint" />
-            <KeybindCard keyLabel="SPACE" action="Vertical Jump / Evasion" />
-            <KeybindCard keyLabel="1 / 2 / 3 / 4 / 5" action="Instant Weapon Switching" />
-            <KeybindCard keyLabel="ESC" action="Tactical Pause & Menu" />
+        <div style={{ padding: 'clamp(14px, 3vw, 24px)', display: 'flex', flexDirection: 'column', gap: 20, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          {/* Mobile Touch Controls Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem', color: '#0284c7', fontWeight: 800 }}>
+              📱 MOBILE TOUCH CONTROLS
+            </span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+              <KeybindCard keyLabel="LEFT JOYSTICK" action="Analog Move (Push max to sprint)" />
+              <KeybindCard keyLabel="RIGHT TOUCH DRAG" action="Aim & Look Camera Rotation" />
+              <KeybindCard keyLabel="FIRE BUTTON" action="Hold/Tap to Shoot Active Weapon" />
+              <KeybindCard keyLabel="EYE (ADS) BUTTON" action="Toggle Aim Down Sights / Scope Zoom" />
+              <KeybindCard keyLabel="ARROW UP BUTTON" action="Jump / Evasive Combat Hop" />
+              <KeybindCard keyLabel="RELOAD BUTTON" action="Reload Magazine Ammo" />
+              <KeybindCard keyLabel="ZAP BUTTON" action="Toggle Permanent Sprint Lock" />
+              <KeybindCard keyLabel="ARROWS (< >)" action="Quick Cycle Unlocked Weapons" />
+              <KeybindCard keyLabel="TOP-LEFT PAUSE" action="Tactical Pause & Menu" />
+            </div>
+          </div>
+
+          {/* PC Keyboard & Mouse Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem', color: '#64748b', fontWeight: 800 }}>
+              ⌨️ KEYBOARD & MOUSE CONTROLS (DESKTOP)
+            </span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+              <KeybindCard keyLabel="W / A / S / D" action="Omni-Directional Movement" />
+              <KeybindCard keyLabel="MOUSE AIM" action="Target Acquisition & Pitch/Yaw" />
+              <KeybindCard keyLabel="LEFT CLICK" action="Fire Weapon Munitions" />
+              <KeybindCard keyLabel="RIGHT CLICK" action="Aim Down Sights (ADS) / Sniper Zoom" />
+              <KeybindCard keyLabel="R" action="Reload Magazine" />
+              <KeybindCard keyLabel="SHIFT / SPACE" action="Sprint / Vertical Jump" />
+              <KeybindCard keyLabel="1 / 2 / 3 / 4 / 5" action="Instant Weapon Switching" />
+              <KeybindCard keyLabel="ESC" action="Tactical Pause & Menu" />
+            </div>
           </div>
 
           {/* Combat Tactics */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem', color: '#0284c7', fontWeight: 800 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem', color: '#0284c7', fontWeight: 800 }}>
               TACTICAL ADVICE
             </span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -100,7 +123,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(15, 23, 42, 0.1)', display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(15, 23, 42, 0.1)', display: 'flex', justifyContent: 'flex-end' }}>
           <button onClick={onClose} className="btn-cyber btn-cyber-primary">
             DISMISS MANUAL
           </button>

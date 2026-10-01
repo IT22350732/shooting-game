@@ -8,7 +8,8 @@ import {
   PowerupType,
   FloatingDamageNumber,
   HitMarkerInfo,
-  PowerupActiveState
+  PowerupActiveState,
+  GameSettings
 } from '../../types/game';
 import { Player } from '../entities/Player';
 import { WeaponInstance, BASE_WEAPONS } from '../entities/Weapon';
@@ -39,6 +40,7 @@ export interface HUDStats {
   enemiesRemaining: number;
   timeRemaining?: number;
   activeWeaponId: WeaponId;
+  isAiming: boolean;
 }
 
 export interface GameEngineCallbacks {
@@ -92,6 +94,11 @@ export class GameEngine {
   private isLeftMouseDown: boolean = false;
   private isRightMouseDown: boolean = false;
   private mouseSensitivity: number = 50;
+  private touchSensitivity: number = 50;
+  public isTouchDevice: boolean = false;
+  private analogMove: { x: number; y: number; sprint: boolean } = { x: 0, y: 0, sprint: false };
+  private isTouchShooting: boolean = false;
+  private isTouchAiming: boolean = false;
   private isRunning: boolean = false;
   private animFrameId: number | null = null;
 
@@ -120,6 +127,8 @@ export class GameEngine {
     // Managers & Systems
     const savedData = saveManager.getData();
     this.mouseSensitivity = savedData.settings.mouseSensitivity;
+    this.touchSensitivity = savedData.settings.touchSensitivity ?? 50;
+    this.isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.matchMedia('(pointer: coarse)').matches;
 
     this.player = new Player(this.camera, savedData.upgrades);
     this.arena = new ArenaManager(this.scene);
@@ -135,6 +144,10 @@ export class GameEngine {
     // Setup Event Listeners
     this.setupInputs();
     window.addEventListener('resize', this.onWindowResize);
+    window.addEventListener('orientationchange', this.onWindowResize);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', this.onWindowResize);
+    }
 
     // Start render loop
     this.startLoop();
@@ -194,7 +207,9 @@ export class GameEngine {
     soundManager.startMusic();
 
     this.callbacks.onGameStateChange('PLAYING');
-    this.requestPointerLock();
+    if (!this.isTouchDevice) {
+      this.requestPointerLock();
+    }
   }
 
   private clearAllEntities() {
@@ -262,6 +277,7 @@ export class GameEngine {
 
     this.renderer.domElement.addEventListener('mousedown', (e) => {
       if (this.state !== 'PLAYING') return;
+      if (this.isTouchDevice) return;
       if (!this.isPointerLocked) {
         this.requestPointerLock();
         return;
@@ -293,10 +309,11 @@ export class GameEngine {
       this.player.rotateCamera(e.movementX, e.movementY, this.mouseSensitivity);
     });
 
-    // Pointer Lock events
+    // Pointer Lock events - only pause if pointer lock was actively engaged and then lost
     document.addEventListener('pointerlockchange', () => {
+      const wasLocked = this.isPointerLocked;
       this.isPointerLocked = (document.pointerLockElement === this.renderer.domElement);
-      if (!this.isPointerLocked && this.state === 'PLAYING') {
+      if (wasLocked && !this.isPointerLocked && this.state === 'PLAYING') {
         this.pauseGame();
       }
     });
@@ -331,18 +348,82 @@ export class GameEngine {
   public resumeGame() {
     if (this.state === 'PAUSED') {
       this.state = 'PLAYING';
-      this.requestPointerLock();
+      if (!this.isTouchDevice) {
+        this.requestPointerLock();
+      }
       this.callbacks.onGameStateChange('PLAYING');
     }
   }
 
-  public updateSettings(sensitivity: number) {
-    this.mouseSensitivity = sensitivity;
+  public updateSettings(settings: Partial<GameSettings> | number) {
+    if (typeof settings === 'number') {
+      this.mouseSensitivity = settings;
+    } else {
+      if (settings.mouseSensitivity !== undefined) this.mouseSensitivity = settings.mouseSensitivity;
+      if (settings.touchSensitivity !== undefined) this.touchSensitivity = settings.touchSensitivity;
+    }
+  }
+
+  // --- MOBILE TOUCH CONTROLS API ---
+  public setAnalogMove(x: number, y: number, sprint: boolean = false) {
+    this.analogMove.x = x;
+    this.analogMove.y = y;
+    this.analogMove.sprint = sprint;
+  }
+
+  public setFiring(firing: boolean) {
+    this.isTouchShooting = firing;
+  }
+
+  public setAiming(aiming: boolean) {
+    this.isTouchAiming = aiming;
+    if (this.currentWeapon) {
+      this.currentWeapon.isAiming = this.isRightMouseDown || this.isTouchAiming;
+    }
+  }
+
+  public toggleAiming(): boolean {
+    this.setAiming(!this.isTouchAiming);
+    return this.isTouchAiming;
+  }
+
+  public isAimingActive(): boolean {
+    return this.isRightMouseDown || this.isTouchAiming;
+  }
+
+  public setJump(jumping: boolean) {
+    this.keys.jump = jumping;
+  }
+
+  public reload() {
+    if (this.currentWeapon) {
+      this.currentWeapon.startReload();
+    }
+  }
+
+  public rotateCameraTouch(deltaX: number, deltaY: number) {
+    const sensFactor = 0.0035 * (this.touchSensitivity / 50);
+    this.player.yaw -= deltaX * sensFactor;
+    this.player.pitch -= deltaY * sensFactor;
+
+    const maxPitch = (Math.PI / 2) - 0.05;
+    this.player.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.player.pitch));
+  }
+
+  public cycleWeapon(direction: 1 | -1 = 1) {
+    const saved = saveManager.getData();
+    const unlocked = saved.unlockedWeapons;
+    if (!unlocked || unlocked.length <= 1) return;
+    const currentIdx = unlocked.indexOf(this.currentWeaponId);
+    let nextIdx = (currentIdx + direction) % unlocked.length;
+    if (nextIdx < 0) nextIdx += unlocked.length;
+    this.switchWeapon(unlocked[nextIdx]);
   }
 
   // --- SHOOTING LOGIC ---
   private handlePlayerShooting(time: number) {
-    if (!this.isLeftMouseDown) return;
+    const shouldShoot = this.isLeftMouseDown || this.isTouchShooting;
+    if (!shouldShoot) return;
 
     const hasInfiniteAmmo = this.player.hasPowerup('infinite_ammo');
     const hasRapidFire = this.player.hasPowerup('rapid_fire');
@@ -612,7 +693,8 @@ export class GameEngine {
       this.keys,
       this.arena.obstacles,
       this.arena.arenaSize,
-      saved.settings.screenShake
+      saved.settings.screenShake,
+      this.analogMove
     );
 
     // 3. Weapon Update
@@ -797,7 +879,8 @@ export class GameEngine {
       wave: this.waveManager.currentWave,
       enemiesRemaining: this.waveManager.enemiesRemaining,
       timeRemaining: this.mode === 'time_attack' ? Math.max(0, Math.round(this.waveManager.timeAttackRemaining)) : undefined,
-      activeWeaponId: this.currentWeaponId
+      activeWeaponId: this.currentWeaponId,
+      isAiming: this.currentWeapon.isAiming
     });
 
     const activeList: PowerupActiveState[] = [];
@@ -823,15 +906,22 @@ export class GameEngine {
   }
 
   private onWindowResize = () => {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(width, height);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   };
 
   public destroy() {
     this.isRunning = false;
     if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
     window.removeEventListener('resize', this.onWindowResize);
+    window.removeEventListener('orientationchange', this.onWindowResize);
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', this.onWindowResize);
+    }
     this.clearAllEntities();
     this.particles.dispose();
     this.renderer.dispose();

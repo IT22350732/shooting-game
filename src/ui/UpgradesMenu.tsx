@@ -102,7 +102,7 @@ export const UpgradesMenu: React.FC<UpgradesMenuProps> = ({ onClose, coins, onRe
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 24
+        padding: 'clamp(10px, 2.5vw, 24px)'
       }}
     >
       <div
@@ -110,7 +110,7 @@ export const UpgradesMenu: React.FC<UpgradesMenuProps> = ({ onClose, coins, onRe
         style={{
           width: '100%',
           maxWidth: 960,
-          maxHeight: '90vh',
+          maxHeight: '92dvh',
           display: 'flex',
           flexDirection: 'column',
           border: '1.5px solid rgba(2, 132, 199, 0.35)',
@@ -122,38 +122,40 @@ export const UpgradesMenu: React.FC<UpgradesMenuProps> = ({ onClose, coins, onRe
         {/* Header */}
         <div
           style={{
-            padding: '20px 28px',
+            padding: 'clamp(12px, 2vw, 20px) clamp(14px, 2.5vw, 28px)',
             borderBottom: '1px solid rgba(15, 23, 42, 0.1)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Zap size={28} color="#0284c7" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Zap size={26} color="#0284c7" />
             <div>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: '#0f172a', letterSpacing: '0.05em', fontWeight: 900 }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', color: '#0f172a', letterSpacing: '0.05em', fontWeight: 900 }}>
                 PERMANENT COMBAT UPGRADES
               </h2>
-              <p style={{ fontFamily: 'var(--font-sub)', fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>
-                Invest earned combat bounty to permanently enhance operative capabilities
+              <p style={{ fontFamily: 'var(--font-sub)', fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>
+                Invest earned combat bounty to enhance operative capabilities
               </p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#d97706', fontFamily: 'var(--font-display)', fontWeight: 900 }}>
-              <span>AVAILABLE COINS:</span>
-              <span style={{ fontSize: '1.3rem' }}>{coins}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#d97706', fontFamily: 'var(--font-display)', fontWeight: 900 }}>
+              <span style={{ fontSize: '0.82rem' }}>COINS:</span>
+              <span style={{ fontSize: '1.15rem' }}>{coins}</span>
             </div>
             <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
-              <X size={26} />
+              <X size={24} />
             </button>
           </div>
         </div>
 
         {/* Upgrade Cards Grid */}
-        <div style={{ padding: 24, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+        <div style={{ padding: 'clamp(12px, 2.5vw, 24px)', overflowY: 'auto', WebkitOverflowScrolling: 'touch', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'clamp(10px, 2vw, 16px)' }}>
           {UPGRADE_ITEMS.map((item) => {
             const currentLvl = upgrades[item.key];
             const isMax = currentLvl >= 5;

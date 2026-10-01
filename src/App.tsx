@@ -19,15 +19,29 @@ import { SettingsModal } from './ui/SettingsModal';
 import { GameOverModal } from './ui/GameOverModal';
 import { PauseModal } from './ui/PauseModal';
 import { TutorialModal } from './ui/TutorialModal';
+import { MobileControls } from './ui/MobileControls';
 
 export const App: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
+  const [engineInstance, setEngineInstance] = useState<GameEngine | null>(null);
 
   // Game State
   const [gameState, setGameState] = useState<GameState>('MENU');
   const [coins, setCoins] = useState<number>(() => saveManager.getData().coins);
   const [settings, setSettings] = useState<GameSettings>(() => saveManager.getData().settings);
+  const [isMobileDevice, setIsMobileDevice] = useState<boolean>(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.matchMedia('(pointer: coarse)').matches;
+      const isSmall = window.innerWidth <= 1024;
+      setIsMobileDevice(isTouch || isSmall);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // HUD stats
   const [stats, setStats] = useState<HUDStats>({
@@ -46,7 +60,8 @@ export const App: React.FC = () => {
     wave: 1,
     enemiesRemaining: 0,
     timeRemaining: undefined,
-    activeWeaponId: 'assault_rifle'
+    activeWeaponId: 'assault_rifle',
+    isAiming: false
   });
 
   const [hitMarker, setHitMarker] = useState<HitMarkerInfo | null>(null);
@@ -107,6 +122,7 @@ export const App: React.FC = () => {
     });
 
     engineRef.current = engine;
+    setEngineInstance(engine);
 
     return () => {
       engine.destroy();
@@ -125,7 +141,7 @@ export const App: React.FC = () => {
     }
   };
 
-  const isAimingSniper = (stats.activeWeaponId === 'sniper' && (engineRef.current?.currentWeapon?.isAiming ?? false));
+  const isAimingSniper = stats.activeWeaponId === 'sniper' && stats.isAiming;
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
@@ -138,16 +154,25 @@ export const App: React.FC = () => {
 
       {/* IN-GAME HUD */}
       {gameState === 'PLAYING' && (
-        <HUD
-          stats={stats}
-          hitMarker={hitMarker}
-          damageNumbers={damageNumbers}
-          boss={boss}
-          powerups={powerups}
-          settings={settings}
-          isAimingSniper={isAimingSniper}
-          onSwitchWeapon={handleSwitchWeapon}
-        />
+        <>
+          <HUD
+            stats={stats}
+            hitMarker={hitMarker}
+            damageNumbers={damageNumbers}
+            boss={boss}
+            powerups={powerups}
+            settings={settings}
+            isAimingSniper={isAimingSniper}
+            onSwitchWeapon={handleSwitchWeapon}
+            onPause={() => engineRef.current?.pauseGame()}
+          />
+          {isMobileDevice && (
+            <MobileControls
+              engine={engineInstance}
+              onPause={() => engineRef.current?.pauseGame()}
+            />
+          )}
+        </>
       )}
 
       {/* MAIN MENU */}
@@ -221,7 +246,7 @@ export const App: React.FC = () => {
           onClose={() => setShowSettings(false)}
           onSettingsChanged={(newSettings) => {
             setSettings(newSettings);
-            engineRef.current?.updateSettings(newSettings.mouseSensitivity);
+            engineRef.current?.updateSettings(newSettings);
           }}
         />
       )}
