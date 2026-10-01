@@ -179,6 +179,7 @@ export const App: React.FC = () => {
       {gameState === 'MENU' && (
         <MainMenu
           onStartGame={handleStartGame}
+          onPreviewArena={(arena) => engineRef.current?.previewArena(arena)}
           onOpenArmory={() => setShowArmory(true)}
           onOpenUpgrades={() => setShowUpgrades(true)}
           onOpenSettings={() => setShowSettings(true)}
@@ -199,7 +200,7 @@ export const App: React.FC = () => {
           onOpenSettings={() => setShowSettings(true)}
           onMainMenu={() => {
             setGameState('MENU');
-            engineRef.current?.exitPointerLock();
+            engineRef.current?.showMenu();
           }}
         />
       )}
@@ -220,7 +221,10 @@ export const App: React.FC = () => {
             }
           }}
           onOpenUpgrades={() => setShowUpgrades(true)}
-          onMainMenu={() => setGameState('MENU')}
+          onMainMenu={() => {
+            setGameState('MENU');
+            engineRef.current?.showMenu();
+          }}
         />
       )}
 

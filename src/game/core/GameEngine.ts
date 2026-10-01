@@ -135,9 +135,14 @@ export class GameEngine {
     this.particles = new ParticleSystem(this.scene);
     this.waveManager = new WaveManager(this.mode);
 
+    // Load default arena immediately so it's visible in 3D in the menu!
+    this.arena.loadArena(this.currentArenaId);
+    this.particles.initAtmosphere(this.currentArenaId);
+
     // Initialize Unlocked Weapons
     this.initWeapons();
     this.currentWeapon = this.weapons.get('assault_rifle')!;
+    this.currentWeapon.meshGroup.visible = false; // Hidden in cinematic menu
     this.camera.add(this.currentWeapon.meshGroup);
     this.scene.add(this.camera);
 
@@ -207,6 +212,11 @@ export class GameEngine {
     soundManager.startMusic();
 
     this.callbacks.onGameStateChange('PLAYING');
+    this.currentWeapon.meshGroup.visible = true;
+    this.camera.position.copy(this.player.position);
+    this.camera.rotation.set(0, 0, 0);
+    this.camera.rotation.order = 'YXZ';
+
     if (!this.isTouchDevice) {
       this.requestPointerLock();
     }
@@ -418,6 +428,37 @@ export class GameEngine {
     let nextIdx = (currentIdx + direction) % unlocked.length;
     if (nextIdx < 0) nextIdx += unlocked.length;
     this.switchWeapon(unlocked[nextIdx]);
+  }
+
+  public previewArena(arenaId: ArenaId) {
+    if (this.currentArenaId === arenaId) return;
+    this.currentArenaId = arenaId;
+    this.arena.loadArena(arenaId);
+    this.particles.initAtmosphere(arenaId);
+  }
+
+  public showMenu() {
+    this.state = 'MENU';
+    if (this.currentWeapon) {
+      this.currentWeapon.meshGroup.visible = false;
+    }
+    this.clearAllEntities();
+    this.exitPointerLock();
+    this.callbacks.onGameStateChange('MENU');
+  }
+
+  private updateMenuCinematic(delta: number, now: number) {
+    this.particles.update(delta);
+    // Smooth cinematic orbit around the arena center
+    const radius = 22;
+    const speed = 0.12;
+    const angle = now * speed;
+    this.camera.position.set(
+      Math.sin(angle) * radius,
+      7 + Math.sin(now * 0.3) * 1.5,
+      Math.cos(angle) * radius
+    );
+    this.camera.lookAt(0, 2.5, 0);
   }
 
   // --- SHOOTING LOGIC ---
@@ -674,6 +715,8 @@ export class GameEngine {
 
       if (this.state === 'PLAYING') {
         this.updateGame(delta, now);
+      } else if (this.state === 'MENU') {
+        this.updateMenuCinematic(delta, now);
       }
 
       this.renderer.render(this.scene, this.camera);

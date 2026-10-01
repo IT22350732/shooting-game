@@ -190,6 +190,11 @@ canvas {
   100% { transform: translateY(-45px) scale(1.25); opacity: 0; }
 }
 
+@keyframes slideUp {
+  0% { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
 .pulse-glow {
   animation: pulseGlow 2s infinite ease-in-out;
 }
