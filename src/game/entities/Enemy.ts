@@ -7,6 +7,10 @@ export interface EnemyShootEvent {
   origin: THREE.Vector3;
   target: THREE.Vector3;
   damage: number;
+  speed?: number;
+  spread?: number;
+  soundType?: 'rifle' | 'shotgun' | 'smg' | 'sniper' | 'plasma';
+  isPlasma?: boolean;
 }
 
 interface HumanTheme {
@@ -46,7 +50,7 @@ const HUMAN_THEMES: Record<EnemyType, HumanTheme> = {
     armorHex: 0x22c55e,     // Neon Green Harness
     visorHex: 0x22c55e,     // Glowing Neon Green Scout Visor
     scale: 0.9,
-    hasWeapon: false,
+    hasWeapon: true,
     hasShield: false,
     hasExplosiveVest: false
   },
@@ -85,7 +89,7 @@ const HUMAN_THEMES: Record<EnemyType, HumanTheme> = {
     armorHex: 0xea580c,     // Orange Riot Armor
     visorHex: 0xff7700,     // Glowing Orange Blast Visor
     scale: 1.05,
-    hasWeapon: false,
+    hasWeapon: true,
     hasShield: true,
     hasExplosiveVest: false
   },
@@ -198,9 +202,9 @@ export class Enemy {
     switch (type) {
       case 'fast':
         this.maxHealth = Math.round(45 * waveMultiplier);
-        this.speed = 9.8;
-        this.damage = 14;
-        this.attackRange = 1.8;
+        this.speed = 8.5;
+        this.damage = 7;
+        this.attackRange = 18.0;
         this.attackInterval = 0.9;
         this.scoreValue = 120;
         this.coinValue = 2;
@@ -209,8 +213,8 @@ export class Enemy {
       case 'ranged':
         this.maxHealth = Math.round(70 * waveMultiplier);
         this.speed = 4.2;
-        this.damage = 18;
-        this.attackRange = 22.0;
+        this.damage = 22;
+        this.attackRange = 28.0;
         this.attackInterval = 2.2;
         this.scoreValue = 180;
         this.coinValue = 3;
@@ -218,10 +222,10 @@ export class Enemy {
 
       case 'tank':
         this.maxHealth = Math.round(360 * waveMultiplier);
-        this.speed = 3.0;
-        this.damage = 35;
-        this.attackRange = 3.2;
-        this.attackInterval = 2.0;
+        this.speed = 3.2;
+        this.damage = 25;
+        this.attackRange = 24.0;
+        this.attackInterval = 1.9;
         this.scoreValue = 400;
         this.coinValue = 6;
         break;
@@ -238,20 +242,20 @@ export class Enemy {
 
       case 'shield':
         this.maxHealth = Math.round(110 * waveMultiplier);
-        this.speed = 4.8;
-        this.damage = 22;
-        this.attackRange = 2.2;
-        this.attackInterval = 1.2;
+        this.speed = 4.5;
+        this.damage = 13;
+        this.attackRange = 20.0;
+        this.attackInterval = 1.5;
         this.scoreValue = 260;
         this.coinValue = 4;
         break;
 
       case 'elite':
         this.maxHealth = Math.round(280 * waveMultiplier);
-        this.speed = 6.4;
-        this.damage = 28;
-        this.attackRange = 18.0;
-        this.attackInterval = 1.4;
+        this.speed = 6.0;
+        this.damage = 16;
+        this.attackRange = 26.0;
+        this.attackInterval = 1.3;
         this.scoreValue = 600;
         this.coinValue = 12;
         break;
@@ -259,10 +263,10 @@ export class Enemy {
       case 'basic':
       default:
         this.maxHealth = Math.round(80 * waveMultiplier);
-        this.speed = 5.6;
-        this.damage = 18;
-        this.attackRange = 2.0;
-        this.attackInterval = 1.1;
+        this.speed = 5.4;
+        this.damage = 12;
+        this.attackRange = 22.0;
+        this.attackInterval = 1.7;
         this.scoreValue = 100;
         this.coinValue = 2;
         break;
@@ -548,25 +552,75 @@ export class Enemy {
       this.rightForearmGroup.add(this.weaponMesh);
       this.weaponMesh.position.set(0, -0.28 * s, 0.22 * s);
 
-      // Rifle Receiver & Barrel
-      const receiverGeo = new THREE.BoxGeometry(0.12 * s, 0.16 * s, 0.65 * s);
-      const rifleMesh = new THREE.Mesh(receiverGeo, jointMat);
-      this.weaponMesh.add(rifleMesh);
-      this.registerMesh(rifleMesh, jointMat);
+      if (this.type === 'shield') {
+        // Compact Sidearm Pistol (used alongside riot shield)
+        const pistolGeo = new THREE.BoxGeometry(0.09 * s, 0.13 * s, 0.34 * s);
+        const pistol = new THREE.Mesh(pistolGeo, jointMat);
+        this.weaponMesh.add(pistol);
+        this.registerMesh(pistol, jointMat);
 
-      // Weapon Highlight Trim (matching enemy highlight color)
-      const trimGeo = new THREE.BoxGeometry(0.13 * s, 0.04 * s, 0.50 * s);
-      const trimMesh = new THREE.Mesh(trimGeo, highlightMat);
-      trimMesh.position.y = 0.08 * s;
-      this.weaponMesh.add(trimMesh);
-      this.registerMesh(trimMesh, highlightMat);
+        const slideGeo = new THREE.BoxGeometry(0.10 * s, 0.04 * s, 0.32 * s);
+        const slide = new THREE.Mesh(slideGeo, highlightMat);
+        slide.position.y = 0.07 * s;
+        this.weaponMesh.add(slide);
+        this.registerMesh(slide, highlightMat);
+      } else if (this.type === 'fast') {
+        // Compact Machine Pistol / SMG
+        const smgGeo = new THREE.BoxGeometry(0.10 * s, 0.15 * s, 0.44 * s);
+        const smg = new THREE.Mesh(smgGeo, jointMat);
+        this.weaponMesh.add(smg);
+        this.registerMesh(smg, jointMat);
 
-      // Magazine
-      const magGeo = new THREE.BoxGeometry(0.08 * s, 0.18 * s, 0.14 * s);
-      const magMesh = new THREE.Mesh(magGeo, jointMat);
-      magMesh.position.set(0, -0.14 * s, -0.05 * s);
-      this.weaponMesh.add(magMesh);
-      this.registerMesh(magMesh, jointMat);
+        const trimGeo = new THREE.BoxGeometry(0.11 * s, 0.04 * s, 0.36 * s);
+        const trim = new THREE.Mesh(trimGeo, highlightMat);
+        trim.position.y = 0.07 * s;
+        this.weaponMesh.add(trim);
+        this.registerMesh(trim, highlightMat);
+      } else if (this.type === 'tank') {
+        // Heavy Minigun / Cannon
+        const cannonGeo = new THREE.BoxGeometry(0.18 * s, 0.22 * s, 0.82 * s);
+        const cannon = new THREE.Mesh(cannonGeo, jointMat);
+        this.weaponMesh.add(cannon);
+        this.registerMesh(cannon, jointMat);
+
+        const muzzleGeo = new THREE.CylinderGeometry(0.08 * s, 0.08 * s, 0.22 * s, 8);
+        muzzleGeo.rotateX(Math.PI / 2);
+        const muzzle = new THREE.Mesh(muzzleGeo, highlightMat);
+        muzzle.position.z = 0.45 * s;
+        this.weaponMesh.add(muzzle);
+        this.registerMesh(muzzle, highlightMat);
+      } else if (this.type === 'ranged') {
+        // Long Marksman Sniper Rifle with Scope
+        const rifleGeo = new THREE.BoxGeometry(0.10 * s, 0.14 * s, 0.92 * s);
+        const rifle = new THREE.Mesh(rifleGeo, jointMat);
+        this.weaponMesh.add(rifle);
+        this.registerMesh(rifle, jointMat);
+
+        const scopeGeo = new THREE.CylinderGeometry(0.04 * s, 0.04 * s, 0.25 * s, 8);
+        scopeGeo.rotateX(Math.PI / 2);
+        const scope = new THREE.Mesh(scopeGeo, highlightMat);
+        scope.position.set(0, 0.10 * s, 0);
+        this.weaponMesh.add(scope);
+        this.registerMesh(scope, highlightMat);
+      } else {
+        // Standard Insurgent / Commando Assault Rifle
+        const receiverGeo = new THREE.BoxGeometry(0.12 * s, 0.16 * s, 0.65 * s);
+        const rifleMesh = new THREE.Mesh(receiverGeo, jointMat);
+        this.weaponMesh.add(rifleMesh);
+        this.registerMesh(rifleMesh, jointMat);
+
+        const trimGeo = new THREE.BoxGeometry(0.13 * s, 0.04 * s, 0.50 * s);
+        const trimMesh = new THREE.Mesh(trimGeo, highlightMat);
+        trimMesh.position.y = 0.08 * s;
+        this.weaponMesh.add(trimMesh);
+        this.registerMesh(trimMesh, highlightMat);
+
+        const magGeo = new THREE.BoxGeometry(0.08 * s, 0.18 * s, 0.14 * s);
+        const magMesh = new THREE.Mesh(magGeo, jointMat);
+        magMesh.position.set(0, -0.14 * s, -0.05 * s);
+        this.weaponMesh.add(magMesh);
+        this.registerMesh(magMesh, jointMat);
+      }
 
       // Default Weapon Hold Pose
       this.rightArmGroup.rotation.x = -Math.PI / 2.3;
@@ -768,42 +822,95 @@ export class Enemy {
     // 4. Movement & Combat AI
     let moveDir = new THREE.Vector3();
 
-    if (this.type === 'ranged' || this.type === 'elite') {
-      if (distToPlayer > 18) {
+    if (this.type === 'exploder') {
+      // Suicide bomber charges directly into player to detonate
+      moveDir.subVectors(playerPos, this.position).normalize();
+    } else {
+      // ARMED HUMAN COMBATANT (SHOOTING & TACTICAL ENGAGEMENT)
+      const minDistance = this.type === 'ranged' ? 12 : (this.type === 'basic' ? 8 : (this.type === 'tank' ? 6 : 5));
+      const maxDistance = this.type === 'ranged' ? 24 : (this.type === 'basic' ? 15 : 13);
+
+      if (distToPlayer > maxDistance) {
+        // Advance into optimal combat firing range
         moveDir.subVectors(playerPos, this.position).normalize();
-      } else if (distToPlayer < 9) {
+      } else if (distToPlayer < minDistance) {
+        // Backpedal to maintain tactical shooting distance
         moveDir.subVectors(this.position, playerPos).normalize();
       } else {
-        if (this.stateTimer > 3.0) {
+        // In sweet-spot: strafe left & right while aiming and firing
+        if (this.stateTimer > 2.2) {
           this.strafeDir *= -1;
           this.stateTimer = 0;
         }
         const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mesh.rotation.y);
-        moveDir.copy(right).multiplyScalar(this.strafeDir);
+        moveDir.copy(right).multiplyScalar(this.strafeDir * 0.75);
       }
 
-      if (this.attackCooldown <= 0 && distToPlayer < this.attackRange) {
-        this.attackCooldown = this.attackInterval;
-        if (onShoot) {
-          const shootOrigin = this.position.clone();
-          shootOrigin.y += this.getHeight() * 0.62;
-          onShoot({
-            origin: shootOrigin,
-            target: playerPos.clone().add(new THREE.Vector3(0, -0.2, 0)),
-            damage: this.damage
-          });
+      // Close-range emergency melee strike if player is within 1.8m
+      if (distToPlayer < 1.8 && this.attackCooldown <= 0) {
+        this.attackCooldown = 0.8;
+        if (onPlayerHit) {
+          onPlayerHit(this.damage + 4);
         }
       }
 
-    } else {
-      if (distToPlayer > this.attackRange) {
-        moveDir.subVectors(playerPos, this.position).normalize();
-      } else {
-        if (this.attackCooldown <= 0) {
-          this.attackCooldown = this.attackInterval;
-          if (onPlayerHit) {
-            onPlayerHit(this.damage);
+      // Ranged Fire Attack (Shooting at player)
+      if (this.attackCooldown <= 0 && distToPlayer <= this.attackRange) {
+        this.attackCooldown = this.attackInterval + (Math.random() * 0.3 - 0.15);
+
+        if (onShoot) {
+          const shootOrigin = this.position.clone();
+          shootOrigin.y += this.getHeight() * 0.62;
+
+          let soundType: 'rifle' | 'shotgun' | 'smg' | 'sniper' | 'plasma' = 'rifle';
+          let speed = 28;
+          let spread = 0.05;
+          let isPlasma = false;
+
+          switch (this.type) {
+            case 'ranged':
+              soundType = 'sniper';
+              speed = 38;
+              spread = 0.02;
+              break;
+            case 'fast':
+              soundType = 'smg';
+              speed = 30;
+              spread = 0.07;
+              break;
+            case 'shield':
+              soundType = 'smg';
+              speed = 26;
+              spread = 0.05;
+              break;
+            case 'tank':
+              soundType = 'shotgun';
+              speed = 22;
+              spread = 0.04;
+              isPlasma = true;
+              break;
+            case 'elite':
+              soundType = 'rifle';
+              speed = 34;
+              spread = 0.03;
+              break;
+            case 'basic':
+            default:
+              soundType = 'rifle';
+              speed = 28;
+              spread = 0.05;
+              break;
           }
+
+          onShoot({
+            origin: shootOrigin,
+            target: playerPos.clone().add(new THREE.Vector3(0, 0.35, 0)),
+            damage: this.damage,
+            speed,
+            spread,
+            soundType,
+            isPlasma
+          });
         }
       }
     }
@@ -875,8 +982,18 @@ export class Enemy {
       }
     }
 
-    // 6. Attack Punch / Strike Animation
-    const isAttacking = this.attackCooldown > (this.attackInterval - 0.28);
+    // 6. Attack Gun Recoil & Punch Animation
+    const isAttacking = this.attackCooldown > (this.attackInterval - 0.22);
+    if (isAttacking && this.theme.hasWeapon) {
+      // Gun recoil kickback
+      this.rightArmGroup.rotation.x = -Math.PI / 2.05;
+      if (this.weaponMesh) {
+        this.weaponMesh.position.z = 0.16 * this.scaleFactor;
+      }
+    } else if (this.weaponMesh) {
+      this.weaponMesh.position.z = THREE.MathUtils.lerp(this.weaponMesh.position.z, 0.22 * this.scaleFactor, delta * 12);
+    }
+
     if (isAttacking && !this.theme.hasWeapon && this.type !== 'shield') {
       // Melee punch thrust
       this.rightArmGroup.rotation.x = -Math.PI / 1.8;

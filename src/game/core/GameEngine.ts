@@ -910,10 +910,26 @@ export class GameEngine {
         this.arena.obstacles,
         // on enemy ranged shoot
         (evt) => {
-          const dir = new THREE.Vector3().subVectors(evt.target, evt.origin).normalize();
-          const proj = new Projectile(evt.origin, dir, 24, evt.damage, false);
+          if (this.mode === 'free_mode') return;
+
+          // Spread calculation so player can dodge with movement and use cover
+          const spread = evt.spread ?? 0.05;
+          const targetWithSpread = evt.target.clone().add(new THREE.Vector3(
+            (Math.random() - 0.5) * spread * 4,
+            (Math.random() - 0.5) * spread * 2,
+            (Math.random() - 0.5) * spread * 4
+          ));
+          const dir = new THREE.Vector3().subVectors(targetWithSpread, evt.origin).normalize();
+          const speed = evt.speed ?? 26;
+          const proj = new Projectile(evt.origin, dir, speed, evt.damage, false, evt.isPlasma);
           this.projectiles.push(proj);
           this.scene.add(proj.mesh);
+
+          // Muzzle flash sparks at enemy gun barrel
+          this.particles.spawnSparks(evt.origin, dir, 0xf59e0b, 6);
+
+          // Gunshot sound
+          soundManager.playGunshot(evt.soundType ?? 'rifle');
         },
         // on enemy melee hit
         (damage) => {
@@ -1039,6 +1055,22 @@ export class GameEngine {
           }
           this.particles.spawnSparks(proj.position, new THREE.Vector3(0, 1, 0), 0xef4444, 12);
           proj.isDead = true;
+        }
+      }
+
+      // Check bullet impact against cover obstacles (cars, fences, walls)
+      if (!proj.isDead) {
+        for (const obs of this.arena.obstacles) {
+          if (obs.box.containsPoint(proj.position)) {
+            proj.isDead = true;
+            this.particles.spawnSparks(proj.position, new THREE.Vector3(0, 1, 0), proj.isPlayerProjectile ? 0x06b6d4 : 0xef4444, 8);
+            break;
+          }
+        }
+        // Check bullet impact on ground
+        if (proj.position.y <= 0.05) {
+          proj.isDead = true;
+          this.particles.spawnSparks(proj.position, new THREE.Vector3(0, 1, 0), 0xf59e0b, 6);
         }
       }
     }
