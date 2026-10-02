@@ -434,6 +434,43 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         </div>
       </div>
 
+      {/* OWNER & COPYRIGHT FOOTER */}
+      <div
+        style={{
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginTop: 10,
+          position: 'relative',
+          zIndex: 10
+        }}
+      >
+        <div
+          className="glass-panel"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '5px 16px',
+            borderRadius: 20,
+            background: 'rgba(255, 255, 255, 0.88)',
+            border: '1px solid rgba(2, 132, 199, 0.25)',
+            boxShadow: '0 4px 14px rgba(15, 23, 42, 0.08)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            fontSize: '0.74rem',
+            fontFamily: 'var(--font-display)',
+            letterSpacing: '0.04em'
+          }}
+        >
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#0284c7' }} />
+          <span style={{ color: '#64748b' }}>
+            Owner: <strong style={{ color: '#0f172a', fontWeight: 800 }}>Imeth Mendis</strong> (All Rights Reserved)
+          </span>
+        </div>
+      </div>
+
       {/* EXPANDABLE MISSION & ARENA SELECTION DRAWER */}
       {showMissionSelect && (
         <div

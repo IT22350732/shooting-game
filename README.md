@@ -92,3 +92,12 @@ npm run build
 ```
 
 Open [http://localhost:5173](http://localhost:5173) in your desktop browser. Click anywhere on the screen to engage pointer lock and enter combat!
+
+---
+
+## ⚖️ Ownership & License
+
+- **Owner**: Imeth Mendis
+- **Rights**: All Rights Reserved
+- **Copyright**: © 2026 Imeth Mendis. All rights reserved.
+

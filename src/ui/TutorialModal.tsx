@@ -123,7 +123,10 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(15, 23, 42, 0.1)', display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(15, 23, 42, 0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <span style={{ fontSize: '0.75rem', color: '#64748b', fontFamily: 'var(--font-sub)', fontWeight: 600 }}>
+            Owner: <strong style={{ color: '#0284c7' }}>Imeth Mendis</strong> (All Rights Reserved)
+          </span>
           <button onClick={onClose} className="btn-cyber btn-cyber-primary">
             DISMISS MANUAL
           </button>
