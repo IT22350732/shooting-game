@@ -388,27 +388,42 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           </span>
         </div>
 
+        <img
+          src="/logo.png"
+          alt="Shoot Arena"
+          style={{
+            width: 'clamp(95px, 14vw, 150px)',
+            height: 'clamp(95px, 14vw, 150px)',
+            objectFit: 'contain',
+            borderRadius: '50%',
+            filter: 'drop-shadow(0 4px 25px rgba(2, 132, 199, 0.6)) drop-shadow(0 2px 10px rgba(0, 0, 0, 0.8))',
+            marginBottom: 6,
+            animation: 'pulseGlow 3s infinite alternate'
+          }}
+        />
+
         <h1
           style={{
             fontFamily: 'var(--font-display)',
-            fontSize: 'clamp(1.6rem, 4.5vw, 2.8rem)',
+            fontSize: 'clamp(1.8rem, 5vw, 3rem)',
             fontWeight: 900,
             color: '#ffffff',
-            letterSpacing: '0.06em',
+            letterSpacing: '0.08em',
             margin: 0,
-            textShadow: '0 2px 20px rgba(0, 0, 0, 0.7), 0 0 35px rgba(2, 132, 199, 0.4)',
+            textShadow: '0 2px 20px rgba(0, 0, 0, 0.7), 0 0 35px rgba(2, 132, 199, 0.5)',
             lineHeight: 1.1
           }}
         >
-          CYBERSTRIKE<span style={{ color: '#38bdf8' }}>:</span> APEX
+          SHOOT <span style={{ color: '#38bdf8' }}>ARENA</span>
         </h1>
         <p
           style={{
             fontFamily: 'var(--font-sub)',
-            fontSize: 'clamp(0.75rem, 1.8vw, 0.92rem)',
-            color: 'rgba(255, 255, 255, 0.85)',
+            fontSize: 'clamp(0.75rem, 1.8vw, 0.95rem)',
+            color: 'rgba(255, 255, 255, 0.9)',
             marginTop: 4,
-            fontWeight: 600,
+            fontWeight: 700,
+            letterSpacing: '0.05em',
             textShadow: '0 1px 8px rgba(0, 0, 0, 0.6)'
           }}
         >

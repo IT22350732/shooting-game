@@ -1,4 +1,4 @@
-# CYBERSTRIKE: APEX ARENA
+# SHOOT ARENA
 
 A fast-paced, high-octane 3D Arcade First-Person Shooter (FPS) built directly for modern web browsers using React, TypeScript, Three.js, and procedural Web Audio API synthesis.
 

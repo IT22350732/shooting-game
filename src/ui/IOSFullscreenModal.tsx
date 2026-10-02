@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Share, PlusSquare, Smartphone, CheckCircle2, Sparkles, ArrowRight } from 'lucide-react';
+import { X, Share, PlusSquare, CheckCircle2, Sparkles, ArrowRight } from 'lucide-react';
 import { enableVirtualFullscreen } from '../utils/fullscreen';
 
 interface IOSFullscreenModalProps {
@@ -56,21 +56,17 @@ export const IOSFullscreenModal: React.FC<IOSFullscreenModalProps> = ({ onClose 
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div
+            <img
+              src="/apple-touch-icon.png"
+              alt="Shoot Arena Icon"
               style={{
-                width: 36,
-                height: 36,
+                width: 38,
+                height: 38,
                 borderRadius: 10,
-                background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#fff',
-                boxShadow: '0 2px 10px rgba(2, 132, 199, 0.4)'
+                boxShadow: '0 2px 10px rgba(2, 132, 199, 0.4)',
+                objectFit: 'cover'
               }}
-            >
-              <Smartphone size={20} />
-            </div>
+            />
             <div>
               <span style={{ fontSize: '0.68rem', color: '#0284c7', fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '0.12em' }}>
                 APPLE IOS SAFARI PROTOCOL
@@ -229,7 +225,7 @@ export const IOSFullscreenModal: React.FC<IOSFullscreenModalProps> = ({ onClose 
           }}
         >
           <span style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'var(--font-sub)', fontWeight: 600 }}>
-            CYBERSTRIKE APEX ARENA
+            SHOOT ARENA
           </span>
           <button
             onClick={handleEnterCompact}
