@@ -9,7 +9,9 @@ import {
   Award,
   Pause,
   Maximize,
-  Minimize
+  Minimize,
+  ChevronDown,
+  Crosshair
 } from 'lucide-react';
 import { WeaponId, PowerupActiveState, HitMarkerInfo, FloatingDamageNumber, GameSettings } from '../types/game';
 import { BASE_WEAPONS } from '../game/entities/Weapon';
@@ -517,81 +519,50 @@ export const HUD: React.FC<HUDProps> = ({
       </div>
 
       {/* BOTTOM RIGHT: WEAPONS INVENTORY & AMMO */}
-      <div className="hud-weapon-panel">
-        {/* Weapon Slots Selector Cards (1 to 5) */}
-        <div className="hud-weapon-slots" style={{ display: 'flex', gap: 6, pointerEvents: 'auto' }}>
-          {(['assault_rifle', 'shotgun', 'smg', 'sniper', 'plasma_rifle'] as WeaponId[]).map((wId, idx) => {
-            const w = BASE_WEAPONS[wId];
-            const isCurrent = (wId === stats.activeWeaponId);
-            return (
-              <div
-                key={wId}
-                onClick={() => onSwitchWeapon(wId)}
-                className="glass-panel"
-                style={{
-                  padding: '6px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  cursor: 'pointer',
-                  border: isCurrent ? '1.5px solid #0284c7' : '1px solid rgba(15, 23, 42, 0.1)',
-                  background: isCurrent ? 'rgba(2, 132, 199, 0.15)' : 'rgba(255, 255, 255, 0.85)',
-                  transform: isCurrent ? 'translateY(-3px)' : 'none',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <span style={{ fontSize: '0.75rem', color: isCurrent ? '#0284c7' : '#94a3b8', fontWeight: 800 }}>[{idx + 1}]</span>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.8rem', color: isCurrent ? '#0f172a' : '#64748b', fontWeight: isCurrent ? 800 : 600 }}>
-                  {w.name.split(' ')[0]}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+      <div className="hud-weapon-panel" style={{ pointerEvents: 'auto' }}>
+        {/* RIGHT CORNER WEAPON DROPDOWN (VERTICAL OPTIONS: PULSE, BREAKER, VIPER, VALKYRIE, HELIOS) */}
+        <div className="hud-weapon-dropdown-wrapper">
+          <div className="hud-dropdown-icon">
+            <Crosshair size={14} color="#0284c7" />
+          </div>
+          <div className="hud-dropdown-content">
+            <span className="hud-dropdown-tag">WEAPON</span>
+            <span className="hud-dropdown-val">
+              [{(['assault_rifle', 'shotgun', 'smg', 'sniper', 'plasma_rifle'] as WeaponId[]).indexOf(stats.activeWeaponId) + 1}] {activeWeapon.name}
+            </span>
+          </div>
+          <ChevronDown size={14} color="#0284c7" className="hud-select-arrow" />
 
-        {/* Current Weapon Stats & Ammo Counter Card with Corner Dropdown Selector */}
-        <div
-          className="glass-panel hud-weapon-card"
-          style={{
-            padding: '14px 20px',
-            minWidth: 220,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-end',
-            gap: 4,
-            position: 'relative',
-            cursor: 'pointer'
-          }}
-        >
-          {/* Native Mobile Dropdown Overlay for Instant Weapon Selection */}
+          {/* Native Select Dropdown Overlay for 100% Clickable Vertical Options (Desktop & Mobile Safari) */}
           <select
             value={stats.activeWeaponId}
             onChange={(e) => onSwitchWeapon(e.target.value as WeaponId)}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              opacity: 0,
-              cursor: 'pointer',
-              zIndex: 10
-            }}
-            aria-label="Switch Weapon"
+            className="hud-native-select-overlay"
+            aria-label="Select Weapon (Pulse, Breaker, Viper, Valkyrie, Helios)"
           >
-            {(['assault_rifle', 'shotgun', 'smg', 'sniper', 'plasma_rifle'] as WeaponId[]).map((wId) => (
-              <option key={wId} value={wId}>
-                {BASE_WEAPONS[wId].name}
-              </option>
-            ))}
+            {(['assault_rifle', 'shotgun', 'smg', 'sniper', 'plasma_rifle'] as WeaponId[]).map((wId, idx) => {
+              const w = BASE_WEAPONS[wId];
+              return (
+                <option key={wId} value={wId}>
+                  [{idx + 1}] {w.name}
+                </option>
+              );
+            })}
           </select>
+        </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'none' }}>
-            <span className="hud-weapon-name" style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
-              {activeWeapon.name} ▾
-            </span>
-          </div>
-
+        {/* Current Weapon Stats & Ammo Counter Card */}
+        <div
+          className="glass-panel hud-weapon-card"
+          style={{
+            padding: '12px 18px',
+            minWidth: 190,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: 4
+          }}
+        >
           {/* Ammo display */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
             <span
@@ -631,7 +602,11 @@ export const HUD: React.FC<HUDProps> = ({
             >
               RELOAD NEEDED [R]
             </span>
-          ) : null}
+          ) : (
+            <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-display)', color: '#64748b', fontWeight: 700 }}>
+              [R] RELOAD
+            </span>
+          )}
         </div>
       </div>
     </div>

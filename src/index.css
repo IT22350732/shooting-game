@@ -249,8 +249,84 @@ canvas {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 12px;
+  gap: 10px;
   z-index: 25;
+  pointer-events: auto;
+}
+
+/* In-Game Right Corner Tactical Weapon Dropdown (Vertical Options) */
+.hud-weapon-dropdown-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1.5px solid rgba(2, 132, 199, 0.4);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  pointer-events: auto;
+}
+
+.hud-weapon-dropdown-wrapper:hover,
+.hud-weapon-dropdown-wrapper:active {
+  border-color: #0284c7;
+  box-shadow: 0 4px 18px rgba(2, 132, 199, 0.3);
+  transform: translateY(-1px);
+}
+
+.hud-dropdown-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.hud-dropdown-content {
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.hud-dropdown-tag {
+  font-family: var(--font-display);
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: #0284c7;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+.hud-dropdown-val {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.hud-select-arrow {
+  margin-left: 4px;
+  pointer-events: none;
+}
+
+.hud-native-select-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 10;
+  -webkit-appearance: menulist;
+  font-size: 16px; /* Prevents mobile browser zoom on focus */
 }
 
 /* Tablets and Mobile Phones (< 840px) */
@@ -284,22 +360,28 @@ canvas {
     gap: 6px !important;
   }
 
+  .hud-weapon-dropdown-wrapper {
+    padding: 6px 10px !important;
+    gap: 6px !important;
+    border-radius: 10px !important;
+  }
+
+  .hud-dropdown-tag {
+    font-size: 0.52rem !important;
+  }
+
+  .hud-dropdown-val {
+    font-size: 0.76rem !important;
+  }
+
   .hud-weapon-card {
-    min-width: 160px !important;
-    padding: 8px 14px !important;
+    min-width: 150px !important;
+    padding: 8px 12px !important;
     gap: 2px !important;
   }
 
   .hud-ammo-big {
     font-size: 1.85rem !important;
-  }
-
-  .hud-weapon-name {
-    font-size: 0.82rem !important;
-  }
-
-  .hud-weapon-slots {
-    display: none !important;
   }
 
   .hud-top-wave {
@@ -340,8 +422,13 @@ canvas {
     gap: 4px !important;
   }
 
+  .hud-weapon-dropdown-wrapper {
+    padding: 5px 8px !important;
+    gap: 5px !important;
+  }
+
   .hud-weapon-card {
-    min-width: 140px !important;
+    min-width: 130px !important;
     padding: 6px 10px !important;
   }
 

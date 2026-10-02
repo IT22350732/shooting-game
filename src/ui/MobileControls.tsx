@@ -5,8 +5,6 @@ import {
   ArrowUp,
   RotateCw,
   Zap,
-  ChevronLeft,
-  ChevronRight,
   Smartphone,
   X,
   Maximize
@@ -236,20 +234,6 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
     setIsSprintLocked(prev => !prev);
   };
 
-  const handlePrevWeapon = (e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    triggerHaptic(10);
-    engine?.cycleWeapon(-1);
-  };
-
-  const handleNextWeapon = (e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    triggerHaptic(10);
-    engine?.cycleWeapon(1);
-  };
-
   return (
     <div
       style={{
@@ -417,66 +401,6 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
         </div>
       </div>
 
-      {/* QUICK WEAPON CYCLE SWITCHER (RIGHT CORNER CLUSTER) */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 182px)',
-          right: 'calc(env(safe-area-inset-right, 0px) + 18px)',
-          display: 'flex',
-          gap: 8,
-          pointerEvents: 'auto',
-          zIndex: 40
-        }}
-      >
-        <button
-          onTouchStart={handlePrevWeapon}
-          onTouchEnd={(e) => e.preventDefault()}
-          onMouseDown={handlePrevWeapon}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '1.5px solid rgba(255, 255, 255, 0.3)',
-            background: 'rgba(15, 23, 42, 0.5)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            color: '#38bdf8',
-            cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)'
-          }}
-          aria-label="Previous Weapon"
-        >
-          <ChevronLeft size={22} />
-        </button>
-
-        <button
-          onTouchStart={handleNextWeapon}
-          onTouchEnd={(e) => e.preventDefault()}
-          onMouseDown={handleNextWeapon}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '1.5px solid rgba(255, 255, 255, 0.3)',
-            background: 'rgba(15, 23, 42, 0.5)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            color: '#38bdf8',
-            cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)'
-          }}
-          aria-label="Next Weapon"
-        >
-          <ChevronRight size={22} />
-        </button>
-      </div>
 
       {/* RIGHT-SIDE TACTICAL ACTION BUTTONS CLUSTER */}
       <div
