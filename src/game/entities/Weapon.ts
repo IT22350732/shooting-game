@@ -438,7 +438,7 @@ export class WeaponInstance {
     soundManager.playReload();
   }
 
-  public update(delta: number, walkTime: number, isMoving: boolean) {
+  public update(delta: number, _walkTime?: number, _isMoving?: boolean) {
     // Muzzle flash decay
     if (this.muzzleFlashTimer > 0) {
       this.muzzleFlashTimer -= delta;
@@ -469,16 +469,8 @@ export class WeaponInstance {
     this.currentRecoil = THREE.MathUtils.lerp(this.currentRecoil, 0, delta * 18);
     this.currentRecoilRot = THREE.MathUtils.lerp(this.currentRecoilRot, 0, delta * 18);
 
-    // Target position based on ADS and recoil
+    // Target position based on ADS and recoil (steady & stabilized during movement)
     const targetPos = this.isAiming ? this.adsPosition.clone() : this.basePosition.clone();
-
-    // Weapon walk bobbing
-    if (isMoving && !this.isAiming) {
-      const bobX = Math.cos(walkTime * 8) * 0.012;
-      const bobY = Math.sin(walkTime * 16) * 0.012;
-      targetPos.x += bobX;
-      targetPos.y += bobY;
-    }
 
     // Apply recoil translation
     targetPos.z += this.currentRecoil;

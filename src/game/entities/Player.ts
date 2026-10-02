@@ -326,18 +326,10 @@ export class Player {
       this.trauma = Math.max(0, this.trauma - delta * 1.5);
     }
 
-    // View bobbing (subtle head bob while walking)
-    let bobY = 0;
-    let bobX = 0;
-    if (isMoving && this.isGrounded) {
-      bobY = Math.sin(this.walkTime) * 0.04;
-      bobX = Math.cos(this.walkTime * 0.5) * 0.02;
-    }
-
-    // Update Three.js camera position & orientation
+    // Smooth camera position without view bobbing or weapon vibration
     this.camera.position.set(
-      this.position.x + bobX,
-      this.position.y + bobY,
+      this.position.x,
+      this.position.y,
       this.position.z
     );
 
