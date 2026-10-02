@@ -63,31 +63,31 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   const ARENAS: { id: ArenaId; name: string; desc: string; tag: string; environment: string }[] = [
     {
       id: 'industrial',
-      name: 'APEX RESEARCH COMPLEX',
-      desc: 'Sunlit high-tech laboratory with white ceramic hex tiles and volatile power canisters.',
-      tag: 'PRISTINE HIGH-TECH',
-      environment: 'Indoor Lab'
-    },
-    {
-      id: 'desert',
-      name: 'SOLIS OUTPOST',
-      desc: 'Radiant desert solarium garrison with elevated sniper platforms and solar arrays.',
-      tag: 'LONG SIGHTLINES',
-      environment: 'Desert Solarium'
+      name: 'SUBURBAN RESIDENTIAL TOWN',
+      desc: 'Quiet residential neighborhood with detached family houses, pitched roofs, front lawns, sidewalks, and streets.',
+      tag: 'HOUSES & STREETS',
+      environment: 'Residential Suburb'
     },
     {
       id: 'neon_city',
-      name: 'NEO-APEX SKYLINE PLAZA',
-      desc: 'Sunlit futuristic city plaza with reflective marble tiles and holographic glass barriers.',
-      tag: 'CLOSE QUARTERS',
-      environment: 'Urban Plaza'
+      name: 'DOWNTOWN METROPOLIS',
+      desc: 'Urban city avenue lined with multi-story commercial buildings, storefronts, awnings, rooftop water towers, and crosswalks.',
+      tag: 'URBAN BUILDINGS',
+      environment: 'Downtown City'
+    },
+    {
+      id: 'desert',
+      name: 'DESERT OASIS SETTLEMENT',
+      desc: 'Traditional sunlit desert village with adobe clay houses, rooftop terraces, market canopies, and stone alleys.',
+      tag: 'ADOBE HOUSES',
+      environment: 'Desert Town'
     },
     {
       id: 'space_station',
-      name: 'ORBITAL SOLAR DECK',
-      desc: 'High-orbit station platform under brilliant solar rays overlooking Earth.',
-      tag: 'TACTICAL COVER',
-      environment: 'Orbital Platform'
+      name: 'FREIGHT LOGISTICS & WAREHOUSES',
+      desc: 'Heavy industrial logistics depot with corrugated metal warehouses, stacked cargo shipping containers, and loading bays.',
+      tag: 'REAL WAREHOUSES',
+      environment: 'Industrial Depot'
     }
   ];
 

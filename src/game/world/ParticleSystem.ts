@@ -117,20 +117,22 @@ export class ParticleSystem {
     let opacity = 0.6;
 
     if (arenaType === 'desert') {
-      color = 0xd97706; // Golden solar dust
-      this.ambientVelocity.set(-2, -0.4, 0.8);
+      color = 0xd97706; // Desert breeze & dust
+      this.ambientVelocity.set(-1.5, -0.3, 0.6);
     } else if (arenaType === 'neon_city') {
-      color = 0x0284c7; // Glistening rain
-      size = 0.12;
-      opacity = 0.75;
-      this.ambientVelocity.set(-0.8, -16, -0.8);
+      color = 0x38bdf8; // Light urban drizzle
+      size = 0.10;
+      opacity = 0.65;
+      this.ambientVelocity.set(-0.5, -12, -0.5);
     } else if (arenaType === 'space_station') {
-      color = 0x38bdf8; // Solar stardust
-      this.ambientVelocity.set(0.3, 0.5, 0.3);
+      color = 0x94a3b8; // Industrial depot air dust
+      this.ambientVelocity.set(0.3, 0.4, 0.2);
     } else {
-      // Industrial
-      color = 0x0ea5e9; // Clean laboratory energy motes
-      this.ambientVelocity.set(0.4, 0.8, 0.4);
+      // Suburban Town
+      color = 0x22c55e; // Gentle outdoor breeze & pollen
+      size = 0.08;
+      opacity = 0.45;
+      this.ambientVelocity.set(0.4, -0.2, 0.3);
     }
 
     const mat = new THREE.PointsMaterial({
