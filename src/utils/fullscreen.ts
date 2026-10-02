@@ -1,6 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const FULLSCREEN_CHANGE_EVENT = 'app-fullscreen-change';
+export const FULLSCREEN_CHANGE_EVENT = 'app-fullscreen-change';
+export const OPEN_IOS_GUIDE_EVENT = 'open-ios-fullscreen-guide';
+
+/**
+ * Checks if the user is running Safari on iPhone / iPod (outside standalone PWA mode)
+ */
+export function isIPhoneSafari(): boolean {
+  if (typeof navigator === 'undefined' || typeof window === 'undefined') return false;
+  const ua = navigator.userAgent;
+  const isIPhone = /iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1 && window.innerWidth < 800);
+  const isStandalone = Boolean(
+    (navigator as any).standalone ||
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches
+  );
+  return isIPhone && !isStandalone;
+}
 
 /**
  * Checks if fullscreen (native or virtual) is active.
@@ -91,8 +107,18 @@ export function disableVirtualFullscreen(): void {
  */
 export function enterFullscreen(element?: HTMLElement): boolean {
   if (typeof document === 'undefined') return false;
-  const target = (element || document.documentElement) as any;
 
+  // On iPhone Safari, Apple forbids Element.requestFullscreen() in standard browser tabs.
+  // We activate virtual fullscreen AND dispatch the guide event so the user knows how to get 100% borderless display.
+  if (isIPhoneSafari()) {
+    enableVirtualFullscreen();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(OPEN_IOS_GUIDE_EVENT));
+    }
+    return true;
+  }
+
+  const target = (element || document.documentElement) as any;
   let nativeAttempted = false;
 
   // 1. Try standard requestFullscreen first (Synchronously on user gesture!)

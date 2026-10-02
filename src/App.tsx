@@ -20,6 +20,8 @@ import { GameOverModal } from './ui/GameOverModal';
 import { PauseModal } from './ui/PauseModal';
 import { TutorialModal } from './ui/TutorialModal';
 import { MobileControls } from './ui/MobileControls';
+import { IOSFullscreenModal } from './ui/IOSFullscreenModal';
+import { OPEN_IOS_GUIDE_EVENT } from './utils/fullscreen';
 
 export const App: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -74,6 +76,13 @@ export const App: React.FC = () => {
   const [showUpgrades, setShowUpgrades] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
+
+  useEffect(() => {
+    const handleOpenGuide = () => setShowIOSGuide(true);
+    window.addEventListener(OPEN_IOS_GUIDE_EVENT, handleOpenGuide);
+    return () => window.removeEventListener(OPEN_IOS_GUIDE_EVENT, handleOpenGuide);
+  }, []);
 
   // Run statistics for game over modal
   const [endStats, setEndStats] = useState({
@@ -258,6 +267,13 @@ export const App: React.FC = () => {
       {showTutorial && (
         <TutorialModal
           onClose={() => setShowTutorial(false)}
+        />
+      )}
+
+      {/* IPHONE FULLSCREEN IMMERSIVE GUIDE MODAL */}
+      {showIOSGuide && (
+        <IOSFullscreenModal
+          onClose={() => setShowIOSGuide(false)}
         />
       )}
     </div>
