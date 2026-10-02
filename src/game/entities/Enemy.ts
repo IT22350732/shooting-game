@@ -9,6 +9,114 @@ export interface EnemyShootEvent {
   damage: number;
 }
 
+interface HumanTheme {
+  name: string;
+  highlightHex: number;
+  emissiveHex: number;
+  uniformHex: number;
+  skinHex: number;
+  armorHex: number;
+  visorHex: number;
+  scale: number;
+  hasWeapon: boolean;
+  hasShield: boolean;
+  hasExplosiveVest: boolean;
+}
+
+const HUMAN_THEMES: Record<EnemyType, HumanTheme> = {
+  basic: {
+    name: 'Hostile Insurgent',
+    highlightHex: 0xef4444, // Vibrant Crimson Red
+    emissiveHex: 0xdc2626,
+    uniformHex: 0x1e293b,   // Slate charcoal uniform
+    skinHex: 0xd4a373,      // Warm Tan
+    armorHex: 0xef4444,     // Crimson Tactical Armor Plate
+    visorHex: 0xff0033,     // Glowing Crimson Optic
+    scale: 1.0,
+    hasWeapon: true,
+    hasShield: false,
+    hasExplosiveVest: false
+  },
+  fast: {
+    name: 'Cyber Sprinter',
+    highlightHex: 0x22c55e, // Electric Lime Green
+    emissiveHex: 0x4ade80,
+    uniformHex: 0x0f172a,   // Midnight stealth suit
+    skinHex: 0xdfb18e,      // Fair Tan
+    armorHex: 0x22c55e,     // Neon Green Harness
+    visorHex: 0x22c55e,     // Glowing Neon Green Scout Visor
+    scale: 0.9,
+    hasWeapon: false,
+    hasShield: false,
+    hasExplosiveVest: false
+  },
+  ranged: {
+    name: 'Sniper Marksman',
+    highlightHex: 0x06b6d4, // High-Voltage Cyan
+    emissiveHex: 0x22d3ee,
+    uniformHex: 0x0f2744,   // Deep Navy Camo
+    skinHex: 0xc99a6b,      // Olive Tan
+    armorHex: 0x0891b2,     // Cyan ballistic plate
+    visorHex: 0x00f0ff,     // Glowing Cyan Sniper HUD Visor
+    scale: 1.02,
+    hasWeapon: true,
+    hasShield: false,
+    hasExplosiveVest: false
+  },
+  tank: {
+    name: 'Heavy Juggernaut',
+    highlightHex: 0xa855f7, // Deep Heavy Purple
+    emissiveHex: 0xc084fc,
+    uniformHex: 0x18181b,   // Heavy Blast Undersuit
+    skinHex: 0xb27c52,      // Deep Tan
+    armorHex: 0x9333ea,     // Reinforced Purple Titan Plating
+    visorHex: 0xa855f7,     // Glowing Purple Slit Visor
+    scale: 1.25,
+    hasWeapon: true,
+    hasShield: false,
+    hasExplosiveVest: false
+  },
+  shield: {
+    name: 'Riot Vanguard',
+    highlightHex: 0xf97316, // Radiant Solar Amber / Orange
+    emissiveHex: 0xfb923c,
+    uniformHex: 0x334155,   // Heavy Riot Uniform
+    skinHex: 0xcca078,      // Neutral Tan
+    armorHex: 0xea580c,     // Orange Riot Armor
+    visorHex: 0xff7700,     // Glowing Orange Blast Visor
+    scale: 1.05,
+    hasWeapon: false,
+    hasShield: true,
+    hasExplosiveVest: false
+  },
+  exploder: {
+    name: 'Demolition Infiltrator',
+    highlightHex: 0xec4899, // Blazing Hot Pink / Magenta
+    emissiveHex: 0xf43f5e,
+    uniformHex: 0x27272a,   // Dark Hazmat Uniform
+    skinHex: 0xe0b99c,      // Pale Skin
+    armorHex: 0xdb2777,     // Magenta Bomb Harness
+    visorHex: 0xff007f,     // Pulsing Pink Hazard Visor
+    scale: 0.95,
+    hasWeapon: false,
+    hasShield: false,
+    hasExplosiveVest: true
+  },
+  elite: {
+    name: 'Commando Officer',
+    highlightHex: 0xeab308, // Radiant Cyber Gold / Yellow
+    emissiveHex: 0xfacc15,
+    uniformHex: 0x111827,   // Obsidian & Carbon Uniform
+    skinHex: 0xc68642,      // Bronzed Skin
+    armorHex: 0xca8a04,     // Gilded Composite Armor
+    visorHex: 0xffea00,     // Dual Golden HUD Glasses
+    scale: 1.12,
+    hasWeapon: true,
+    hasShield: false,
+    hasExplosiveVest: false
+  }
+};
+
 export class Enemy {
   public id: string;
   public type: EnemyType;
@@ -41,9 +149,34 @@ export class Enemy {
   private originalMaterials: Map<THREE.Mesh, THREE.Material> = new Map();
   private flashMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
-  // Floating Health Bar
+  // Floating Health Bar & Highlight Aura
   private healthBarMesh: THREE.Mesh;
   private healthBarBg: THREE.Mesh;
+  private groundHighlightRing: THREE.Mesh | null = null;
+
+  // Articulated Human Skeletal Hierarchy
+  private humanGroup: THREE.Group = new THREE.Group();
+  private pelvis: THREE.Group = new THREE.Group();
+  private torsoGroup: THREE.Group = new THREE.Group();
+  private headGroup: THREE.Group = new THREE.Group();
+  private leftArmGroup: THREE.Group = new THREE.Group();
+  private rightArmGroup: THREE.Group = new THREE.Group();
+  private leftForearmGroup: THREE.Group = new THREE.Group();
+  private rightForearmGroup: THREE.Group = new THREE.Group();
+  private leftLegGroup: THREE.Group = new THREE.Group();
+  private rightLegGroup: THREE.Group = new THREE.Group();
+  private leftKneeGroup: THREE.Group = new THREE.Group();
+  private rightKneeGroup: THREE.Group = new THREE.Group();
+  private weaponMesh: THREE.Group | null = null;
+  private coreMesh: THREE.Mesh | null = null;
+
+  // Animation Tracking
+  private walkCycle: number = Math.random() * Math.PI * 2;
+  private basePelvisY: number = 0.92;
+  private baseTorsoY: number = 0.12;
+  private deathTimer: number = 0;
+  private scaleFactor: number = 1.0;
+  private theme: HumanTheme;
 
   constructor(
     id: string,
@@ -57,6 +190,9 @@ export class Enemy {
     this.position.copy(spawnPos);
     this.mesh = new THREE.Group();
     this.mesh.position.copy(this.position);
+
+    this.theme = HUMAN_THEMES[type] || HUMAN_THEMES.basic;
+    this.scaleFactor = this.theme.scale;
 
     // Configure stats based on type
     switch (type) {
@@ -138,8 +274,8 @@ export class Enemy {
     this.damage = Math.max(1, Math.round(this.damage * difficultyMultiplier.dmg));
     this.speed = this.speed * difficultyMultiplier.speed;
 
-    // Build Procedural 3D Mesh
-    this.build3DModel();
+    // Build Articulated Human Model with Highlight Colors
+    this.buildHumanModel();
 
     // Create Floating Health Bar billboard
     const bgGeo = new THREE.PlaneGeometry(1.0, 0.12);
@@ -150,7 +286,7 @@ export class Enemy {
 
     const barGeo = new THREE.PlaneGeometry(0.96, 0.08);
     const barMat = new THREE.MeshBasicMaterial({
-      color: type === 'elite' ? 0xd97706 : (type === 'tank' ? 0x0284c7 : 0xf43f5e),
+      color: this.theme.highlightHex,
       side: THREE.DoubleSide
     });
     this.healthBarMesh = new THREE.Mesh(barGeo, barMat);
@@ -161,182 +297,349 @@ export class Enemy {
 
   public getHeight(): number {
     switch (this.type) {
-      case 'tank': return 3.2;
-      case 'fast': return 1.4;
-      case 'exploder': return 1.3;
-      case 'elite': return 2.6;
-      default: return 2.2;
+      case 'tank': return 2.45;
+      case 'fast': return 1.68;
+      case 'exploder': return 1.82;
+      case 'elite': return 2.15;
+      default: return 1.95;
     }
   }
 
-  private build3DModel() {
-    const isElite = this.type === 'elite';
+  private registerMesh(mesh: THREE.Mesh, mat: THREE.Material) {
+    this.originalMaterials.set(mesh, mat);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+  }
 
-    // Sleek White Ceramic Armor with Chrome Joints
-    const armorColor = isElite ? 0xfef08a : (this.type === 'tank' ? 0xe2e8f0 : (this.type === 'exploder' ? 0xffedd5 : 0xffffff));
-    const eyeColor = isElite ? 0xd97706 : (this.type === 'exploder' ? 0xf43f5e : 0x0284c7);
+  private buildHumanModel() {
+    const s = this.scaleFactor;
+    const theme = this.theme;
 
-    const armorMat = new THREE.MeshStandardMaterial({
-      color: armorColor,
-      roughness: 0.15,
-      metalness: 0.4
+    // Tactical Materials
+    const skinMat = new THREE.MeshStandardMaterial({
+      color: theme.skinHex,
+      roughness: 0.7,
+      metalness: 0.05
+    });
+
+    const uniformMat = new THREE.MeshStandardMaterial({
+      color: theme.uniformHex,
+      roughness: 0.8,
+      metalness: 0.15
+    });
+
+    const highlightMat = new THREE.MeshStandardMaterial({
+      color: theme.highlightHex,
+      roughness: 0.25,
+      metalness: 0.6,
+      emissive: theme.emissiveHex,
+      emissiveIntensity: 0.65
+    });
+
+    const visorMat = new THREE.MeshBasicMaterial({
+      color: theme.visorHex
     });
 
     const jointMat = new THREE.MeshStandardMaterial({
-      color: 0x334155,
-      roughness: 0.3,
-      metalness: 0.9
+      color: 0x0f172a,
+      roughness: 0.4,
+      metalness: 0.8
     });
 
-    const visorMat = new THREE.MeshBasicMaterial({ color: eyeColor });
+    // Root of Human Body
+    this.mesh.add(this.humanGroup);
 
-    if (this.type === 'tank') {
-      // High-Tech White & Chrome Heavy Mech
-      const torsoGeo = new THREE.BoxGeometry(1.6, 1.8, 1.2);
-      const torso = new THREE.Mesh(torsoGeo, armorMat);
-      torso.position.y = 1.8;
-      torso.castShadow = true;
-      torso.receiveShadow = true;
-      this.mesh.add(torso);
-      this.originalMaterials.set(torso, armorMat);
+    // 0. Ground Tactical Aura Ring (Distinct high-visibility glow under human enemy feet)
+    const ringGeo = new THREE.RingGeometry(0.55 * s, 0.68 * s, 32);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: theme.highlightHex,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.55
+    });
+    this.groundHighlightRing = new THREE.Mesh(ringGeo, ringMat);
+    this.groundHighlightRing.rotation.x = -Math.PI / 2;
+    this.groundHighlightRing.position.y = 0.02;
+    this.mesh.add(this.groundHighlightRing);
 
-      // Heavy shoulders
-      const shoulderGeo = new THREE.BoxGeometry(0.65, 0.75, 0.75);
-      const leftShoulder = new THREE.Mesh(shoulderGeo, armorMat);
-      leftShoulder.position.set(-1.15, 2.2, 0);
-      leftShoulder.castShadow = true;
-      this.mesh.add(leftShoulder);
-      this.originalMaterials.set(leftShoulder, armorMat);
+    // 1. Pelvis / Hips (Root of body motion)
+    this.basePelvisY = 0.92 * s;
+    this.pelvis.position.set(0, this.basePelvisY, 0);
+    this.humanGroup.add(this.pelvis);
 
-      const rightShoulder = new THREE.Mesh(shoulderGeo, armorMat);
-      rightShoulder.position.set(1.15, 2.2, 0);
-      rightShoulder.castShadow = true;
-      this.mesh.add(rightShoulder);
-      this.originalMaterials.set(rightShoulder, armorMat);
+    const hipGeo = new THREE.BoxGeometry(0.42 * s, 0.22 * s, 0.26 * s);
+    const hipMesh = new THREE.Mesh(hipGeo, uniformMat);
+    this.pelvis.add(hipMesh);
+    this.registerMesh(hipMesh, uniformMat);
 
-      // Head (Critical Weakpoint)
-      const headGeo = new THREE.BoxGeometry(0.6, 0.5, 0.6);
-      this.headMesh = new THREE.Mesh(headGeo, armorMat);
-      this.headMesh.position.set(0, 2.85, 0.1);
-      this.headMesh.castShadow = true;
-      this.mesh.add(this.headMesh);
-      this.originalMaterials.set(this.headMesh, armorMat);
+    // Tactical Belt with Highlighted Buckle & Holsters
+    const beltGeo = new THREE.BoxGeometry(0.44 * s, 0.08 * s, 0.28 * s);
+    const beltMesh = new THREE.Mesh(beltGeo, highlightMat);
+    beltMesh.position.y = 0.08 * s;
+    this.pelvis.add(beltMesh);
+    this.registerMesh(beltMesh, highlightMat);
 
-      // Luminous Visor
-      const visorGeo = new THREE.BoxGeometry(0.48, 0.16, 0.1);
-      const visor = new THREE.Mesh(visorGeo, visorMat);
-      visor.position.set(0, 2.85, 0.42);
-      this.mesh.add(visor);
+    // 2. Spine & Torso Group (Pivots at waist above pelvis)
+    this.baseTorsoY = 0.12 * s;
+    this.torsoGroup.position.set(0, this.baseTorsoY, 0);
+    this.pelvis.add(this.torsoGroup);
 
-      // Articulated hydraulic legs
-      const legGeo = new THREE.CylinderGeometry(0.24, 0.32, 1.2, 12);
-      const leftLeg = new THREE.Mesh(legGeo, jointMat);
-      leftLeg.position.set(-0.55, 0.6, 0);
-      leftLeg.castShadow = true;
-      this.mesh.add(leftLeg);
+    // Waist / Abdomen
+    const abdomenGeo = new THREE.BoxGeometry(0.38 * s, 0.24 * s, 0.24 * s);
+    const abdomenMesh = new THREE.Mesh(abdomenGeo, uniformMat);
+    abdomenMesh.position.y = 0.12 * s;
+    this.torsoGroup.add(abdomenMesh);
+    this.registerMesh(abdomenMesh, uniformMat);
 
-      const rightLeg = new THREE.Mesh(legGeo, jointMat);
-      rightLeg.position.set(0.55, 0.6, 0);
-      rightLeg.castShadow = true;
-      this.mesh.add(rightLeg);
+    // Upper Chest
+    const chestGeo = new THREE.BoxGeometry(0.46 * s, 0.36 * s, 0.28 * s);
+    const chestMesh = new THREE.Mesh(chestGeo, uniformMat);
+    chestMesh.position.y = 0.38 * s;
+    this.torsoGroup.add(chestMesh);
+    this.registerMesh(chestMesh, uniformMat);
 
-    } else if (this.type === 'exploder') {
-      // Sleek spherical drone with pulsing core
-      const sphereGeo = new THREE.SphereGeometry(0.65, 24, 24);
-      const bombMat = new THREE.MeshStandardMaterial({
+    // Tactical Armored Vest (Highlighted Enemy Armor Plating)
+    const vestGeo = new THREE.BoxGeometry(0.48 * s, 0.38 * s, 0.32 * s);
+    const vestMesh = new THREE.Mesh(vestGeo, highlightMat);
+    vestMesh.position.y = 0.38 * s;
+    this.torsoGroup.add(vestMesh);
+    this.registerMesh(vestMesh, highlightMat);
+
+    // Shoulder Pauldrons (Left & Right Armor Pads)
+    const pauldronGeo = new THREE.BoxGeometry(0.18 * s, 0.14 * s, 0.22 * s);
+    const leftPad = new THREE.Mesh(pauldronGeo, highlightMat);
+    leftPad.position.set(-0.31 * s, 0.54 * s, 0);
+    this.torsoGroup.add(leftPad);
+    this.registerMesh(leftPad, highlightMat);
+
+    const rightPad = new THREE.Mesh(pauldronGeo, highlightMat);
+    rightPad.position.set(0.31 * s, 0.54 * s, 0);
+    this.torsoGroup.add(rightPad);
+    this.registerMesh(rightPad, highlightMat);
+
+    // Exploder Demolition Core in Chest
+    if (theme.hasExplosiveVest) {
+      const coreGeo = new THREE.SphereGeometry(0.14 * s, 16, 16);
+      const coreMat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
-        roughness: 0.2,
-        metalness: 0.6,
-        emissive: 0xf43f5e,
-        emissiveIntensity: 0.4
+        emissive: theme.highlightHex,
+        emissiveIntensity: 1.5,
+        roughness: 0.1
       });
-      const bomb = new THREE.Mesh(sphereGeo, bombMat);
-      bomb.position.y = 0.8;
-      bomb.castShadow = true;
-      this.mesh.add(bomb);
-      this.originalMaterials.set(bomb, bombMat);
+      this.coreMesh = new THREE.Mesh(coreGeo, coreMat);
+      this.coreMesh.position.set(0, 0.38 * s, 0.18 * s);
+      this.torsoGroup.add(this.coreMesh);
+      this.registerMesh(this.coreMesh, coreMat);
+    }
 
-      // 4 chrome spider legs
-      for (let i = 0; i < 4; i++) {
-        const legGeo = new THREE.CylinderGeometry(0.06, 0.04, 0.8, 8);
-        const leg = new THREE.Mesh(legGeo, jointMat);
-        const angle = (i * Math.PI) / 2 + Math.PI / 4;
-        leg.position.set(Math.cos(angle) * 0.55, 0.4, Math.sin(angle) * 0.55);
-        leg.rotation.z = Math.cos(angle) * 0.4;
-        leg.rotation.x = Math.sin(angle) * 0.4;
-        leg.castShadow = true;
-        this.mesh.add(leg);
-      }
+    // 3. Head & Neck (Weakpoint Headshot Mesh)
+    this.headGroup.position.set(0, 0.60 * s, 0);
+    this.torsoGroup.add(this.headGroup);
 
-      this.headMesh = bomb;
+    // Neck
+    const neckGeo = new THREE.CylinderGeometry(0.08 * s, 0.09 * s, 0.12 * s, 12);
+    const neckMesh = new THREE.Mesh(neckGeo, skinMat);
+    neckMesh.position.y = 0.06 * s;
+    this.headGroup.add(neckMesh);
+    this.registerMesh(neckMesh, skinMat);
 
-    } else if (this.type === 'shield') {
-      // White & Cyan Shield Vanguard
-      const torsoGeo = new THREE.BoxGeometry(0.8, 1.3, 0.5);
-      const torso = new THREE.Mesh(torsoGeo, armorMat);
-      torso.position.y = 1.3;
-      torso.castShadow = true;
-      this.mesh.add(torso);
-      this.originalMaterials.set(torso, armorMat);
+    // Human Head (Face / Cranium)
+    const headGeo = new THREE.BoxGeometry(0.28 * s, 0.30 * s, 0.28 * s);
+    this.headMesh = new THREE.Mesh(headGeo, skinMat);
+    this.headMesh.position.set(0, 0.24 * s, 0);
+    this.headGroup.add(this.headMesh);
+    this.registerMesh(this.headMesh, skinMat);
 
-      // Head
-      const headGeo = new THREE.BoxGeometry(0.42, 0.42, 0.42);
-      this.headMesh = new THREE.Mesh(headGeo, armorMat);
-      this.headMesh.position.set(0, 2.1, 0);
-      this.headMesh.castShadow = true;
-      this.mesh.add(this.headMesh);
-      this.originalMaterials.set(this.headMesh, armorMat);
+    // Tactical Combat Helmet
+    const helmetGeo = new THREE.BoxGeometry(0.32 * s, 0.16 * s, 0.32 * s);
+    const helmetMesh = new THREE.Mesh(helmetGeo, uniformMat);
+    helmetMesh.position.set(0, 0.32 * s, 0.01 * s);
+    this.headGroup.add(helmetMesh);
+    this.registerMesh(helmetMesh, uniformMat);
 
-      // Luminous Hex Energy Shield
-      const shieldGeo = new THREE.PlaneGeometry(1.5, 1.9);
+    // Helmet Highlight Stripe
+    const helmetStripeGeo = new THREE.BoxGeometry(0.12 * s, 0.18 * s, 0.33 * s);
+    const helmetStripe = new THREE.Mesh(helmetStripeGeo, highlightMat);
+    helmetStripe.position.set(0, 0.32 * s, 0.01 * s);
+    this.headGroup.add(helmetStripe);
+    this.registerMesh(helmetStripe, highlightMat);
+
+    // Glowing Optical Tactical Visor / Eyes
+    const visorGeo = new THREE.BoxGeometry(0.26 * s, 0.09 * s, 0.08 * s);
+    const visorMesh = new THREE.Mesh(visorGeo, visorMat);
+    visorMesh.position.set(0, 0.23 * s, 0.15 * s);
+    this.headGroup.add(visorMesh);
+
+    // 4. Left Arm Group (Shoulder pivot at left side of chest)
+    this.leftArmGroup.position.set(-0.31 * s, 0.48 * s, 0);
+    this.torsoGroup.add(this.leftArmGroup);
+
+    // Upper Arm (Bicep)
+    const upperArmGeo = new THREE.BoxGeometry(0.13 * s, 0.32 * s, 0.13 * s);
+    const leftUpperArm = new THREE.Mesh(upperArmGeo, uniformMat);
+    leftUpperArm.position.y = -0.16 * s;
+    this.leftArmGroup.add(leftUpperArm);
+    this.registerMesh(leftUpperArm, uniformMat);
+
+    // Left Forearm Group (Elbow pivot)
+    this.leftForearmGroup.position.set(0, -0.32 * s, 0);
+    this.leftArmGroup.add(this.leftForearmGroup);
+
+    const forearmGeo = new THREE.BoxGeometry(0.12 * s, 0.28 * s, 0.12 * s);
+    const leftForearm = new THREE.Mesh(forearmGeo, uniformMat);
+    leftForearm.position.y = -0.14 * s;
+    this.leftForearmGroup.add(leftForearm);
+    this.registerMesh(leftForearm, uniformMat);
+
+    // Tactical Glove
+    const gloveGeo = new THREE.BoxGeometry(0.13 * s, 0.11 * s, 0.13 * s);
+    const leftGlove = new THREE.Mesh(gloveGeo, jointMat);
+    leftGlove.position.y = -0.27 * s;
+    this.leftForearmGroup.add(leftGlove);
+    this.registerMesh(leftGlove, jointMat);
+
+    // Riot Shield for Shield Vanguard (Mounted on Left Forearm)
+    if (theme.hasShield) {
+      const shieldGeo = new THREE.BoxGeometry(0.85 * s, 1.45 * s, 0.05 * s);
       const shieldMat = new THREE.MeshStandardMaterial({
-        color: 0x0ea5e9,
+        color: theme.highlightHex,
         transparent: true,
-        opacity: 0.8,
+        opacity: 0.85,
         roughness: 0.1,
         metalness: 0.9,
         side: THREE.DoubleSide,
-        emissive: 0x0284c7,
-        emissiveIntensity: 0.9
+        emissive: theme.emissiveHex,
+        emissiveIntensity: 0.8
       });
       this.shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
-      this.shieldMesh.position.set(0, 1.25, 0.65);
-      this.mesh.add(this.shieldMesh);
-
-    } else {
-      // Standard Humanoid Android (Basic, Fast, Ranged, Elite)
-      const scaleY = this.type === 'fast' ? 0.75 : (isElite ? 1.2 : 1.0);
-
-      const torsoGeo = new THREE.BoxGeometry(0.8, 1.1 * scaleY, 0.45);
-      const torso = new THREE.Mesh(torsoGeo, armorMat);
-      torso.position.y = 1.25 * scaleY;
-      torso.castShadow = true;
-      this.mesh.add(torso);
-      this.originalMaterials.set(torso, armorMat);
-
-      // Head (Weak Point)
-      const headGeo = new THREE.BoxGeometry(0.44, 0.45, 0.44);
-      this.headMesh = new THREE.Mesh(headGeo, armorMat);
-      this.headMesh.position.set(0, 2.0 * scaleY, 0);
-      this.headMesh.castShadow = true;
-      this.mesh.add(this.headMesh);
-      this.originalMaterials.set(this.headMesh, armorMat);
-
-      // Glowing Optical Visor
-      const visorGeo = new THREE.BoxGeometry(0.32, 0.1, 0.08);
-      const eyes = new THREE.Mesh(visorGeo, visorMat);
-      eyes.position.set(0, 2.0 * scaleY, 0.23);
-      this.mesh.add(eyes);
-
-      // Ranged Weapon on arm
-      if (this.type === 'ranged' || this.type === 'elite') {
-        const gunGeo = new THREE.BoxGeometry(0.18, 0.18, 0.75);
-        const gun = new THREE.Mesh(gunGeo, jointMat);
-        gun.position.set(0.55, 1.25 * scaleY, 0.35);
-        gun.castShadow = true;
-        this.mesh.add(gun);
-      }
+      this.shieldMesh.position.set(0, -0.15 * s, 0.35 * s);
+      this.leftForearmGroup.add(this.shieldMesh);
+      this.registerMesh(this.shieldMesh, shieldMat);
     }
+
+    // 5. Right Arm Group (Shoulder pivot at right side of chest)
+    this.rightArmGroup.position.set(0.31 * s, 0.48 * s, 0);
+    this.torsoGroup.add(this.rightArmGroup);
+
+    // Upper Arm (Bicep)
+    const rightUpperArm = new THREE.Mesh(upperArmGeo, uniformMat);
+    rightUpperArm.position.y = -0.16 * s;
+    this.rightArmGroup.add(rightUpperArm);
+    this.registerMesh(rightUpperArm, uniformMat);
+
+    // Right Forearm Group (Elbow pivot)
+    this.rightForearmGroup.position.set(0, -0.32 * s, 0);
+    this.rightArmGroup.add(this.rightForearmGroup);
+
+    const rightForearm = new THREE.Mesh(forearmGeo, uniformMat);
+    rightForearm.position.y = -0.14 * s;
+    this.rightForearmGroup.add(rightForearm);
+    this.registerMesh(rightForearm, uniformMat);
+
+    // Tactical Glove
+    const rightGlove = new THREE.Mesh(gloveGeo, jointMat);
+    rightGlove.position.y = -0.27 * s;
+    this.rightForearmGroup.add(rightGlove);
+    this.registerMesh(rightGlove, jointMat);
+
+    // Firearm attached to Right Hand
+    if (theme.hasWeapon) {
+      this.weaponMesh = new THREE.Group();
+      this.rightForearmGroup.add(this.weaponMesh);
+      this.weaponMesh.position.set(0, -0.28 * s, 0.22 * s);
+
+      // Rifle Receiver & Barrel
+      const receiverGeo = new THREE.BoxGeometry(0.12 * s, 0.16 * s, 0.65 * s);
+      const rifleMesh = new THREE.Mesh(receiverGeo, jointMat);
+      this.weaponMesh.add(rifleMesh);
+      this.registerMesh(rifleMesh, jointMat);
+
+      // Weapon Highlight Trim (matching enemy highlight color)
+      const trimGeo = new THREE.BoxGeometry(0.13 * s, 0.04 * s, 0.50 * s);
+      const trimMesh = new THREE.Mesh(trimGeo, highlightMat);
+      trimMesh.position.y = 0.08 * s;
+      this.weaponMesh.add(trimMesh);
+      this.registerMesh(trimMesh, highlightMat);
+
+      // Magazine
+      const magGeo = new THREE.BoxGeometry(0.08 * s, 0.18 * s, 0.14 * s);
+      const magMesh = new THREE.Mesh(magGeo, jointMat);
+      magMesh.position.set(0, -0.14 * s, -0.05 * s);
+      this.weaponMesh.add(magMesh);
+      this.registerMesh(magMesh, jointMat);
+
+      // Default Weapon Hold Pose
+      this.rightArmGroup.rotation.x = -Math.PI / 2.3;
+      this.rightForearmGroup.rotation.x = -Math.PI / 12;
+    }
+
+    // 6. Left Leg Group (Hip pivot at left bottom of pelvis)
+    this.leftLegGroup.position.set(-0.16 * s, 0, 0);
+    this.pelvis.add(this.leftLegGroup);
+
+    // Thigh (Upper Leg)
+    const thighGeo = new THREE.BoxGeometry(0.17 * s, 0.42 * s, 0.19 * s);
+    const leftThigh = new THREE.Mesh(thighGeo, uniformMat);
+    leftThigh.position.y = -0.21 * s;
+    this.leftLegGroup.add(leftThigh);
+    this.registerMesh(leftThigh, uniformMat);
+
+    // Left Knee Group (Knee pivot)
+    this.leftKneeGroup.position.set(0, -0.42 * s, 0);
+    this.leftLegGroup.add(this.leftKneeGroup);
+
+    // Knee Armor Pad (Highlighted color)
+    const kneePadGeo = new THREE.BoxGeometry(0.16 * s, 0.12 * s, 0.08 * s);
+    const leftKneePad = new THREE.Mesh(kneePadGeo, highlightMat);
+    leftKneePad.position.set(0, 0, 0.10 * s);
+    this.leftKneeGroup.add(leftKneePad);
+    this.registerMesh(leftKneePad, highlightMat);
+
+    // Shin / Calf (Lower Leg)
+    const shinGeo = new THREE.BoxGeometry(0.15 * s, 0.38 * s, 0.17 * s);
+    const leftShin = new THREE.Mesh(shinGeo, uniformMat);
+    leftShin.position.y = -0.19 * s;
+    this.leftKneeGroup.add(leftShin);
+    this.registerMesh(leftShin, uniformMat);
+
+    // Combat Boot
+    const bootGeo = new THREE.BoxGeometry(0.17 * s, 0.14 * s, 0.28 * s);
+    const leftBoot = new THREE.Mesh(bootGeo, jointMat);
+    leftBoot.position.set(0, -0.40 * s, 0.04 * s);
+    this.leftKneeGroup.add(leftBoot);
+    this.registerMesh(leftBoot, jointMat);
+
+    // 7. Right Leg Group (Hip pivot at right bottom of pelvis)
+    this.rightLegGroup.position.set(0.16 * s, 0, 0);
+    this.pelvis.add(this.rightLegGroup);
+
+    // Thigh (Upper Leg)
+    const rightThigh = new THREE.Mesh(thighGeo, uniformMat);
+    rightThigh.position.y = -0.21 * s;
+    this.rightLegGroup.add(rightThigh);
+    this.registerMesh(rightThigh, uniformMat);
+
+    // Right Knee Group (Knee pivot)
+    this.rightKneeGroup.position.set(0, -0.42 * s, 0);
+    this.rightLegGroup.add(this.rightKneeGroup);
+
+    // Knee Armor Pad (Highlighted color)
+    const rightKneePad = new THREE.Mesh(kneePadGeo, highlightMat);
+    rightKneePad.position.set(0, 0, 0.10 * s);
+    this.rightKneeGroup.add(rightKneePad);
+    this.registerMesh(rightKneePad, highlightMat);
+
+    // Shin / Calf (Lower Leg)
+    const rightShin = new THREE.Mesh(shinGeo, uniformMat);
+    rightShin.position.y = -0.19 * s;
+    this.rightKneeGroup.add(rightShin);
+    this.registerMesh(rightShin, uniformMat);
+
+    // Combat Boot
+    const rightBoot = new THREE.Mesh(bootGeo, jointMat);
+    rightBoot.position.set(0, -0.40 * s, 0.04 * s);
+    this.rightKneeGroup.add(rightBoot);
+    this.registerMesh(rightBoot, jointMat);
   }
 
   public takeDamage(
@@ -392,12 +695,29 @@ export class Enemy {
     onShoot?: (event: EnemyShootEvent) => void,
     onPlayerHit?: (damage: number) => void
   ) {
+    // 1. Human Death Animation (ragdoll collapse backward onto the floor, then sinks away)
     if (this.isDead) {
-      this.mesh.scale.multiplyScalar(Math.max(0, 1 - delta * 4));
+      this.deathTimer += delta;
+      // Stagger and fall backward onto ground
+      this.humanGroup.rotation.x = THREE.MathUtils.lerp(this.humanGroup.rotation.x, -Math.PI / 2.1, delta * 7);
+      this.humanGroup.position.y = THREE.MathUtils.lerp(this.humanGroup.position.y, 0.15 * this.scaleFactor, delta * 6);
+      this.leftLegGroup.rotation.x = THREE.MathUtils.lerp(this.leftLegGroup.rotation.x, 0.4, delta * 5);
+      this.rightLegGroup.rotation.x = THREE.MathUtils.lerp(this.rightLegGroup.rotation.x, -0.3, delta * 5);
+      this.leftArmGroup.rotation.z = THREE.MathUtils.lerp(this.leftArmGroup.rotation.z, -0.8, delta * 5);
+      this.rightArmGroup.rotation.z = THREE.MathUtils.lerp(this.rightArmGroup.rotation.z, 0.8, delta * 5);
+
+      if (this.groundHighlightRing) {
+        this.groundHighlightRing.scale.multiplyScalar(Math.max(0, 1 - delta * 4));
+      }
+
+      // Sinks into ground and shrinks to trigger cleanup
+      if (this.deathTimer > 0.45) {
+        this.mesh.scale.multiplyScalar(Math.max(0, 1 - delta * 3.5));
+      }
       return;
     }
 
-    // Hit flash decay
+    // 2. Hit Flash Decay
     if (this.hitFlashTimer > 0) {
       this.hitFlashTimer -= delta;
       if (this.hitFlashTimer <= 0) {
@@ -405,7 +725,7 @@ export class Enemy {
       }
     }
 
-    // Billboards face camera
+    // Billboards face player camera
     this.healthBarBg.lookAt(playerPos.x, this.healthBarBg.position.y + this.position.y, playerPos.z);
     this.healthBarMesh.lookAt(playerPos.x, this.healthBarMesh.position.y + this.position.y, playerPos.z);
 
@@ -416,21 +736,23 @@ export class Enemy {
     const targetAngle = Math.atan2(playerPos.x - this.position.x, playerPos.z - this.position.z);
     this.mesh.rotation.y = THREE.MathUtils.lerp(this.mesh.rotation.y, targetAngle, delta * 8);
 
-    // Exploder fuse logic
+    // 3. Exploder Fuse Logic & Blinking Chest Core
     if (this.type === 'exploder') {
-      if (distToPlayer < 4.5) {
+      if (distToPlayer < 4.8) {
         this.isFuseActive = true;
       }
       if (this.isFuseActive) {
         this.fuseTimer -= delta;
-        const pulse = Math.sin(this.stateTimer * 25) * 0.5 + 0.5;
-        this.mesh.scale.setScalar(1 + pulse * 0.25);
+        const pulse = Math.sin(this.stateTimer * 28) * 0.5 + 0.5;
+        if (this.coreMesh) {
+          this.coreMesh.scale.setScalar(1 + pulse * 0.6);
+        }
 
         if (this.fuseTimer <= 0) {
           this.isDead = true;
           soundManager.playExplosion();
-          if (distToPlayer < 6.0 && onPlayerHit) {
-            const factor = 1 - (distToPlayer / 6.0);
+          if (distToPlayer < 6.5 && onPlayerHit) {
+            const factor = 1 - (distToPlayer / 6.5);
             onPlayerHit(Math.round(this.damage * factor));
           }
           return;
@@ -443,7 +765,7 @@ export class Enemy {
       this.attackCooldown -= delta;
     }
 
-    // Movement & Combat Behavior
+    // 4. Movement & Combat AI
     let moveDir = new THREE.Vector3();
 
     if (this.type === 'ranged' || this.type === 'elite') {
@@ -464,7 +786,7 @@ export class Enemy {
         this.attackCooldown = this.attackInterval;
         if (onShoot) {
           const shootOrigin = this.position.clone();
-          shootOrigin.y += this.getHeight() * 0.65;
+          shootOrigin.y += this.getHeight() * 0.62;
           onShoot({
             origin: shootOrigin,
             target: playerPos.clone().add(new THREE.Vector3(0, -0.2, 0)),
@@ -486,8 +808,85 @@ export class Enemy {
       }
     }
 
-    // Move enemy and avoid obstacles
-    if (moveDir.lengthSq() > 0.01) {
+    const isMoving = moveDir.lengthSq() > 0.01;
+
+    // 5. Natural Human Walk, Run & Combat Animations
+    const animRate = this.type === 'fast' ? 14 : (this.type === 'tank' ? 6 : 9);
+
+    if (isMoving) {
+      this.walkCycle += delta * animRate;
+
+      // Leg stride oscillation
+      const strideAmp = this.type === 'fast' ? 0.85 : 0.72;
+      this.leftLegGroup.rotation.x = Math.sin(this.walkCycle) * strideAmp;
+      this.rightLegGroup.rotation.x = -Math.sin(this.walkCycle) * strideAmp;
+
+      // Knee flexing during back-swing
+      this.leftKneeGroup.rotation.x = Math.max(0, -Math.sin(this.walkCycle)) * 0.85;
+      this.rightKneeGroup.rotation.x = Math.max(0, Math.sin(this.walkCycle)) * 0.85;
+
+      // Vertical body bounce & hip sway as footsteps land
+      this.pelvis.position.y = this.basePelvisY + Math.abs(Math.sin(this.walkCycle)) * (0.05 * this.scaleFactor);
+      this.torsoGroup.rotation.z = Math.sin(this.walkCycle * 0.5) * 0.04;
+
+      // Forward lean during run
+      const forwardLean = this.type === 'fast' ? 0.32 : (this.type === 'exploder' ? 0.26 : 0.12);
+      this.torsoGroup.rotation.x = forwardLean;
+
+      // Arm swing dynamics
+      if (this.type === 'shield') {
+        // Shield bearer holds riot shield firmly in front
+        this.leftArmGroup.rotation.x = -Math.PI / 3.4;
+        this.leftForearmGroup.rotation.x = -Math.PI / 10;
+        this.rightArmGroup.rotation.x = Math.sin(this.walkCycle) * 0.45;
+      } else if (this.theme.hasWeapon) {
+        // Weapon bearer keeps gun raised aiming forward, subtle recoil/bob
+        this.rightArmGroup.rotation.x = -Math.PI / 2.3 + Math.sin(this.walkCycle * 2) * 0.04;
+        this.leftArmGroup.rotation.x = -Math.sin(this.walkCycle) * 0.55;
+      } else if (this.type === 'fast') {
+        // Sprinter pumps both arms vigorously
+        this.leftArmGroup.rotation.x = -Math.sin(this.walkCycle) * 0.95;
+        this.rightArmGroup.rotation.x = Math.sin(this.walkCycle) * 0.95;
+      } else if (this.type === 'exploder') {
+        // Bomb infiltrator runs frantically with arms waving
+        this.leftArmGroup.rotation.x = -Math.PI / 1.9 + Math.sin(this.walkCycle * 2) * 0.3;
+        this.rightArmGroup.rotation.x = -Math.PI / 1.9 - Math.sin(this.walkCycle * 2) * 0.3;
+      } else {
+        // Standard opposite arm swing
+        this.leftArmGroup.rotation.x = -Math.sin(this.walkCycle) * 0.65;
+        this.rightArmGroup.rotation.x = Math.sin(this.walkCycle) * 0.65;
+      }
+    } else {
+      // Idle Human Breathing & Stance Recovery
+      this.walkCycle = 0;
+      this.leftLegGroup.rotation.x = THREE.MathUtils.lerp(this.leftLegGroup.rotation.x, 0, delta * 6);
+      this.rightLegGroup.rotation.x = THREE.MathUtils.lerp(this.rightLegGroup.rotation.x, 0, delta * 6);
+      this.leftKneeGroup.rotation.x = THREE.MathUtils.lerp(this.leftKneeGroup.rotation.x, 0, delta * 6);
+      this.rightKneeGroup.rotation.x = THREE.MathUtils.lerp(this.rightKneeGroup.rotation.x, 0, delta * 6);
+      this.torsoGroup.rotation.x = THREE.MathUtils.lerp(this.torsoGroup.rotation.x, 0, delta * 6);
+      this.torsoGroup.rotation.z = THREE.MathUtils.lerp(this.torsoGroup.rotation.z, 0, delta * 6);
+
+      // Subtle breathing expansion
+      this.torsoGroup.position.y = this.baseTorsoY + Math.sin(this.stateTimer * 2.4) * 0.012;
+      this.headGroup.rotation.x = Math.sin(this.stateTimer * 2.0) * 0.015;
+
+      if (this.theme.hasWeapon) {
+        this.rightArmGroup.rotation.x = -Math.PI / 2.3;
+      }
+    }
+
+    // 6. Attack Punch / Strike Animation
+    const isAttacking = this.attackCooldown > (this.attackInterval - 0.28);
+    if (isAttacking && !this.theme.hasWeapon && this.type !== 'shield') {
+      // Melee punch thrust
+      this.rightArmGroup.rotation.x = -Math.PI / 1.8;
+      this.torsoGroup.rotation.y = 0.25;
+    } else {
+      this.torsoGroup.rotation.y = THREE.MathUtils.lerp(this.torsoGroup.rotation.y, 0, delta * 6);
+    }
+
+    // 7. Move enemy and avoid obstacles
+    if (isMoving) {
       moveDir.y = 0;
       moveDir.normalize();
 
@@ -509,7 +908,7 @@ export class Enemy {
 
   public dispose() {
     this.originalMaterials.clear();
-    this.mesh.traverse(child => {
+    this.mesh.traverse((child) => {
       if ((child as THREE.Mesh).geometry) (child as THREE.Mesh).geometry.dispose();
       if ((child as THREE.Mesh).material) {
         const mat = (child as THREE.Mesh).material;
