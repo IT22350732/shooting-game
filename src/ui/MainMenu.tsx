@@ -286,6 +286,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           {/* Fullscreen Toggle Button */}
           <button
             onClick={() => toggleFullscreen()}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              toggleFullscreen();
+            }}
             className="glass-panel"
             style={{
               width: 42,

@@ -78,6 +78,10 @@ export const PauseModal: React.FC<PauseModalProps> = ({
 
           <button
             onClick={() => toggleFullscreen()}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              toggleFullscreen();
+            }}
             className="btn-cyber"
             style={{
               width: '100%',

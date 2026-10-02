@@ -243,6 +243,10 @@ export const HUD: React.FC<HUDProps> = ({
 
         <button
           onClick={() => toggleFullscreen()}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            toggleFullscreen();
+          }}
           className="glass-panel"
           style={{
             width: 44,

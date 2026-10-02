@@ -209,6 +209,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onSetting
             </div>
             <button
               onClick={() => toggleFullscreen()}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                toggleFullscreen();
+              }}
               className="glass-panel"
               style={{
                 padding: '6px 16px',

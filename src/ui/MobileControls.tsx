@@ -289,6 +289,10 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
           </span>
           <button
             onClick={() => toggleFullscreen()}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              toggleFullscreen();
+            }}
             style={{
               background: '#0284c7',
               color: '#ffffff',

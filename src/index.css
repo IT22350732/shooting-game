@@ -46,6 +46,36 @@ html, body, #root {
   overscroll-behavior: none;
 }
 
+/* Virtual Fullscreen fallback for mobile (iOS Safari & in-app WebViews) */
+html.fullscreen-virtual-active,
+body.fullscreen-virtual-active {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  z-index: 999999 !important;
+}
+
+html.fullscreen-virtual-active #root {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+  z-index: 999999 !important;
+}
+
 canvas {
   display: block;
   width: 100%;
