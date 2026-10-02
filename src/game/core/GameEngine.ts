@@ -105,6 +105,7 @@ export class GameEngine {
   private isTouchAiming: boolean = false;
   private isRunning: boolean = false;
   private animFrameId: number | null = null;
+  private killsSinceHealthPack: number = 0;
 
   // Raycaster
   private raycaster = new THREE.Raycaster();
@@ -310,6 +311,7 @@ export class GameEngine {
       p.dispose();
     });
     this.powerups = [];
+    this.killsSinceHealthPack = 0;
   }
 
   // --- INPUT HANDLING ---
@@ -786,8 +788,11 @@ export class GameEngine {
     this.player.stats.coins += enemy.coinValue;
     saveManager.addCoins(enemy.coinValue);
 
-    // Chance to drop powerup (18% chance)
-    if (Math.random() < 0.18) {
+    // Health pack drop every 3 kills guarantee
+    this.killsSinceHealthPack++;
+    if (this.killsSinceHealthPack % 3 === 0) {
+      this.spawnHealthPack(enemy.position);
+    } else if (Math.random() < 0.16) {
       this.spawnRandomPowerup(enemy.position);
     }
 
@@ -806,6 +811,14 @@ export class GameEngine {
       this.exitPointerLock();
       this.callbacks.onGameStateChange('VICTORY');
     }
+  }
+
+  public spawnHealthPack(pos: THREE.Vector3) {
+    const p = new Powerup(Math.random().toString(), 'health', pos.clone());
+    this.powerups.push(p);
+    this.scene.add(p.mesh);
+    // Green sparkle beacon effect on spawn
+    this.particles.spawnSparks(pos, new THREE.Vector3(0, 1, 0), 0x22c55e, 16);
   }
 
   private spawnRandomPowerup(pos: THREE.Vector3) {
@@ -1082,6 +1095,10 @@ export class GameEngine {
       if (finished) {
         if (p.isCollected) {
           this.player.activatePowerup(p.type);
+          if (p.type === 'health') {
+            soundManager.playHealthPack();
+            this.particles.spawnSparks(this.player.position, new THREE.Vector3(0, 1, 0), 0x22c55e, 24);
+          }
         }
         this.scene.remove(p.mesh);
         p.dispose();

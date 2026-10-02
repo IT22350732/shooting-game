@@ -327,6 +327,28 @@ export class SoundManager {
     });
   }
 
+  public playHealthPack() {
+    this.initContext();
+    if (!this.ctx || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+    // Uplifting harmonic healing chord (F4, A4, C5, F5)
+    const freqs = [349.23, 440.0, 523.25, 698.46];
+    freqs.forEach((freq, idx) => {
+      if (!this.ctx || !this.sfxGain) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const noteTime = now + idx * 0.045;
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, noteTime);
+      gain.gain.setValueAtTime(0.32, noteTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.26);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(noteTime);
+      osc.stop(noteTime + 0.28);
+    });
+  }
+
   public playPlayerHurt() {
     this.initContext();
     if (!this.ctx || !this.sfxGain) return;

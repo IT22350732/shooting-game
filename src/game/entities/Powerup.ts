@@ -23,9 +23,78 @@ export class Powerup {
   }
 
   private build3DModel() {
+    if (this.type === 'health') {
+      // DEDICATED TACTICAL MEDKIT HEALTH PACK
+      const whiteMat = new THREE.MeshStandardMaterial({
+        color: 0xf8fafc,
+        roughness: 0.28,
+        metalness: 0.12
+      });
+      const redCrossMat = new THREE.MeshStandardMaterial({
+        color: 0xef4444,
+        emissive: 0xef4444,
+        emissiveIntensity: 0.7,
+        roughness: 0.25
+      });
+      const greenCrossMat = new THREE.MeshStandardMaterial({
+        color: 0x22c55e,
+        emissive: 0x22c55e,
+        emissiveIntensity: 0.85,
+        roughness: 0.2
+      });
+
+      // Medkit Briefcase Box
+      const caseGeo = new THREE.BoxGeometry(0.52, 0.35, 0.28);
+      const caseMesh = new THREE.Mesh(caseGeo, whiteMat);
+      this.mesh.add(caseMesh);
+
+      // Carry Handle on Top
+      const handleGeo = new THREE.BoxGeometry(0.18, 0.05, 0.04);
+      const handleMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 });
+      const handleMesh = new THREE.Mesh(handleGeo, handleMat);
+      handleMesh.position.y = 0.20;
+      this.mesh.add(handleMesh);
+
+      // Embossed Medical Cross on Front & Back
+      const crossH = new THREE.BoxGeometry(0.24, 0.075, 0.29);
+      const crossHMesh = new THREE.Mesh(crossH, redCrossMat);
+      this.mesh.add(crossHMesh);
+
+      const crossV = new THREE.BoxGeometry(0.075, 0.24, 0.29);
+      const crossVMesh = new THREE.Mesh(crossV, redCrossMat);
+      this.mesh.add(crossVMesh);
+
+      // Hovering 3D Medical Cross spinning above the Medkit
+      const hoverGroup = new THREE.Group();
+      hoverGroup.position.y = 0.44;
+      const hoverH = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.09, 0.09), greenCrossMat);
+      const hoverV = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.32, 0.09), greenCrossMat);
+      hoverGroup.add(hoverH);
+      hoverGroup.add(hoverV);
+      this.mesh.add(hoverGroup);
+
+      // Pulsing floor beacon circle
+      const beaconGeo = new THREE.RingGeometry(0.65, 0.90, 20);
+      beaconGeo.rotateX(-Math.PI / 2);
+      const beaconMat = new THREE.MeshBasicMaterial({
+        color: 0x22c55e,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.65
+      });
+      const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+      beacon.position.y = -0.75;
+      this.mesh.add(beacon);
+
+      // Glowing Point Light illuminating floor
+      const light = new THREE.PointLight(0x22c55e, 1.6, 6.0);
+      light.position.y = 0.2;
+      this.mesh.add(light);
+      return;
+    }
+
     let color = 0x06b6d4;
     switch (this.type) {
-      case 'health': color = 0xef4444; break;
       case 'armor': color = 0x38bdf8; break;
       case 'rapid_fire': color = 0xf59e0b; break;
       case 'infinite_ammo': color = 0xa855f7; break;

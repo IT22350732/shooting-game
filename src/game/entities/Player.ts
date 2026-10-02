@@ -137,7 +137,7 @@ export class Player {
 
   public activatePowerup(type: PowerupType, duration: number = 10) {
     if (type === 'health') {
-      this.heal(40);
+      this.heal(65);
       return;
     }
     if (type === 'armor') {
