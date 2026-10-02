@@ -35,7 +35,8 @@ const DEFAULT_SAVE: SaveData = {
     musicVolume: 40,
     screenShake: true,
     crosshairStyle: 'classic',
-    fov: 75
+    fov: 75,
+    difficulty: 'medium'
   },
   stats: {
     totalKills: 0,

@@ -845,6 +845,10 @@ export class GameEngine {
       (type: EnemyType) => {
         const spawnPos = this.arena.getValidSpawnPoint(this.player.position);
         const waveMultiplier = 1 + (this.waveManager.currentWave - 1) * 0.18;
+        const savedDiff = saveManager.getData().settings.difficulty || 'medium';
+        const effectiveDiff = (this.mode === 'easy' || this.mode === 'medium' || this.mode === 'hard')
+          ? this.mode
+          : (this.mode === 'free_mode' ? 'free_mode' : savedDiff);
         const diffMultipliers: Record<string, { hp: number; dmg: number; speed: number }> = {
           easy: { hp: 0.65, dmg: 0.5, speed: 0.75 },
           medium: { hp: 1.0, dmg: 1.0, speed: 1.0 },
@@ -854,7 +858,7 @@ export class GameEngine {
           boss_arena: { hp: 1.0, dmg: 1.0, speed: 1.0 },
           free_mode: { hp: 1.0, dmg: 0, speed: 0 }
         };
-        const diff = diffMultipliers[this.mode] || diffMultipliers.medium;
+        const diff = diffMultipliers[effectiveDiff] || diffMultipliers.medium;
         const enemy = new Enemy(Math.random().toString(), type, spawnPos, waveMultiplier, diff);
         this.enemies.push(enemy);
         this.scene.add(enemy.mesh);

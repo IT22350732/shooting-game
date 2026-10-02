@@ -43,11 +43,20 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenTutorial,
   coins
 }) => {
-  const [selectedMode, setSelectedMode] = useState<GameMode>('medium');
+  const savedDifficulty = (saveManager.getData().settings.difficulty || 'medium') as GameMode;
+  const [selectedMode, setSelectedMode] = useState<GameMode>(savedDifficulty);
   const [selectedArena, setSelectedArena] = useState<ArenaId>('industrial');
   const [showMissionSelect, setShowMissionSelect] = useState(false);
   const [activeTab, setActiveTab] = useState<'mode' | 'arena'>('mode');
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
+
+  const handleModeChange = (mode: GameMode) => {
+    setSelectedMode(mode);
+    if (mode === 'easy' || mode === 'medium' || mode === 'hard') {
+      const cur = saveManager.getData().settings;
+      saveManager.updateSettings({ ...cur, difficulty: mode });
+    }
+  };
 
   const savedData = saveManager.getData();
 
@@ -337,7 +346,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           <ChevronDown size={14} color="#0284c7" className="menu-select-arrow" />
           <select
             value={selectedMode}
-            onChange={(e) => setSelectedMode(e.target.value as GameMode)}
+            onChange={(e) => handleModeChange(e.target.value as GameMode)}
             className="menu-native-select-overlay"
             aria-label="Select Game Mode"
           >
@@ -703,7 +712,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                   return (
                     <div
                       key={m.id}
-                      onClick={() => setSelectedMode(m.id)}
+                      onClick={() => handleModeChange(m.id)}
                       className="glass-panel"
                       style={{
                         padding: '14px 18px',

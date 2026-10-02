@@ -77,6 +77,8 @@ export interface UpgradeLevels {
   critChance: number;
 }
 
+export type DifficultyLevel = 'easy' | 'medium' | 'hard';
+
 export interface GameSettings {
   mouseSensitivity: number;
   touchSensitivity: number;
@@ -85,6 +87,7 @@ export interface GameSettings {
   screenShake: boolean;
   crosshairStyle: 'classic' | 'dot' | 'circle' | 'tech';
   fov: number;
+  difficulty?: DifficultyLevel;
 }
 
 export interface GameStatsRecord {

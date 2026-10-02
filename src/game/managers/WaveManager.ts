@@ -1,5 +1,6 @@
 import { GameMode, EnemyType } from '../../types/game';
 import { soundManager } from '../../audio/SoundManager';
+import { saveManager } from './SaveManager';
 
 export interface WaveConfig {
   waveNumber: number;
@@ -61,18 +62,23 @@ export class WaveManager {
     const isBossWave = (this.currentWave % 5 === 0);
     this.isBossAlive = isBossWave;
 
+    const savedDifficulty = saveManager.getData().settings.difficulty || 'medium';
+    const effectiveDifficulty = (this.mode === 'easy' || this.mode === 'medium' || this.mode === 'hard')
+      ? this.mode
+      : savedDifficulty;
+
     // Scaling enemy count according to difficulty mode
     let baseCount = 6 + this.currentWave * 3;
-    if (this.mode === 'easy') {
+    if (effectiveDifficulty === 'easy') {
       baseCount = Math.max(4, 4 + this.currentWave * 2);
-    } else if (this.mode === 'hard') {
+    } else if (effectiveDifficulty === 'hard') {
       baseCount = Math.max(8, 8 + this.currentWave * 5);
     }
 
     this.totalEnemiesInWave = isBossWave ? Math.round(baseCount * 0.8) : baseCount;
     this.enemiesRemaining = this.totalEnemiesInWave + (isBossWave ? 1 : 0);
     this.enemiesSpawned = 0;
-    this.spawnCooldown = this.mode === 'easy' ? 1.5 : (this.mode === 'hard' ? 0.4 : 0.8);
+    this.spawnCooldown = effectiveDifficulty === 'easy' ? 1.5 : (effectiveDifficulty === 'hard' ? 0.4 : 0.8);
 
     soundManager.playWaveComplete();
   }

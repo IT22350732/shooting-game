@@ -1,6 +1,6 @@
 import React from 'react';
-import { X, Sliders, Maximize, Minimize } from 'lucide-react';
-import { GameSettings } from '../types/game';
+import { X, Sliders, Maximize, Minimize, Shield, Flame, Skull, Gauge } from 'lucide-react';
+import { GameSettings, DifficultyLevel } from '../types/game';
 import { saveManager } from '../game/managers/SaveManager';
 import { soundManager } from '../audio/SoundManager';
 import { useFullscreen } from '../utils/fullscreen';
@@ -76,6 +76,125 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onSetting
 
         {/* Settings Body */}
         <div style={{ padding: 'clamp(14px, 3vw, 24px)', display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          {/* Game Hardness Level (Difficulty) */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.06), rgba(15, 23, 42, 0.02))',
+              padding: '14px 16px',
+              borderRadius: 12,
+              border: '1.5px solid rgba(2, 132, 199, 0.22)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Gauge size={18} color="#0284c7" />
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', color: '#0f172a', fontWeight: 800 }}>
+                  GAME HARDNESS LEVEL
+                </span>
+              </div>
+              <span
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.74rem',
+                  fontWeight: 900,
+                  letterSpacing: '0.06em',
+                  padding: '3px 10px',
+                  borderRadius: 6,
+                  background:
+                    (settings.difficulty || 'medium') === 'easy'
+                      ? 'rgba(34, 197, 94, 0.15)'
+                      : (settings.difficulty || 'medium') === 'hard'
+                      ? 'rgba(239, 68, 68, 0.15)'
+                      : 'rgba(2, 132, 199, 0.15)',
+                  color:
+                    (settings.difficulty || 'medium') === 'easy'
+                      ? '#16a34a'
+                      : (settings.difficulty || 'medium') === 'hard'
+                      ? '#dc2626'
+                      : '#0284c7',
+                  border: `1px solid ${
+                    (settings.difficulty || 'medium') === 'easy'
+                      ? 'rgba(34, 197, 94, 0.3)'
+                      : (settings.difficulty || 'medium') === 'hard'
+                      ? 'rgba(239, 68, 68, 0.3)'
+                      : 'rgba(2, 132, 199, 0.3)'
+                  }`,
+                  textTransform: 'uppercase'
+                }}
+              >
+                {settings.difficulty || 'medium'}
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {[
+                {
+                  id: 'easy' as DifficultyLevel,
+                  label: 'EASY',
+                  desc: 'Enemy HP -35%, DMG -50%, Slower',
+                  icon: <Shield size={16} />,
+                  color: '#16a34a',
+                  activeBg: 'rgba(34, 197, 94, 0.14)',
+                  activeBorder: '#16a34a'
+                },
+                {
+                  id: 'medium' as DifficultyLevel,
+                  label: 'MEDIUM',
+                  desc: 'Standard combat simulation balance',
+                  icon: <Flame size={16} />,
+                  color: '#0284c7',
+                  activeBg: 'rgba(2, 132, 199, 0.14)',
+                  activeBorder: '#0284c7'
+                },
+                {
+                  id: 'hard' as DifficultyLevel,
+                  label: 'HARD',
+                  desc: 'Enemy HP +40%, DMG +50%, Faster',
+                  icon: <Skull size={16} />,
+                  color: '#dc2626',
+                  activeBg: 'rgba(239, 68, 68, 0.14)',
+                  activeBorder: '#dc2626'
+                }
+              ].map((lvl) => {
+                const isSelected = (settings.difficulty || 'medium') === lvl.id;
+                return (
+                  <button
+                    key={lvl.id}
+                    type="button"
+                    onClick={() => updateSetting('difficulty', lvl.id)}
+                    className="glass-panel"
+                    style={{
+                      padding: '10px 8px',
+                      border: isSelected ? `2px solid ${lvl.activeBorder}` : '1px solid rgba(15, 23, 42, 0.12)',
+                      background: isSelected ? lvl.activeBg : 'rgba(255, 255, 255, 0.85)',
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease',
+                      boxShadow: isSelected ? `0 4px 12px ${lvl.activeBg}` : 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: isSelected ? lvl.color : '#64748b' }}>
+                      {lvl.icon}
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 900 }}>
+                        {lvl.label}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '0.67rem', color: isSelected ? '#334155' : '#94a3b8', textAlign: 'center', lineHeight: 1.25, fontWeight: 500 }}>
+                      {lvl.desc}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Touch Sensitivity (for mobile) */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 700 }}>
