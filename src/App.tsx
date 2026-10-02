@@ -181,6 +181,7 @@ export const App: React.FC = () => {
             isAimingSniper={isAimingSniper}
             onSwitchWeapon={handleSwitchWeapon}
             onPause={() => engineRef.current?.pauseGame()}
+            isMobile={isMobileDevice}
           />
         </>
       )}

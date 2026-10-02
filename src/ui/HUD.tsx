@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Shield,
   Heart,
@@ -10,9 +10,6 @@ import {
   Pause,
   Maximize,
   Minimize,
-  ChevronDown,
-  Crosshair,
-  Check,
   RotateCw
 } from 'lucide-react';
 import { WeaponId, PowerupActiveState, HitMarkerInfo, FloatingDamageNumber, GameSettings } from '../types/game';
@@ -46,6 +43,7 @@ interface HUDProps {
   isAimingSniper: boolean;
   onSwitchWeapon: (id: WeaponId) => void;
   onPause?: () => void;
+  isMobile?: boolean;
 }
 
 export const HUD: React.FC<HUDProps> = ({
@@ -57,42 +55,48 @@ export const HUD: React.FC<HUDProps> = ({
   settings,
   isAimingSniper,
   onSwitchWeapon,
-  onPause
+  onPause,
+  isMobile
 }) => {
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
   const [showHitmarker, setShowHitmarker] = useState(false);
   const [hitmarkerCrit, setHitmarkerCrit] = useState(false);
-  const [isWeaponMenuOpen, setIsWeaponMenuOpen] = useState(false);
+  const lastCycleTimeRef = useRef<number>(0);
 
   const WEAPON_LIST: WeaponId[] = ['assault_rifle', 'shotgun', 'smg', 'sniper', 'plasma_rifle'];
+
+  const isMobileView = Boolean(isMobile) || (typeof window !== 'undefined' && (
+    ('ontouchstart' in window) ||
+    (navigator.maxTouchPoints > 0) ||
+    window.matchMedia('(pointer: coarse)').matches ||
+    (window.innerWidth <= 1024 && window.innerHeight <= 600)
+  ));
 
   const currentWeaponIdx = WEAPON_LIST.indexOf(stats.activeWeaponId);
   const nextWeaponIdx = (currentWeaponIdx + 1) % WEAPON_LIST.length;
   const nextWeapon = BASE_WEAPONS[WEAPON_LIST[nextWeaponIdx]];
 
-  const handleCycleWeaponNext = (e?: React.MouseEvent | React.TouchEvent) => {
+  const handleCycleWeaponNext = (e?: React.SyntheticEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
+    const now = Date.now();
+    if (now - lastCycleTimeRef.current < 220) {
+      return;
+    }
+    lastCycleTimeRef.current = now;
+
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(15);
+      } catch {}
+    }
+
     onSwitchWeapon(WEAPON_LIST[nextWeaponIdx]);
   };
 
-  useEffect(() => {
-    if (!isWeaponMenuOpen) return;
-    const handleClose = (e: MouseEvent | TouchEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target?.closest?.('.hud-weapon-dropdown-container')) {
-        setIsWeaponMenuOpen(false);
-      }
-    };
-    window.addEventListener('mousedown', handleClose);
-    window.addEventListener('touchstart', handleClose);
-    return () => {
-      window.removeEventListener('mousedown', handleClose);
-      window.removeEventListener('touchstart', handleClose);
-    };
-  }, [isWeaponMenuOpen]);
+
 
   useEffect(() => {
     if (hitMarker) {
@@ -553,185 +557,114 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* BOTTOM RIGHT: WEAPONS INVENTORY & AMMO */}
       <div className="hud-weapon-panel" style={{ pointerEvents: 'auto', zIndex: 60 }}>
-        {/* DESKTOP VIEW: Tactical Dropdown Selector */}
-        <div className="hud-weapon-desktop-dropdown hud-weapon-dropdown-container" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-          {/* Dropdown Header Pill (Click to toggle options) */}
+        {isMobileView ? (
+          /* MOBILE VIEW: Single One-Tap Weapon Cycler Button (1 click -> next weapon) */
           <button
             type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsWeaponMenuOpen(prev => !prev);
-            }}
-            className="hud-weapon-dropdown-wrapper"
-            style={{ cursor: 'pointer', outline: 'none' }}
-            aria-label="Select Weapon"
-          >
-            <div className="hud-dropdown-icon">
-              <Crosshair size={14} color="#0284c7" />
-            </div>
-            <div className="hud-dropdown-content">
-              <span className="hud-dropdown-tag">WEAPON</span>
-              <span className="hud-dropdown-val">
-                [{currentWeaponIdx + 1}] {activeWeapon.name}
-              </span>
-            </div>
-            <ChevronDown
-              size={14}
-              color="#0284c7"
-              className="hud-select-arrow"
-              style={{
-                transform: isWeaponMenuOpen ? 'rotate(180deg)' : 'none',
-                transition: 'transform 0.2s ease'
-              }}
-            />
-          </button>
-
-          {/* REAL VERTICAL DROPDOWN MENU (PULSE, BREAKER, VIPER, VALKYRIE, HELIOS) */}
-          {isWeaponMenuOpen && (
-            <div
-              className="hud-weapon-dropdown-menu"
-              style={{
-                position: 'absolute',
-                bottom: 'calc(100% + 8px)',
-                right: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 5,
-                padding: 8,
-                background: 'rgba(255, 255, 255, 0.98)',
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
-                borderRadius: 14,
-                border: '1.5px solid rgba(2, 132, 199, 0.45)',
-                boxShadow: '0 10px 32px rgba(15, 23, 42, 0.3)',
-                minWidth: 220,
-                zIndex: 120,
-                pointerEvents: 'auto'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 6px 4px', borderBottom: '1px solid rgba(15, 23, 42, 0.08)' }}>
-                <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#0284c7', letterSpacing: '0.06em' }}>
-                  SELECT WEAPON
-                </span>
-                <span style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 600 }}>KEY [1-5]</span>
-              </div>
-
-              {WEAPON_LIST.map((wId, idx) => {
-                const w = BASE_WEAPONS[wId];
-                const isCurrent = (wId === stats.activeWeaponId);
-                return (
-                  <button
-                    key={wId}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onSwitchWeapon(wId);
-                      setIsWeaponMenuOpen(false);
-                    }}
-                    className="hud-weapon-option-btn"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 10,
-                      padding: '7px 10px',
-                      borderRadius: 8,
-                      border: isCurrent ? '1.5px solid #0284c7' : '1px solid rgba(15, 23, 42, 0.08)',
-                      background: isCurrent ? 'rgba(2, 132, 199, 0.15)' : 'rgba(255, 255, 255, 0.85)',
-                      cursor: 'pointer',
-                      transition: 'all 0.12s ease',
-                      textAlign: 'left',
-                      outline: 'none'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      <span style={{
-                        fontSize: '0.72rem',
-                        fontFamily: 'var(--font-display)',
-                        fontWeight: 800,
-                        color: isCurrent ? '#0284c7' : '#94a3b8'
-                      }}>
-                        [{idx + 1}]
-                      </span>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{
-                          fontFamily: 'var(--font-display)',
-                          fontSize: '0.82rem',
-                          fontWeight: isCurrent ? 800 : 700,
-                          color: isCurrent ? '#0284c7' : '#0f172a',
-                          lineHeight: 1.1
-                        }}>
-                          {w.name}
-                        </span>
-                        <span style={{ fontSize: '0.62rem', color: '#64748b', textTransform: 'uppercase', marginTop: 1 }}>
-                          {w.category}
-                        </span>
-                      </div>
-                    </div>
-                    {isCurrent && (
-                      <Check size={15} color="#0284c7" strokeWidth={3} />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* MOBILE VIEW: Single One-Tap Weapon Cycler Button (1 click -> next weapon) */}
-        <button
-          type="button"
-          onClick={handleCycleWeaponNext}
-          onTouchEnd={handleCycleWeaponNext}
-          className="hud-weapon-mobile-cycler"
-          aria-label="Switch Weapon"
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'none' }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#ffffff',
-                boxShadow: '0 2px 8px rgba(2, 132, 199, 0.4)',
-                flexShrink: 0
-              }}
-            >
-              <RotateCw size={17} strokeWidth={2.5} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#0284c7', letterSpacing: '0.04em', lineHeight: 1 }}>
-                WEAPON [{currentWeaponIdx + 1}/5]
-              </span>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.15 }}>
-                {activeWeapon.name.split(' ')[0]}
-              </span>
-            </div>
-          </div>
-
-          <div
+            onClick={handleCycleWeaponNext}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={handleCycleWeaponNext}
+            className="hud-weapon-mobile-cycler"
             style={{
-              padding: '3px 8px',
-              borderRadius: 6,
-              background: 'rgba(2, 132, 199, 0.12)',
-              border: '1px solid rgba(2, 132, 199, 0.3)',
               display: 'flex',
               alignItems: 'center',
-              gap: 3,
-              pointerEvents: 'none'
+              justifyContent: 'space-between',
+              gap: 12,
+              padding: '8px 14px',
+              background: 'rgba(255, 255, 255, 0.96)',
+              border: '2px solid #0284c7',
+              borderRadius: 14,
+              boxShadow: '0 4px 20px rgba(2, 132, 199, 0.35)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              cursor: 'pointer',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              touchAction: 'manipulation',
+              pointerEvents: 'auto',
+              minWidth: 185
             }}
+            aria-label="Switch Weapon"
           >
-            <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#0284c7' }}>
-              NEXT: {nextWeapon.name.split(' ')[0]} ➔
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, pointerEvents: 'none' }}>
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#ffffff',
+                  boxShadow: '0 2px 10px rgba(2, 132, 199, 0.4)',
+                  flexShrink: 0
+                }}
+              >
+                <RotateCw size={18} strokeWidth={2.6} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#0284c7', letterSpacing: '0.06em', lineHeight: 1 }}>
+                  WEAPON [{currentWeaponIdx + 1}/5] • TAP
+                </span>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.92rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.15 }}>
+                  {activeWeapon.name}
+                </span>
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '4px 10px',
+                borderRadius: 8,
+                background: 'rgba(2, 132, 199, 0.12)',
+                border: '1.5px solid rgba(2, 132, 199, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                pointerEvents: 'none'
+              }}
+            >
+              <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#0284c7' }}>
+                NEXT: {nextWeapon.name.split(' ')[0]} ➔
+              </span>
+            </div>
+          </button>
+        ) : (
+          /* DESKTOP VIEW: WEAPON SLOTS [1-5] (Keys 1, 2, 3, 4, 5 or Click) */
+          <div className="hud-weapon-slots" style={{ display: 'flex', gap: 6, pointerEvents: 'auto' }}>
+            {WEAPON_LIST.map((wId, idx) => {
+              const w = BASE_WEAPONS[wId];
+              const isCurrent = (wId === stats.activeWeaponId);
+              return (
+                <div
+                  key={wId}
+                  onClick={() => onSwitchWeapon(wId)}
+                  className="glass-panel"
+                  style={{
+                    padding: '6px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    cursor: 'pointer',
+                    border: isCurrent ? '1.5px solid #0284c7' : '1px solid rgba(15, 23, 42, 0.1)',
+                    background: isCurrent ? 'rgba(2, 132, 199, 0.18)' : 'rgba(255, 255, 255, 0.88)',
+                    transform: isCurrent ? 'translateY(-3px)' : 'none',
+                    boxShadow: isCurrent ? '0 4px 15px rgba(2, 132, 199, 0.3)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span style={{ fontSize: '0.75rem', color: isCurrent ? '#0284c7' : '#94a3b8', fontWeight: 800 }}>
+                    [{idx + 1}]
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.82rem', color: isCurrent ? '#0f172a' : '#64748b', fontWeight: isCurrent ? 800 : 600 }}>
+                    {w.name.split(' ')[0]}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-        </button>
+        )}
 
         {/* Current Weapon Stats & Ammo Counter Card */}
         <div

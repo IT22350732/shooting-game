@@ -254,82 +254,38 @@ canvas {
   pointer-events: auto;
 }
 
-/* In-Game Right Corner Tactical Weapon Dropdown (Vertical Options) */
-.hud-weapon-dropdown-wrapper {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1.5px solid rgba(2, 132, 199, 0.4);
-  border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  user-select: none;
+/* In-Game Weapon Switcher */
+.hud-weapon-slots {
+  display: flex;
+  gap: 6px;
   pointer-events: auto;
 }
 
-.hud-weapon-dropdown-wrapper:hover,
-.hud-weapon-dropdown-wrapper:active {
-  border-color: #0284c7;
-  box-shadow: 0 4px 18px rgba(2, 132, 199, 0.3);
-  transform: translateY(-1px);
-}
-
-.hud-dropdown-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.hud-dropdown-content {
-  display: flex;
-  flex-direction: column;
-  pointer-events: none;
-}
-
-.hud-dropdown-tag {
-  font-family: var(--font-display);
-  font-size: 0.58rem;
-  font-weight: 800;
-  color: #0284c7;
-  letter-spacing: 0.05em;
-  line-height: 1;
-}
-
-.hud-dropdown-val {
-  font-family: var(--font-display);
-  font-size: 0.82rem;
-  font-weight: 800;
-  color: #0f172a;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-.hud-select-arrow {
-  margin-left: 4px;
-  pointer-events: none;
-}
-
-.hud-weapon-option-btn:hover,
-.hud-weapon-option-btn:active {
-  background: rgba(2, 132, 199, 0.12) !important;
-  border-color: #0284c7 !important;
-  transform: translateX(-2px);
-}
-
-/* Desktop Weapon Dropdown & Mobile Cycler */
-.hud-weapon-desktop-dropdown {
-  display: flex;
-}
-
 .hud-weapon-mobile-cycler {
-  display: none;
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 2px solid #0284c7;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(2, 132, 199, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  pointer-events: auto !important;
+  z-index: 100 !important;
+  min-width: 180px;
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+
+.hud-weapon-mobile-cycler:active {
+  transform: scale(0.96);
+  background: rgba(2, 132, 199, 0.18) !important;
 }
 
 /* Tablets and Mobile Phones (< 840px) */
@@ -341,7 +297,7 @@ canvas {
   }
 
   .hud-health-panel {
-    bottom: calc(var(--safe-bottom) + 165px) !important;
+    bottom: calc(var(--safe-bottom) + 155px) !important;
     left: calc(var(--safe-left) + 14px) !important;
     min-width: 160px !important;
     max-width: 190px !important;
@@ -358,65 +314,10 @@ canvas {
   }
 
   .hud-weapon-panel {
-    bottom: calc(var(--safe-bottom) + 165px) !important;
+    bottom: calc(var(--safe-bottom) + 155px) !important;
     right: calc(var(--safe-right) + 14px) !important;
     gap: 6px !important;
-  }
-
-  /* Hide Desktop Dropdown on Mobile, Show One-Tap Mobile Cycler Button */
-  .hud-weapon-desktop-dropdown {
-    display: none !important;
-  }
-
-  .hud-weapon-mobile-cycler {
-    display: flex !important;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 7px 12px !important;
-    background: rgba(255, 255, 255, 0.96) !important;
-    border: 1.5px solid #0284c7 !important;
-    border-radius: 12px !important;
-    box-shadow: 0 4px 18px rgba(2, 132, 199, 0.25) !important;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    cursor: pointer;
-    user-select: none;
-    -webkit-user-select: none;
-    touch-action: manipulation;
-    pointer-events: auto !important;
-    z-index: 100 !important;
-    min-width: 175px;
-    transition: transform 0.1s ease, background 0.15s ease;
-  }
-
-  .hud-weapon-mobile-cycler:active {
-    transform: scale(0.96);
-    background: rgba(2, 132, 199, 0.18) !important;
-  }
-
-  .hud-weapon-dropdown-wrapper {
-    padding: 6px 10px !important;
-    gap: 6px !important;
-    border-radius: 10px !important;
-  }
-
-  .hud-dropdown-tag {
-    font-size: 0.52rem !important;
-  }
-
-  .hud-dropdown-val {
-    font-size: 0.76rem !important;
-  }
-
-  .hud-weapon-dropdown-menu {
-    min-width: 195px !important;
-    padding: 6px !important;
-    gap: 4px !important;
-  }
-
-  .hud-weapon-option-btn {
-    padding: 5px 8px !important;
+    z-index: 65 !important;
   }
 
   .hud-weapon-card {
@@ -453,23 +354,24 @@ canvas {
 /* Compact Landscape View (Landscape Mobile, e.g. height <= 520px) */
 @media (max-height: 520px) {
   .hud-health-panel {
-    bottom: calc(var(--safe-bottom) + 130px) !important;
-    left: calc(var(--safe-left) + 14px) !important;
-    min-width: 150px !important;
-    max-width: 180px !important;
+    bottom: calc(var(--safe-bottom) + 120px) !important;
+    left: calc(var(--safe-left) + 12px) !important;
+    min-width: 145px !important;
+    max-width: 175px !important;
     padding: 6px 10px !important;
     gap: 4px !important;
   }
 
   .hud-weapon-panel {
-    bottom: calc(var(--safe-bottom) + 130px) !important;
-    right: calc(var(--safe-right) + 14px) !important;
+    bottom: calc(var(--safe-bottom) + 120px) !important;
+    right: calc(var(--safe-right) + 12px) !important;
     gap: 4px !important;
+    z-index: 65 !important;
   }
 
-  .hud-weapon-dropdown-wrapper {
-    padding: 5px 8px !important;
-    gap: 5px !important;
+  .hud-weapon-mobile-cycler {
+    padding: 6px 10px !important;
+    min-width: 165px !important;
   }
 
   .hud-weapon-card {
