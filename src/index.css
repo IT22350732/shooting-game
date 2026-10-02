@@ -389,15 +389,16 @@ canvas {
   flex-shrink: 0;
 }
 
-/* Tactical Corner Selectors (Dropdowns) */
+/* Tactical Right-Side Corner Selectors (Vertical Dropdowns) */
 .menu-corner-selectors {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 10px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 6px;
   z-index: 20;
   position: relative;
-  align-self: flex-start;
+  align-self: flex-end;
 }
 
 .menu-dropdown-wrapper {
@@ -570,17 +571,21 @@ canvas {
   }
 
   .menu-corner-selectors {
-    width: 100% !important;
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 8px !important;
+    width: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    gap: 6px !important;
     margin-top: 4px !important;
+    align-self: flex-end !important;
   }
 
   .menu-dropdown-wrapper {
-    width: 100% !important;
+    width: auto !important;
+    min-width: 150px !important;
+    max-width: 200px !important;
     justify-content: space-between !important;
-    padding: 8px 10px !important;
+    padding: 6px 10px !important;
   }
 
   .menu-mission-card {
