@@ -323,6 +323,15 @@ canvas {
   transform: translateX(-2px);
 }
 
+/* Desktop Weapon Dropdown & Mobile Cycler */
+.hud-weapon-desktop-dropdown {
+  display: flex;
+}
+
+.hud-weapon-mobile-cycler {
+  display: none;
+}
+
 /* Tablets and Mobile Phones (< 840px) */
 @media (max-width: 840px) {
   .btn-cyber {
@@ -352,6 +361,38 @@ canvas {
     bottom: calc(var(--safe-bottom) + 165px) !important;
     right: calc(var(--safe-right) + 14px) !important;
     gap: 6px !important;
+  }
+
+  /* Hide Desktop Dropdown on Mobile, Show One-Tap Mobile Cycler Button */
+  .hud-weapon-desktop-dropdown {
+    display: none !important;
+  }
+
+  .hud-weapon-mobile-cycler {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 12px !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    border: 1.5px solid #0284c7 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 18px rgba(2, 132, 199, 0.25) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    pointer-events: auto !important;
+    z-index: 100 !important;
+    min-width: 175px;
+    transition: transform 0.1s ease, background 0.15s ease;
+  }
+
+  .hud-weapon-mobile-cycler:active {
+    transform: scale(0.96);
+    background: rgba(2, 132, 199, 0.18) !important;
   }
 
   .hud-weapon-dropdown-wrapper {

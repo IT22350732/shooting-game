@@ -447,6 +447,43 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
             <Zap size={20} fill={isSprintLocked ? '#ffffff' : 'none'} />
           </button>
 
+          {/* Quick Weapon Switch Button */}
+          <button
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              triggerHaptic(12);
+              engine?.cycleWeapon(1);
+            }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              triggerHaptic(12);
+              engine?.cycleWeapon(1);
+            }}
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: '50%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.5), rgba(56, 189, 248, 0.4))',
+              border: '2px solid #38bdf8',
+              color: '#ffffff',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              boxShadow: '0 4px 15px rgba(2, 132, 199, 0.4)',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            aria-label="Cycle Weapon"
+          >
+            <RotateCw size={17} strokeWidth={2.5} />
+            <span style={{ fontSize: '0.48rem', fontWeight: 900, fontFamily: 'var(--font-display)', marginTop: 1, letterSpacing: '0.04em' }}>GUN</span>
+          </button>
+
           {/* Reload Button */}
           <button
             onTouchStart={handleReload}

@@ -12,7 +12,8 @@ import {
   Minimize,
   ChevronDown,
   Crosshair,
-  Check
+  Check,
+  RotateCw
 } from 'lucide-react';
 import { WeaponId, PowerupActiveState, HitMarkerInfo, FloatingDamageNumber, GameSettings } from '../types/game';
 import { BASE_WEAPONS } from '../game/entities/Weapon';
@@ -64,6 +65,18 @@ export const HUD: React.FC<HUDProps> = ({
   const [isWeaponMenuOpen, setIsWeaponMenuOpen] = useState(false);
 
   const WEAPON_LIST: WeaponId[] = ['assault_rifle', 'shotgun', 'smg', 'sniper', 'plasma_rifle'];
+
+  const currentWeaponIdx = WEAPON_LIST.indexOf(stats.activeWeaponId);
+  const nextWeaponIdx = (currentWeaponIdx + 1) % WEAPON_LIST.length;
+  const nextWeapon = BASE_WEAPONS[WEAPON_LIST[nextWeaponIdx]];
+
+  const handleCycleWeaponNext = (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    onSwitchWeapon(WEAPON_LIST[nextWeaponIdx]);
+  };
 
   useEffect(() => {
     if (!isWeaponMenuOpen) return;
@@ -540,17 +553,12 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* BOTTOM RIGHT: WEAPONS INVENTORY & AMMO */}
       <div className="hud-weapon-panel" style={{ pointerEvents: 'auto', zIndex: 60 }}>
-        {/* RIGHT CORNER WEAPON DROPDOWN CONTAINER */}
-        <div className="hud-weapon-dropdown-container" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+        {/* DESKTOP VIEW: Tactical Dropdown Selector */}
+        <div className="hud-weapon-desktop-dropdown hud-weapon-dropdown-container" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
           {/* Dropdown Header Pill (Click to toggle options) */}
           <button
             type="button"
             onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsWeaponMenuOpen(prev => !prev);
-            }}
-            onTouchEnd={(e) => {
               e.preventDefault();
               e.stopPropagation();
               setIsWeaponMenuOpen(prev => !prev);
@@ -565,7 +573,7 @@ export const HUD: React.FC<HUDProps> = ({
             <div className="hud-dropdown-content">
               <span className="hud-dropdown-tag">WEAPON</span>
               <span className="hud-dropdown-val">
-                [{WEAPON_LIST.indexOf(stats.activeWeaponId) + 1}] {activeWeapon.name}
+                [{currentWeaponIdx + 1}] {activeWeapon.name}
               </span>
             </div>
             <ChevronDown
@@ -622,12 +630,6 @@ export const HUD: React.FC<HUDProps> = ({
                       onSwitchWeapon(wId);
                       setIsWeaponMenuOpen(false);
                     }}
-                    onTouchEnd={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onSwitchWeapon(wId);
-                      setIsWeaponMenuOpen(false);
-                    }}
                     className="hud-weapon-option-btn"
                     style={{
                       display: 'flex',
@@ -677,6 +679,59 @@ export const HUD: React.FC<HUDProps> = ({
             </div>
           )}
         </div>
+
+        {/* MOBILE VIEW: Single One-Tap Weapon Cycler Button (1 click -> next weapon) */}
+        <button
+          type="button"
+          onClick={handleCycleWeaponNext}
+          onTouchEnd={handleCycleWeaponNext}
+          className="hud-weapon-mobile-cycler"
+          aria-label="Switch Weapon"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'none' }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                boxShadow: '0 2px 8px rgba(2, 132, 199, 0.4)',
+                flexShrink: 0
+              }}
+            >
+              <RotateCw size={17} strokeWidth={2.5} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#0284c7', letterSpacing: '0.04em', lineHeight: 1 }}>
+                WEAPON [{currentWeaponIdx + 1}/5]
+              </span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.15 }}>
+                {activeWeapon.name.split(' ')[0]}
+              </span>
+            </div>
+          </div>
+
+          <div
+            style={{
+              padding: '3px 8px',
+              borderRadius: 6,
+              background: 'rgba(2, 132, 199, 0.12)',
+              border: '1px solid rgba(2, 132, 199, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3,
+              pointerEvents: 'none'
+            }}
+          >
+            <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#0284c7' }}>
+              NEXT: {nextWeapon.name.split(' ')[0]} ➔
+            </span>
+          </div>
+        </button>
 
         {/* Current Weapon Stats & Ammo Counter Card */}
         <div
