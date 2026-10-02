@@ -7,6 +7,24 @@ import * as THREE from 'three';
 export class TextureGenerator {
   private static cache: Map<string, THREE.CanvasTexture> = new Map();
 
+  private static finalizeTexture(
+    texture: THREE.CanvasTexture,
+    wrap: boolean = true,
+    repeatX: number = 1,
+    repeatY: number = 1
+  ): THREE.CanvasTexture {
+    if (wrap) {
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(repeatX, repeatY);
+    }
+    texture.anisotropy = 16;
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    return texture;
+  }
+
   /**
    * High-tech white hexagonal ceramic tiles with subtle cyan illumination
    */
@@ -45,10 +63,7 @@ export class TextureGenerator {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, size, size);
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(12, 12);
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 12, 12);
     this.cache.set(key, texture);
     return texture;
   }
@@ -96,10 +111,7 @@ export class TextureGenerator {
       }
     }
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(4, 4);
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 4, 4);
     this.cache.set(key, texture);
     return texture;
   }
@@ -129,10 +141,7 @@ export class TextureGenerator {
       }
     }
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(6, 6);
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 6, 6);
     this.cache.set(key, texture);
     return texture;
   }
@@ -164,7 +173,7 @@ export class TextureGenerator {
     ctx.shadowBlur = 0;
     ctx.fillText(`/${maxAmmo}`, 96, 36);
 
-    const texture = new THREE.CanvasTexture(canvas);
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), false);
     return texture;
   }
 
@@ -205,10 +214,7 @@ export class TextureGenerator {
       }
     }
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(4, 4);
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 4, 4);
     this.cache.set(key, texture);
     return texture;
   }
@@ -250,16 +256,13 @@ export class TextureGenerator {
       }
     }
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(4, 4);
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 4, 4);
     this.cache.set(key, texture);
     return texture;
   }
 
   /**
-   * Real Asphalt Road with Lane Markings & Crosswalk
+   * Real Asphalt Road Pavement Texture (Seamless, fine grain, micro-aggregate)
    */
   public static createAsphaltRoadTexture(): THREE.CanvasTexture {
     const key = 'asphalt_road';
@@ -271,37 +274,36 @@ export class TextureGenerator {
     canvas.height = size;
     const ctx = canvas.getContext('2d')!;
 
-    // Dark gritty asphalt base
-    ctx.fillStyle = '#262626';
+    // Rich dark charcoal asphalt base
+    ctx.fillStyle = '#212327';
     ctx.fillRect(0, 0, size, size);
 
-    // Subtle grain noise
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-    for (let i = 0; i < 3000; i++) {
+    // Fine mineral aggregate grain & specks
+    for (let i = 0; i < 6000; i++) {
+      const shade = Math.floor(25 + Math.random() * 35);
+      ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade + 3})`;
+      ctx.fillRect(Math.random() * size, Math.random() * size, 1 + Math.random() * 2, 1 + Math.random() * 2);
+    }
+
+    // Light stone flecks
+    ctx.fillStyle = 'rgba(200, 210, 225, 0.08)';
+    for (let i = 0; i < 1200; i++) {
       ctx.fillRect(Math.random() * size, Math.random() * size, 2, 2);
     }
 
-    // Yellow double center line
-    ctx.fillStyle = '#eab308';
-    ctx.fillRect(size / 2 - 5, 0, 3, size);
-    ctx.fillRect(size / 2 + 2, 0, 3, size);
-
-    // White dashed lane borders
-    ctx.fillStyle = '#ffffff';
-    for (let y = 0; y < size; y += 48) {
-      ctx.fillRect(size * 0.15, y, 4, 28);
-      ctx.fillRect(size * 0.85 - 4, y, 4, 28);
+    // Subtle tar streaks & pavement patches
+    ctx.fillStyle = 'rgba(15, 17, 20, 0.15)';
+    for (let i = 0; i < 35; i++) {
+      const rx = Math.random() * size;
+      const ry = Math.random() * size;
+      const rw = 20 + Math.random() * 40;
+      const rh = 10 + Math.random() * 20;
+      ctx.beginPath();
+      ctx.ellipse(rx, ry, rw, rh, Math.random() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
     }
 
-    // White Zebra Crosswalk stripes near bottom
-    ctx.fillStyle = '#ffffff';
-    for (let x = size * 0.15; x < size * 0.85; x += 36) {
-      ctx.fillRect(x, size - 70, 20, 50);
-    }
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 4, 4);
     this.cache.set(key, texture);
     return texture;
   }
@@ -339,10 +341,7 @@ export class TextureGenerator {
       ctx.stroke();
     }
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(6, 6);
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 6, 6);
     this.cache.set(key, texture);
     return texture;
   }
@@ -405,9 +404,7 @@ export class TextureGenerator {
       }
     }
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 1, 1);
     this.cache.set(key, texture);
     return texture;
   }
@@ -438,10 +435,7 @@ export class TextureGenerator {
       ctx.fillRect(0, y, size, 1.5);
     }
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(2, 4);
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 2, 4);
     this.cache.set(key, texture);
     return texture;
   }
@@ -474,10 +468,7 @@ export class TextureGenerator {
       ctx.fillRect(x, 0, w, size);
     }
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(4, 4);
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 4, 4);
     this.cache.set(key, texture);
     return texture;
   }
@@ -507,10 +498,7 @@ export class TextureGenerator {
       ctx.fillRect(Math.random() * size, Math.random() * size, 2, 2);
     }
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(8, 8);
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 12, 12);
     this.cache.set(key, texture);
     return texture;
   }
@@ -540,10 +528,7 @@ export class TextureGenerator {
       ctx.fillRect(Math.random() * size, Math.random() * size, 2, 2);
     }
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(4, 4);
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 4, 4);
     this.cache.set(key, texture);
     return texture;
   }

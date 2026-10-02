@@ -88,8 +88,9 @@ export class ArenaManager {
     sun.shadow.camera.right = d;
     sun.shadow.camera.top = d;
     sun.shadow.camera.bottom = -d;
-    sun.shadow.bias = -0.0005;
-    sun.shadow.radius = 2.0;
+    sun.shadow.bias = -0.00008;
+    sun.shadow.normalBias = 0.04;
+    sun.shadow.radius = 1.5;
     this.arenaGroup.add(sun);
 
     // Green Grass Lawn Ground Base
@@ -105,32 +106,11 @@ export class ArenaManager {
     ground.receiveShadow = true;
     this.arenaGroup.add(ground);
 
-    // Real Intersecting Two-Lane Asphalt Streets (X & Z axes)
-    const roadTex = TextureGenerator.createAsphaltRoadTexture();
-    const roadMat = new THREE.MeshStandardMaterial({
-      map: roadTex,
-      roughness: 0.7,
-      metalness: 0.1
-    });
-
-    // Main East-West Street
-    const roadXGeo = new THREE.PlaneGeometry(this.arenaSize, 12);
-    roadXGeo.rotateX(-Math.PI / 2);
-    const roadX = new THREE.Mesh(roadXGeo, roadMat);
-    roadX.position.y = 0.02;
-    roadX.receiveShadow = true;
-    this.arenaGroup.add(roadX);
-
-    // Main North-South Street
-    const roadZGeo = new THREE.PlaneGeometry(12, this.arenaSize);
-    roadZGeo.rotateX(-Math.PI / 2);
-    const roadZ = new THREE.Mesh(roadZGeo, roadMat);
-    roadZ.position.y = 0.02;
-    roadZ.receiveShadow = true;
-    this.arenaGroup.add(roadZ);
+    // Seamless Intersecting Asphalt Streets with Vector-Sharp Markings (Zero Z-Fighting)
+    this.createStreetSystem(12);
 
     // Concrete Sidewalks bordering the streets
-    this.createSidewalkBorder();
+    this.createSidewalkBorder(12);
 
     // REAL HOUSES IN THE 4 NEIGHBORHOOD SECTORS
     // House 1 (North-West): 2-Story Red Brick Suburban Family House
@@ -200,7 +180,9 @@ export class ArenaManager {
     sun.shadow.camera.right = d;
     sun.shadow.camera.top = d;
     sun.shadow.camera.bottom = -d;
-    sun.shadow.bias = -0.0005;
+    sun.shadow.bias = -0.00008;
+    sun.shadow.normalBias = 0.04;
+    sun.shadow.radius = 1.5;
     this.arenaGroup.add(sun);
 
     // Urban Concrete Plaza & Sidewalk Ground
@@ -216,19 +198,9 @@ export class ArenaManager {
     ground.receiveShadow = true;
     this.arenaGroup.add(ground);
 
-    // Wide 4-Lane City Avenue & Intersecting Street
-    const roadTex = TextureGenerator.createAsphaltRoadTexture();
-    const roadMat = new THREE.MeshStandardMaterial({ map: roadTex, roughness: 0.65 });
-
-    const avenueX = new THREE.Mesh(new THREE.PlaneGeometry(this.arenaSize, 14).rotateX(-Math.PI / 2), roadMat);
-    avenueX.position.y = 0.02;
-    avenueX.receiveShadow = true;
-    this.arenaGroup.add(avenueX);
-
-    const avenueZ = new THREE.Mesh(new THREE.PlaneGeometry(14, this.arenaSize).rotateX(-Math.PI / 2), roadMat);
-    avenueZ.position.y = 0.02;
-    avenueZ.receiveShadow = true;
-    this.arenaGroup.add(avenueZ);
+    // Wide 4-Lane City Avenue & Intersecting Street with Vector-Sharp Markings (Zero Z-Fighting)
+    this.createStreetSystem(14);
+    this.createSidewalkBorder(14);
 
     // REAL MULTI-STORY BUILDINGS IN THE 4 CITY CORNERS
     // Building 1 (NW): 6-Story Commercial Office with Ground-floor "CAFE APEX" with Green Awning
@@ -291,7 +263,9 @@ export class ArenaManager {
     sun.shadow.camera.right = d;
     sun.shadow.camera.top = d;
     sun.shadow.camera.bottom = -d;
-    sun.shadow.bias = -0.0005;
+    sun.shadow.bias = -0.00008;
+    sun.shadow.normalBias = 0.04;
+    sun.shadow.radius = 1.5;
     this.arenaGroup.add(sun);
 
     // Warm Desert Sandstone Ground
@@ -365,7 +339,9 @@ export class ArenaManager {
     sun.shadow.camera.right = d;
     sun.shadow.camera.top = d;
     sun.shadow.camera.bottom = -d;
-    sun.shadow.bias = -0.0005;
+    sun.shadow.bias = -0.00008;
+    sun.shadow.normalBias = 0.04;
+    sun.shadow.radius = 1.5;
     this.arenaGroup.add(sun);
 
     // Paved Concrete Industrial Depot Floor
@@ -1091,22 +1067,141 @@ export class ArenaManager {
   }
 
   /**
+   * Seamless 4-way asphalt street system with vector-sharp procedural markings
+   * Zero overlapping geometry (no Z-fighting) and realistic road markings
+   */
+  private createStreetSystem(streetWidth: number = 12) {
+    const half = this.arenaSize / 2;
+    const iHalf = streetWidth / 2;
+    const armLength = half - iHalf;
+
+    const roadTex = TextureGenerator.createAsphaltRoadTexture();
+    const roadMat = new THREE.MeshStandardMaterial({
+      map: roadTex,
+      roughness: 0.72,
+      metalness: 0.08
+    });
+
+    // 1. North-South Continuous Street (covers center intersection [-iHalf, iHalf])
+    const roadZGeo = new THREE.PlaneGeometry(streetWidth, this.arenaSize);
+    roadZGeo.rotateX(-Math.PI / 2);
+    const roadZ = new THREE.Mesh(roadZGeo, roadMat);
+    roadZ.position.set(0, 0.02, 0);
+    roadZ.receiveShadow = true;
+    this.arenaGroup.add(roadZ);
+
+    // 2. West Street Arm (runs from -half to -iHalf, no overlap with center)
+    const roadWestGeo = new THREE.PlaneGeometry(armLength, streetWidth);
+    roadWestGeo.rotateX(-Math.PI / 2);
+    const roadWest = new THREE.Mesh(roadWestGeo, roadMat);
+    roadWest.position.set(-(iHalf + armLength / 2), 0.02, 0);
+    roadWest.receiveShadow = true;
+    this.arenaGroup.add(roadWest);
+
+    // 3. East Street Arm (runs from iHalf to half, no overlap with center)
+    const roadEastGeo = new THREE.PlaneGeometry(armLength, streetWidth);
+    roadEastGeo.rotateX(-Math.PI / 2);
+    const roadEast = new THREE.Mesh(roadEastGeo, roadMat);
+    roadEast.position.set(iHalf + armLength / 2, 0.02, 0);
+    roadEast.receiveShadow = true;
+    this.arenaGroup.add(roadEast);
+
+    // --- CRISP PROCEDURAL ROAD MARKINGS (at y = 0.026, slightly above asphalt) ---
+    const yellowMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      roughness: 0.45,
+      metalness: 0.02
+    });
+
+    const whiteMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.4,
+      metalness: 0.02
+    });
+
+    const markGroup = new THREE.Group();
+    markGroup.position.y = 0.026;
+
+    // Helper: add stripe
+    const addStripe = (w: number, d: number, x: number, z: number, mat: THREE.Material) => {
+      const geo = new THREE.PlaneGeometry(w, d);
+      geo.rotateX(-Math.PI / 2);
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, 0, z);
+      mesh.receiveShadow = false;
+      markGroup.add(mesh);
+    };
+
+    // A. Yellow Double Center Lines along each street segment (stops before crosswalks)
+    const crosswalkClearance = 3.6;
+    const stripeDist = half - (iHalf + crosswalkClearance);
+    const centerDist = iHalf + crosswalkClearance + stripeDist / 2;
+    const lineWidth = 0.14;
+    const lineGap = 0.14;
+
+    // North & South yellow double lines
+    [-lineGap, lineGap].forEach(offsetX => {
+      addStripe(lineWidth, stripeDist, offsetX, -centerDist, yellowMat);
+      addStripe(lineWidth, stripeDist, offsetX, centerDist, yellowMat);
+    });
+
+    // West & East yellow double lines
+    [-lineGap, lineGap].forEach(offsetZ => {
+      addStripe(stripeDist, lineWidth, -centerDist, offsetZ, yellowMat);
+      addStripe(stripeDist, lineWidth, centerDist, offsetZ, yellowMat);
+    });
+
+    // B. Stop Lines right before entering the intersection
+    const stopLineWidth = 0.45;
+    const stopLineLength = streetWidth - 1.2;
+    addStripe(stopLineLength, stopLineWidth, 0, -(iHalf + 0.5), whiteMat);
+    addStripe(stopLineLength, stopLineWidth, 0, iHalf + 0.5, whiteMat);
+    addStripe(stopLineWidth, stopLineLength, -(iHalf + 0.5), 0, whiteMat);
+    addStripe(stopLineWidth, stopLineLength, iHalf + 0.5, 0, whiteMat);
+
+    // C. Pedestrian Zebra Crosswalks (4 crosswalks at each intersection mouth)
+    const zebraNum = 7;
+    const zebraW = 0.55;
+    const zebraL = 2.4;
+    const zebraSpacing = 0.45;
+    const zebraStart = -((zebraNum - 1) * (zebraW + zebraSpacing)) / 2;
+
+    for (let i = 0; i < zebraNum; i++) {
+      const offset = zebraStart + i * (zebraW + zebraSpacing);
+      // North Crosswalk
+      addStripe(zebraW, zebraL, offset, -(iHalf + 2.0), whiteMat);
+      // South Crosswalk
+      addStripe(zebraW, zebraL, offset, iHalf + 2.0, whiteMat);
+      // West Crosswalk
+      addStripe(zebraL, zebraW, -(iHalf + 2.0), offset, whiteMat);
+      // East Crosswalk
+      addStripe(zebraL, zebraW, iHalf + 2.0, offset, whiteMat);
+    }
+
+    this.arenaGroup.add(markGroup);
+  }
+
+  /**
    * Concrete Sidewalk Borders lining the streets
    */
-  private createSidewalkBorder() {
+  private createSidewalkBorder(streetWidth: number = 12) {
     const sidewalkTex = TextureGenerator.createSidewalkTexture();
     const mat = new THREE.MeshStandardMaterial({ map: sidewalkTex, roughness: 0.6 });
+    const offset = streetWidth / 2 + 0.8;
+    const half = this.arenaSize / 2;
+    const armLen = half - streetWidth / 2;
+    const centerArm = (streetWidth / 2 + half) / 2;
 
     // 4 Corner Sidewalk Strips
     [
-      { x: -22, z: -6.8, w: 36, d: 1.6 },
-      { x: 22, z: -6.8, w: 36, d: 1.6 },
-      { x: -22, z: 6.8, w: 36, d: 1.6 },
-      { x: 22, z: 6.8, w: 36, d: 1.6 },
-      { x: -6.8, z: -22, w: 1.6, d: 36 },
-      { x: 6.8, z: -22, w: 1.6, d: 36 },
-      { x: -6.8, z: 22, w: 1.6, d: 36 },
-      { x: 6.8, z: 22, w: 1.6, d: 36 }
+      { x: -centerArm, z: -offset, w: armLen, d: 1.6 },
+      { x: centerArm, z: -offset, w: armLen, d: 1.6 },
+      { x: -centerArm, z: offset, w: armLen, d: 1.6 },
+      { x: centerArm, z: offset, w: armLen, d: 1.6 },
+      { x: -offset, z: -centerArm, w: 1.6, d: armLen },
+      { x: offset, z: -centerArm, w: 1.6, d: armLen },
+      { x: -offset, z: centerArm, w: 1.6, d: armLen },
+      { x: offset, z: centerArm, w: 1.6, d: armLen }
     ].forEach(s => {
       const geo = new THREE.BoxGeometry(s.w, 0.16, s.d);
       const mesh = new THREE.Mesh(geo, mat);
