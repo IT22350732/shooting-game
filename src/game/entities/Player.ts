@@ -160,8 +160,9 @@ export class Player {
     this.trauma = Math.min(1.0, this.trauma + amount);
   }
 
-  public rotateCamera(movementX: number, movementY: number, sensitivity: number) {
-    const sensFactor = 0.002 * (sensitivity / 50);
+  public rotateCamera(movementX: number, movementY: number, sensitivity: number, isAiming: boolean = false) {
+    const adsDamp = isAiming ? 0.55 : 1.0;
+    const sensFactor = 0.002 * (sensitivity / 50) * adsDamp;
     this.yaw -= movementX * sensFactor;
     this.pitch -= movementY * sensFactor;
 
@@ -263,9 +264,27 @@ export class Player {
     newPos.z += this.velocity.z * delta;
     newPos.y += this.velocity.y * delta;
 
-    // Floor collision
-    if (newPos.y <= this.eyeHeight) {
-      newPos.y = this.eyeHeight;
+    // Check landing on top of waist-high cover obstacles (crates, fences, cars)
+    let groundY = this.eyeHeight;
+    for (const obs of obstacles) {
+      if (obs.isCover && obs.box.max.y <= 2.2) {
+        if (
+          newPos.x >= obs.box.min.x - this.playerRadius * 0.6 &&
+          newPos.x <= obs.box.max.x + this.playerRadius * 0.6 &&
+          newPos.z >= obs.box.min.z - this.playerRadius * 0.6 &&
+          newPos.z <= obs.box.max.z + this.playerRadius * 0.6
+        ) {
+          const topY = obs.box.max.y + this.eyeHeight;
+          if (this.position.y >= topY - 0.35 && newPos.y <= topY + 0.1) {
+            if (topY > groundY) groundY = topY;
+          }
+        }
+      }
+    }
+
+    // Floor / Obstacle-top collision
+    if (newPos.y <= groundY) {
+      newPos.y = groundY;
       this.velocity.y = 0;
       this.isGrounded = true;
     }
@@ -275,33 +294,35 @@ export class Player {
     newPos.x = Math.max(-halfArena, Math.min(halfArena, newPos.x));
     newPos.z = Math.max(-halfArena, Math.min(halfArena, newPos.z));
 
-    // Obstacle AABB Collision resolution
-    const playerBox = new THREE.Box3();
+    // Obstacle AABB Collision resolution with smooth wall sliding
     const boxSize = new THREE.Vector3(this.playerRadius * 2, this.eyeHeight, this.playerRadius * 2);
 
     for (const obs of obstacles) {
-      playerBox.setFromCenterAndSize(
+      // Skip horizontal blocking if standing safely on top
+      if (newPos.y > obs.box.max.y + this.eyeHeight - 0.05) continue;
+
+      const playerBox = new THREE.Box3().setFromCenterAndSize(
         new THREE.Vector3(newPos.x, newPos.y - this.eyeHeight / 2, newPos.z),
         boxSize
       );
 
       if (obs.box.intersectsBox(playerBox)) {
         // Resolve collision along X
-        playerBox.setFromCenterAndSize(
+        const testBoxX = new THREE.Box3().setFromCenterAndSize(
           new THREE.Vector3(newPos.x, this.position.y - this.eyeHeight / 2, this.position.z),
           boxSize
         );
-        if (obs.box.intersectsBox(playerBox)) {
+        if (obs.box.intersectsBox(testBoxX)) {
           newPos.x = this.position.x;
           this.velocity.x = 0;
         }
 
-        // Resolve collision along Z
-        playerBox.setFromCenterAndSize(
-          new THREE.Vector3(this.position.x, this.position.y - this.eyeHeight / 2, newPos.z),
+        // Resolve collision along Z using the resolved newPos.x (allows smooth wall sliding!)
+        const testBoxZ = new THREE.Box3().setFromCenterAndSize(
+          new THREE.Vector3(newPos.x, this.position.y - this.eyeHeight / 2, newPos.z),
           boxSize
         );
-        if (obs.box.intersectsBox(playerBox)) {
+        if (obs.box.intersectsBox(testBoxZ)) {
           newPos.z = this.position.z;
           this.velocity.z = 0;
         }

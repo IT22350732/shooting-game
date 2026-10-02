@@ -380,8 +380,18 @@ export class GameEngine {
     // Mouse movement
     window.addEventListener('mousemove', (e) => {
       if (this.state !== 'PLAYING' || !this.isPointerLocked) return;
-      this.player.rotateCamera(e.movementX, e.movementY, this.mouseSensitivity);
+      this.player.rotateCamera(e.movementX, e.movementY, this.mouseSensitivity, this.currentWeapon?.isAiming);
     });
+
+    // Mouse wheel weapon switching (Desktop)
+    window.addEventListener('wheel', (e) => {
+      if (this.state !== 'PLAYING' || !this.isPointerLocked) return;
+      if (e.deltaY > 0) {
+        this.cycleWeapon(1);
+      } else if (e.deltaY < 0) {
+        this.cycleWeapon(-1);
+      }
+    }, { passive: true });
 
     // Pointer Lock events - only pause if pointer lock was actively engaged and then lost
     document.addEventListener('pointerlockchange', () => {
@@ -447,6 +457,10 @@ export class GameEngine {
 
   public setFiring(firing: boolean) {
     this.isTouchShooting = firing;
+    if (firing && this.state === 'PLAYING') {
+      // Immediate shot trigger on tap for zero touch latency
+      this.handlePlayerShooting(this.clock.getElapsedTime());
+    }
   }
 
   public setAiming(aiming: boolean) {
@@ -476,7 +490,9 @@ export class GameEngine {
   }
 
   public rotateCameraTouch(deltaX: number, deltaY: number) {
-    const sensFactor = 0.0035 * (this.touchSensitivity / 50);
+    const isAiming = this.isAimingActive();
+    const adsDamp = isAiming ? 0.55 : 1.0;
+    const sensFactor = 0.0034 * (this.touchSensitivity / 50) * adsDamp;
     this.player.yaw -= deltaX * sensFactor;
     this.player.pitch -= deltaY * sensFactor;
 

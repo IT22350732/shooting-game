@@ -624,46 +624,7 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* BOTTOM RIGHT: WEAPONS INVENTORY & AMMO */}
       <div className="hud-weapon-panel" style={{ pointerEvents: 'auto', zIndex: 60 }}>
-        {isMobileView ? (
-          /* MOBILE VIEW: Small compact weapon cycler button (no full name, unobtrusive) */
-          <button
-            type="button"
-            onClick={handleCycleWeaponNext}
-            onTouchStart={(e) => e.stopPropagation()}
-            onTouchEnd={handleCycleWeaponNext}
-            className="hud-weapon-mobile-cycler"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-              padding: '6px 12px',
-              background: 'rgba(255, 255, 255, 0.94)',
-              border: '1.5px solid #0284c7',
-              borderRadius: 20,
-              boxShadow: '0 2px 10px rgba(2, 132, 199, 0.25)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              cursor: 'pointer',
-              userSelect: 'none',
-              WebkitUserSelect: 'none',
-              touchAction: 'manipulation',
-              pointerEvents: 'auto',
-              minWidth: 'auto',
-              width: 'auto'
-            }}
-            aria-label={`Switch Weapon: ${activeWeapon.name.split(' ')[0]}`}
-            title="Tap to switch weapon"
-          >
-            <RotateCw size={14} color="#0284c7" strokeWidth={2.5} style={{ flexShrink: 0 }} />
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.74rem', fontWeight: 800, color: '#0284c7' }}>
-              [{currentWeaponIdx + 1}/5]
-            </span>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.8rem', fontWeight: 800, color: '#0f172a' }}>
-              {activeWeapon.name.split(' ')[0]}
-            </span>
-          </button>
-        ) : (
+        {!isMobileView && (
           /* DESKTOP VIEW: WEAPON SLOTS [1-5] (Keys 1, 2, 3, 4, 5 or Click) */
           <div className="hud-weapon-slots" style={{ display: 'flex', gap: 6, pointerEvents: 'auto' }}>
             {WEAPON_LIST.map((wId, idx) => {
@@ -702,15 +663,30 @@ export const HUD: React.FC<HUDProps> = ({
         {/* Current Weapon Stats & Ammo Counter Card */}
         <div
           className="glass-panel hud-weapon-card"
+          onClick={isMobileView ? handleCycleWeaponNext : undefined}
+          onTouchStart={isMobileView ? (e) => e.stopPropagation() : undefined}
+          onTouchEnd={isMobileView ? handleCycleWeaponNext : undefined}
           style={{
             padding: isMobileView ? '6px 12px' : '12px 18px',
             minWidth: isMobileView ? 'auto' : 190,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-end',
-            gap: isMobileView ? 2 : 4
+            gap: isMobileView ? 2 : 4,
+            cursor: isMobileView ? 'pointer' : 'default',
+            userSelect: 'none',
+            WebkitUserSelect: 'none'
           }}
+          title={isMobileView ? 'Tap to switch weapon' : undefined}
         >
+          {isMobileView && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 1 }}>
+              <RotateCw size={11} color="#0284c7" strokeWidth={2.5} />
+              <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#0284c7' }}>
+                [{currentWeaponIdx + 1}/5] {activeWeapon.name.split(' ')[0]}
+              </span>
+            </div>
+          )}
           {/* Ammo display */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: isMobileView ? 4 : 6 }}>
             <span

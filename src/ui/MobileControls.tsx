@@ -76,6 +76,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
 
   // --- JOYSTICK TOUCH HANDLERS ---
   const handleJoystickTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     if (joystickTouchIdRef.current !== null) return;
     const touch = e.changedTouches[0];
     joystickTouchIdRef.current = touch.identifier;
@@ -153,12 +154,17 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
     // Only capture if we don't already have an active look touch
     if (lookTouchIdRef.current !== null) return;
     const target = e.target as HTMLElement;
-    if (target?.closest?.('.hud-weapon-panel, .hud-weapon-dropdown-wrapper, .hud-weapon-menu, .hud-weapon-option-btn, button, select, [role="button"]')) {
+    if (target?.closest?.('.hud-weapon-panel, .hud-weapon-slots, .hud-weapon-card, .mobile-joystick, button, select, [role="button"]')) {
       return;
     }
-    const touch = e.changedTouches[0];
-    lookTouchIdRef.current = touch.identifier;
-    lookLastPosRef.current = { x: touch.clientX, y: touch.clientY };
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+      if (touch.identifier !== joystickTouchIdRef.current) {
+        lookTouchIdRef.current = touch.identifier;
+        lookLastPosRef.current = { x: touch.clientX, y: touch.clientY };
+        break;
+      }
+    }
   }, []);
 
   const handleLookTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
@@ -315,7 +321,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
         </div>
       )}
 
-      {/* RIGHT-SIDE TOUCH AIM SURFACE (COVERS RIGHT HALF) */}
+      {/* FULL-SCREEN TOUCH AIM SURFACE (COVERS ENTIRE SCREEN BEHIND HUD & CONTROLS) */}
       <div
         onTouchStart={handleLookTouchStart}
         onTouchMove={handleLookTouchMove}
@@ -323,18 +329,17 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
         onTouchCancel={handleLookTouchEnd}
         style={{
           position: 'absolute',
-          top: 0,
-          right: 0,
-          width: '55%',
-          height: '100%',
+          inset: 0,
           pointerEvents: 'auto',
-          touchAction: 'none'
+          touchAction: 'none',
+          zIndex: 1
         }}
       />
 
       {/* LEFT-SIDE VIRTUAL JOYSTICK */}
       <div
         ref={joystickBaseRef}
+        className="mobile-joystick"
         onTouchStart={handleJoystickTouchStart}
         onTouchMove={handleJoystickTouchMove}
         onTouchEnd={handleJoystickTouchEnd}
@@ -358,6 +363,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
           justifyContent: 'center',
           pointerEvents: 'auto',
           touchAction: 'none',
+          zIndex: 30,
           transition: 'border 0.2s, box-shadow 0.2s'
         }}
       >
