@@ -162,8 +162,15 @@ export const App: React.FC = () => {
       <div className="vignette" />
 
       {/* IN-GAME HUD */}
+      {/* IN-GAME HUD & MOBILE CONTROLS */}
       {gameState === 'PLAYING' && (
         <>
+          {isMobileDevice && (
+            <MobileControls
+              engine={engineInstance}
+              onPause={() => engineRef.current?.pauseGame()}
+            />
+          )}
           <HUD
             stats={stats}
             hitMarker={hitMarker}
@@ -175,12 +182,6 @@ export const App: React.FC = () => {
             onSwitchWeapon={handleSwitchWeapon}
             onPause={() => engineRef.current?.pauseGame()}
           />
-          {isMobileDevice && (
-            <MobileControls
-              engine={engineInstance}
-              onPause={() => engineRef.current?.pauseGame()}
-            />
-          )}
         </>
       )}
 

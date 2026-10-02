@@ -152,6 +152,10 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
   const handleLookTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     // Only capture if we don't already have an active look touch
     if (lookTouchIdRef.current !== null) return;
+    const target = e.target as HTMLElement;
+    if (target?.closest?.('.hud-weapon-panel, .hud-weapon-dropdown-wrapper, .hud-weapon-menu, .hud-weapon-option-btn, button, select, [role="button"]')) {
+      return;
+    }
     const touch = e.changedTouches[0];
     lookTouchIdRef.current = touch.identifier;
     lookLastPosRef.current = { x: touch.clientX, y: touch.clientY };

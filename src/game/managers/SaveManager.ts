@@ -17,7 +17,7 @@ const DEFAULT_SAVE: SaveData = {
   coins: 50, // Starting bonus
   highestScore: 0,
   highestWave: 1,
-  unlockedWeapons: ['assault_rifle', 'shotgun', 'smg'],
+  unlockedWeapons: ['assault_rifle', 'shotgun', 'smg', 'sniper', 'plasma_rifle'],
   unlockedArenas: ['industrial', 'desert', 'neon_city', 'space_station'],
   upgrades: {
     damage: 0,
@@ -65,9 +65,14 @@ export class SaveManager {
       const raw = localStorage.getItem(SAVE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
+        const unlockedWeapons = Array.from(new Set([
+          ...DEFAULT_SAVE.unlockedWeapons,
+          ...(parsed.unlockedWeapons || [])
+        ]));
         return {
           ...DEFAULT_SAVE,
           ...parsed,
+          unlockedWeapons,
           upgrades: { ...DEFAULT_SAVE.upgrades, ...(parsed.upgrades || {}) },
           settings: { ...DEFAULT_SAVE.settings, ...(parsed.settings || {}) },
           stats: { ...DEFAULT_SAVE.stats, ...(parsed.stats || {}) }
