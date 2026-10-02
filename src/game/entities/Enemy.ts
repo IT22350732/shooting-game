@@ -45,7 +45,13 @@ export class Enemy {
   private healthBarMesh: THREE.Mesh;
   private healthBarBg: THREE.Mesh;
 
-  constructor(id: string, type: EnemyType, spawnPos: THREE.Vector3, waveMultiplier: number = 1) {
+  constructor(
+    id: string,
+    type: EnemyType,
+    spawnPos: THREE.Vector3,
+    waveMultiplier: number = 1,
+    difficultyMultiplier: { hp: number; dmg: number; speed: number } = { hp: 1, dmg: 1, speed: 1 }
+  ) {
     this.id = id;
     this.type = type;
     this.position.copy(spawnPos);
@@ -126,7 +132,11 @@ export class Enemy {
         break;
     }
 
+    // Apply difficulty scaling
+    this.maxHealth = Math.max(1, Math.round(this.maxHealth * difficultyMultiplier.hp));
     this.health = this.maxHealth;
+    this.damage = Math.max(1, Math.round(this.damage * difficultyMultiplier.dmg));
+    this.speed = this.speed * difficultyMultiplier.speed;
 
     // Build Procedural 3D Mesh
     this.build3DModel();

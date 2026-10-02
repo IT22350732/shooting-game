@@ -10,9 +10,10 @@ import {
   Pause,
   Maximize,
   Minimize,
-  RotateCw
+  RotateCw,
+  Target
 } from 'lucide-react';
-import { WeaponId, PowerupActiveState, HitMarkerInfo, FloatingDamageNumber, GameSettings } from '../types/game';
+import { WeaponId, PowerupActiveState, HitMarkerInfo, FloatingDamageNumber, GameSettings, GameMode } from '../types/game';
 import { BASE_WEAPONS } from '../game/entities/Weapon';
 import { useFullscreen } from '../utils/fullscreen';
 
@@ -31,9 +32,11 @@ interface HUDProps {
     comboTimer: number;
     coins: number;
     wave: number;
+    kills?: number;
     enemiesRemaining: number;
     timeRemaining?: number;
     activeWeaponId: WeaponId;
+    mode?: GameMode;
   };
   hitMarker: HitMarkerInfo | null;
   damageNumbers: FloatingDamageNumber[];
@@ -355,20 +358,85 @@ export const HUD: React.FC<HUDProps> = ({
               />
             </div>
           </div>
-        ) : (
-          // Normal Wave Display
+        ) : stats.mode === 'free_mode' ? (
+          // Free Mode: Target Practice Range Display
           <div
             className="glass-panel"
             style={{
-              padding: '10px 28px',
+              padding: '8px 22px',
               display: 'flex',
               alignItems: 'center',
-              gap: 20
+              gap: 14
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <div
+                style={{
+                  padding: '3px 8px',
+                  borderRadius: 6,
+                  background: 'rgba(168, 85, 247, 0.15)',
+                  border: '1.5px solid rgba(168, 85, 247, 0.4)',
+                  color: '#a855f7',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.72rem',
+                  fontWeight: 900,
+                  letterSpacing: '0.05em'
+                }}
+              >
+                FREE MODE
+              </div>
+              <Target size={18} color="#a855f7" />
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 900, color: '#0f172a' }}>
+                TARGET RANGE
+              </span>
+            </div>
+
+            <div style={{ width: 1.5, height: 22, background: 'rgba(15, 23, 42, 0.15)' }} />
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748b', fontFamily: 'var(--font-sub)', fontSize: '0.85rem' }}>
+              <span>TARGETS HIT:</span>
+              <span style={{ color: '#a855f7', fontWeight: 900, fontSize: '1.15rem' }}>
+                {stats.kills ?? 0}
+              </span>
+            </div>
+
+            <div style={{ width: 1.5, height: 22, background: 'rgba(15, 23, 42, 0.15)' }} />
+
+            <span style={{ fontSize: '0.72rem', color: '#22c55e', fontWeight: 800, fontFamily: 'var(--font-display)' }}>
+              ENDLESS PRACTICE
+            </span>
+          </div>
+        ) : (
+          // Normal Wave Display with Difficulty Badge
+          <div
+            className="glass-panel"
+            style={{
+              padding: '10px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Award size={20} color="#0284c7" />
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', fontWeight: 900, color: '#0f172a' }}>
+              {stats.mode && (
+                <div
+                  style={{
+                    padding: '2px 7px',
+                    borderRadius: 6,
+                    background: stats.mode === 'easy' ? 'rgba(34, 197, 94, 0.15)' : (stats.mode === 'hard' ? 'rgba(244, 63, 94, 0.15)' : 'rgba(2, 132, 199, 0.15)'),
+                    border: `1.5px solid ${stats.mode === 'easy' ? '#22c55e' : (stats.mode === 'hard' ? '#f43f5e' : '#0284c7')}`,
+                    color: stats.mode === 'easy' ? '#22c55e' : (stats.mode === 'hard' ? '#e11d48' : '#0284c7'),
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '0.68rem',
+                    fontWeight: 900,
+                    letterSpacing: '0.04em'
+                  }}
+                >
+                  {stats.mode.toUpperCase()}
+                </div>
+              )}
+              <Award size={18} color="#0284c7" />
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 900, color: '#0f172a' }}>
                 WAVE {stats.wave}
               </span>
             </div>

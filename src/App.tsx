@@ -60,10 +60,12 @@ export const App: React.FC = () => {
     comboTimer: 0,
     coins: 0,
     wave: 1,
+    kills: 0,
     enemiesRemaining: 0,
     timeRemaining: undefined,
     activeWeaponId: 'assault_rifle',
-    isAiming: false
+    isAiming: false,
+    mode: 'medium'
   });
 
   const [hitMarker, setHitMarker] = useState<HitMarkerInfo | null>(null);

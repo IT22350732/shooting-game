@@ -17,6 +17,7 @@ import { Enemy } from '../entities/Enemy';
 import { Boss } from '../entities/Boss';
 import { Projectile } from '../entities/Projectile';
 import { Powerup } from '../entities/Powerup';
+import { PracticeTarget } from '../entities/PracticeTarget';
 import { ArenaManager } from '../world/ArenaManager';
 import { ParticleSystem } from '../world/ParticleSystem';
 import { WaveManager } from '../managers/WaveManager';
@@ -37,10 +38,12 @@ export interface HUDStats {
   comboTimer: number;
   coins: number;
   wave: number;
+  kills: number;
   enemiesRemaining: number;
   timeRemaining?: number;
   activeWeaponId: WeaponId;
   isAiming: boolean;
+  mode?: GameMode;
 }
 
 export interface GameEngineCallbacks {
@@ -71,13 +74,14 @@ export class GameEngine {
 
   // Entities
   public enemies: Enemy[] = [];
+  public practiceTargets: PracticeTarget[] = [];
   public boss: Boss | null = null;
   public projectiles: Projectile[] = [];
   public powerups: Powerup[] = [];
 
   // State
   public state: GameState = 'MENU';
-  public mode: GameMode = 'survival';
+  public mode: GameMode = 'medium';
   public currentArenaId: ArenaId = 'industrial';
   private callbacks: GameEngineCallbacks;
 
@@ -217,9 +221,63 @@ export class GameEngine {
     this.camera.rotation.set(0, 0, 0);
     this.camera.rotation.order = 'YXZ';
 
+    if (this.mode === 'free_mode') {
+      this.initFreeModeTargets();
+    }
+
     if (!this.isTouchDevice) {
       this.requestPointerLock();
     }
+  }
+
+  private initFreeModeTargets() {
+    this.practiceTargets = [];
+    for (let i = 0; i < 10; i++) {
+      this.spawnPracticeTarget(i < 3); // 3 moving targets for aim tracking practice
+    }
+  }
+
+  private spawnPracticeTarget(isMoving: boolean = false) {
+    const spawnPos = this.arena.getValidSpawnPoint(this.player.position);
+    const target = new PracticeTarget(Math.random().toString(), spawnPos, isMoving);
+    this.practiceTargets.push(target);
+    this.scene.add(target.mesh);
+  }
+
+  private handlePracticeTargetDestroyed(target: PracticeTarget, isBullseye: boolean) {
+    this.player.stats.kills++;
+    if (isBullseye) {
+      this.player.stats.headshots++;
+    }
+
+    this.player.stats.combo++;
+    this.player.stats.comboTimer = 5.0;
+    if (this.player.stats.combo > this.player.stats.highestCombo) {
+      this.player.stats.highestCombo = this.player.stats.combo;
+    }
+
+    const comboMult = Math.min(5, 1 + Math.floor(this.player.stats.combo / 3) * 0.5);
+    const points = Math.round((isBullseye ? 250 : 100) * comboMult);
+    this.player.stats.score += points;
+
+    const coinsEarned = isBullseye ? 2 : 1;
+    this.player.stats.coins += coinsEarned;
+    saveManager.addCoins(coinsEarned);
+
+    this.particles.spawnExplosion(target.position.clone().setY(target.position.y + 1.2), 22);
+    soundManager.playEnemyHit();
+
+    // Occasional powerup drop (25% chance) so players can test powerups in free mode
+    if (Math.random() < 0.25) {
+      this.spawnRandomPowerup(target.position);
+    }
+
+    // Automatically respawn replacement target after 0.5s so shooting is endless
+    setTimeout(() => {
+      if (this.state === 'PLAYING' && this.mode === 'free_mode') {
+        this.spawnPracticeTarget(Math.random() < 0.35);
+      }
+    }, 500);
   }
 
   private clearAllEntities() {
@@ -228,6 +286,12 @@ export class GameEngine {
       e.dispose();
     });
     this.enemies = [];
+
+    this.practiceTargets.forEach(t => {
+      this.scene.remove(t.mesh);
+      t.dispose();
+    });
+    this.practiceTargets = [];
 
     if (this.boss) {
       this.scene.remove(this.boss.mesh);
@@ -466,7 +530,8 @@ export class GameEngine {
     const shouldShoot = this.isLeftMouseDown || this.isTouchShooting;
     if (!shouldShoot) return;
 
-    const hasInfiniteAmmo = this.player.hasPowerup('infinite_ammo');
+    const isFreeMode = this.mode === 'free_mode';
+    const hasInfiniteAmmo = isFreeMode || this.player.hasPowerup('infinite_ammo');
     const hasRapidFire = this.player.hasPowerup('rapid_fire');
     const hasDamageBoost = this.player.hasPowerup('damage_boost');
 
@@ -476,6 +541,10 @@ export class GameEngine {
     }
 
     if (this.currentWeapon.shoot(time, hasInfiniteAmmo)) {
+      if (isFreeMode) {
+        // Keep ammo full in free mode for infinite shooting
+        this.currentWeapon.currentAmmo = this.currentWeapon.maxAmmo;
+      }
       // Trigger camera recoil punch
       this.player.addTrauma(this.currentWeapon.config.recoilKick * 0.85);
 
@@ -518,6 +587,9 @@ export class GameEngine {
     // Collect all shootable objects
     const targets: THREE.Object3D[] = [];
     this.enemies.forEach(e => targets.push(e.mesh));
+    this.practiceTargets.forEach(t => {
+      if (!t.isDead) targets.push(t.mesh);
+    });
     if (this.boss) targets.push(this.boss.mesh);
     this.arena.obstacles.forEach(o => targets.push(o.mesh));
     this.arena.explosiveBarrels.forEach(b => {
@@ -542,6 +614,30 @@ export class GameEngine {
         }
       }
 
+      // Check Practice Target Hit (Free Mode / Target Practice)
+      for (const pt of this.practiceTargets) {
+        if (pt.isDead) continue;
+        let isPartOfTarget = false;
+        hit.object.traverseAncestors(ancestor => {
+          if (ancestor === pt.mesh) isPartOfTarget = true;
+        });
+        if (hit.object === pt.mesh) isPartOfTarget = true;
+
+        if (isPartOfTarget) {
+          const isBullseye = pt.isBullseyeMesh(hit.object);
+          const baseDmg = this.currentWeapon.config.damage * (hasDamageBoost ? 2.0 : 1.0);
+          const res = pt.takeDamage(baseDmg, isBullseye);
+
+          this.particles.spawnSparks(hitPoint, hitNormal, isBullseye ? 0xfef08a : 0x0284c7, 16);
+          this.triggerHitFeedback(hitPoint, res.finalDamage, res.isCrit);
+
+          if (res.killed) {
+            this.handlePracticeTargetDestroyed(pt, isBullseye);
+          }
+          return;
+        }
+      }
+
       // Check Boss Hit
       if (this.boss && (this.boss.mesh === hit.object || this.boss.mesh.children.includes(hit.object as THREE.Mesh))) {
         const isWeakpoint = (this.boss.weakpointMesh === hit.object);
@@ -554,7 +650,6 @@ export class GameEngine {
         if (res.killed) {
           this.handleBossDefeat();
         }
-        return;
       }
 
       // Check Enemy Hit
@@ -750,7 +845,17 @@ export class GameEngine {
       (type: EnemyType) => {
         const spawnPos = this.arena.getValidSpawnPoint(this.player.position);
         const waveMultiplier = 1 + (this.waveManager.currentWave - 1) * 0.18;
-        const enemy = new Enemy(Math.random().toString(), type, spawnPos, waveMultiplier);
+        const diffMultipliers: Record<string, { hp: number; dmg: number; speed: number }> = {
+          easy: { hp: 0.65, dmg: 0.5, speed: 0.75 },
+          medium: { hp: 1.0, dmg: 1.0, speed: 1.0 },
+          hard: { hp: 1.4, dmg: 1.5, speed: 1.25 },
+          survival: { hp: 1.0, dmg: 1.0, speed: 1.0 },
+          time_attack: { hp: 0.9, dmg: 0.9, speed: 1.0 },
+          boss_arena: { hp: 1.0, dmg: 1.0, speed: 1.0 },
+          free_mode: { hp: 1.0, dmg: 0, speed: 0 }
+        };
+        const diff = diffMultipliers[this.mode] || diffMultipliers.medium;
+        const enemy = new Enemy(Math.random().toString(), type, spawnPos, waveMultiplier, diff);
         this.enemies.push(enemy);
         this.scene.add(enemy.mesh);
       },
@@ -792,10 +897,24 @@ export class GameEngine {
         },
         // on enemy melee hit
         (damage) => {
-          const dead = this.player.takeDamage(damage, enemy.position);
-          if (dead) this.triggerGameOver();
+          if (this.mode !== 'free_mode') {
+            const dead = this.player.takeDamage(damage, enemy.position);
+            if (dead) this.triggerGameOver();
+          }
         }
       );
+    }
+
+    // 5b. Practice Targets Update (Free Mode)
+    for (let i = this.practiceTargets.length - 1; i >= 0; i--) {
+      const pt = this.practiceTargets[i];
+      if (pt.isDead && pt.mesh.scale.x <= 0.05) {
+        this.scene.remove(pt.mesh);
+        pt.dispose();
+        this.practiceTargets.splice(i, 1);
+        continue;
+      }
+      pt.update(delta, this.player.position);
     }
 
     // 6. Boss Update
@@ -866,24 +985,40 @@ export class GameEngine {
 
       // Check collision
       if (proj.isPlayerProjectile) {
-        // Player Plasma Projectile hits enemy
-        for (const enemy of this.enemies) {
-          if (!enemy.isDead && enemy.position.distanceTo(proj.position) < (enemy.getHeight() * 0.7 + proj.radius)) {
-            const res = enemy.takeDamage(proj.damage, false);
-            this.particles.spawnExplosion(proj.position, 20);
+        // Player Plasma Projectile hits Practice Target (Free Mode)
+        for (const pt of this.practiceTargets) {
+          if (!pt.isDead && pt.position.distanceTo(proj.position) < 1.4) {
+            const res = pt.takeDamage(proj.damage, false);
+            this.particles.spawnExplosion(proj.position, 18);
             this.triggerHitFeedback(proj.position, res.finalDamage, false);
-            if (res.killed) this.handleEnemyKill(enemy, false);
+            if (res.killed) this.handlePracticeTargetDestroyed(pt, false);
             proj.isDead = true;
             break;
+          }
+        }
+
+        // Player Plasma Projectile hits enemy
+        if (!proj.isDead) {
+          for (const enemy of this.enemies) {
+            if (!enemy.isDead && enemy.position.distanceTo(proj.position) < (enemy.getHeight() * 0.7 + proj.radius)) {
+              const res = enemy.takeDamage(proj.damage, false);
+              this.particles.spawnExplosion(proj.position, 20);
+              this.triggerHitFeedback(proj.position, res.finalDamage, false);
+              if (res.killed) this.handleEnemyKill(enemy, false);
+              proj.isDead = true;
+              break;
+            }
           }
         }
       } else {
         // Enemy Projectile hits player
         if (proj.position.distanceTo(this.player.position) < (0.8 + proj.radius)) {
-          const dead = this.player.takeDamage(proj.damage, proj.position);
+          if (this.mode !== 'free_mode') {
+            const dead = this.player.takeDamage(proj.damage, proj.position);
+            if (dead) this.triggerGameOver();
+          }
           this.particles.spawnSparks(proj.position, new THREE.Vector3(0, 1, 0), 0xef4444, 12);
           proj.isDead = true;
-          if (dead) this.triggerGameOver();
         }
       }
     }
@@ -920,10 +1055,12 @@ export class GameEngine {
       comboTimer: this.player.stats.comboTimer,
       coins: this.player.stats.coins,
       wave: this.waveManager.currentWave,
-      enemiesRemaining: this.waveManager.enemiesRemaining,
+      kills: this.player.stats.kills,
+      enemiesRemaining: this.mode === 'free_mode' ? this.practiceTargets.length : this.waveManager.enemiesRemaining,
       timeRemaining: this.mode === 'time_attack' ? Math.max(0, Math.round(this.waveManager.timeAttackRemaining)) : undefined,
       activeWeaponId: this.currentWeaponId,
-      isAiming: this.currentWeapon.isAiming
+      isAiming: this.currentWeapon.isAiming,
+      mode: this.mode
     });
 
     const activeList: PowerupActiveState[] = [];

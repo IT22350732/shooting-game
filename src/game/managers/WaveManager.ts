@@ -42,6 +42,14 @@ export class WaveManager {
     this.currentWave = waveNumber;
     this.isIntermission = false;
 
+    if (this.mode === 'free_mode') {
+      this.totalEnemiesInWave = 0;
+      this.enemiesRemaining = 0;
+      this.enemiesSpawned = 0;
+      this.isBossAlive = false;
+      return;
+    }
+
     if (this.mode === 'boss_arena') {
       this.totalEnemiesInWave = 1;
       this.enemiesRemaining = 1;
@@ -53,12 +61,18 @@ export class WaveManager {
     const isBossWave = (this.currentWave % 5 === 0);
     this.isBossAlive = isBossWave;
 
-    // Scaling enemy count
-    const baseCount = 6 + this.currentWave * 4;
-    this.totalEnemiesInWave = isBossWave ? 10 + this.currentWave * 2 : baseCount;
+    // Scaling enemy count according to difficulty mode
+    let baseCount = 6 + this.currentWave * 3;
+    if (this.mode === 'easy') {
+      baseCount = Math.max(4, 4 + this.currentWave * 2);
+    } else if (this.mode === 'hard') {
+      baseCount = Math.max(8, 8 + this.currentWave * 5);
+    }
+
+    this.totalEnemiesInWave = isBossWave ? Math.round(baseCount * 0.8) : baseCount;
     this.enemiesRemaining = this.totalEnemiesInWave + (isBossWave ? 1 : 0);
     this.enemiesSpawned = 0;
-    this.spawnCooldown = 0.5;
+    this.spawnCooldown = this.mode === 'easy' ? 1.5 : (this.mode === 'hard' ? 0.4 : 0.8);
 
     soundManager.playWaveComplete();
   }
@@ -116,6 +130,10 @@ export class WaveManager {
   }
 
   public update(delta: number, onSpawnSquad: (enemyType: EnemyType) => void, onSpawnBoss: () => void): boolean {
+    if (this.mode === 'free_mode') {
+      return false;
+    }
+
     if (this.mode === 'time_attack') {
       this.timeAttackRemaining -= delta;
       if (this.timeAttackRemaining <= 0) {
@@ -140,7 +158,13 @@ export class WaveManager {
     // Regular enemy squad spawn
     this.spawnCooldown -= delta;
     if (this.spawnCooldown <= 0 && this.enemiesSpawned < this.totalEnemiesInWave) {
-      this.spawnCooldown = Math.max(0.8, 2.5 - this.currentWave * 0.1);
+      if (this.mode === 'easy') {
+        this.spawnCooldown = Math.max(1.6, 3.0 - this.currentWave * 0.08);
+      } else if (this.mode === 'hard') {
+        this.spawnCooldown = Math.max(0.45, 1.5 - this.currentWave * 0.1);
+      } else {
+        this.spawnCooldown = Math.max(0.8, 2.3 - this.currentWave * 0.1);
+      }
 
       // Spawn 1 to 2 enemies per tick
       const count = Math.min(2, this.totalEnemiesInWave - this.enemiesSpawned);

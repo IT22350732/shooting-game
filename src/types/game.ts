@@ -1,4 +1,4 @@
-export type GameMode = 'survival' | 'time_attack' | 'boss_arena';
+export type GameMode = 'easy' | 'medium' | 'hard' | 'free_mode' | 'survival' | 'time_attack' | 'boss_arena';
 
 export type GameState = 'MENU' | 'PLAYING' | 'PAUSED' | 'GAME_OVER' | 'VICTORY';
 

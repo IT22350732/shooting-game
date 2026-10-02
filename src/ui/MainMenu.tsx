@@ -9,13 +9,14 @@ import {
   Coins,
   Skull,
   Flame,
-  Clock,
   Compass,
   Layers,
   ChevronRight,
   ChevronDown,
   X,
   ShieldCheck,
+  Shield,
+  Target,
   Maximize,
   Minimize
 } from 'lucide-react';
@@ -42,7 +43,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenTutorial,
   coins
 }) => {
-  const [selectedMode, setSelectedMode] = useState<GameMode>('survival');
+  const [selectedMode, setSelectedMode] = useState<GameMode>('medium');
   const [selectedArena, setSelectedArena] = useState<ArenaId>('industrial');
   const [showMissionSelect, setShowMissionSelect] = useState(false);
   const [activeTab, setActiveTab] = useState<'mode' | 'arena'>('mode');
@@ -83,25 +84,32 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
   const MODES: { id: GameMode; name: string; desc: string; icon: React.ReactNode; color: string }[] = [
     {
-      id: 'survival',
-      name: 'ENDLESS SURVIVAL',
-      desc: 'Face escalating android waves, elite captains, and boss encounters every 5 waves.',
-      icon: <Flame size={20} color="#f97316" />,
-      color: '#f97316'
+      id: 'easy',
+      name: 'EASY',
+      desc: 'Casual combat with slower enemies, reduced damage, and relaxed wave pacing.',
+      icon: <Shield size={20} color="#22c55e" />,
+      color: '#22c55e'
     },
     {
-      id: 'time_attack',
-      name: 'TIME ATTACK',
-      desc: 'Race against a 120s timer. Earn bonus seconds and high multiplier on every kill.',
-      icon: <Clock size={20} color="#d97706" />,
-      color: '#d97706'
+      id: 'medium',
+      name: 'MEDIUM',
+      desc: 'Standard combat simulation with balanced enemy health, tactical escalation, and boss encounters.',
+      icon: <Flame size={20} color="#0284c7" />,
+      color: '#0284c7'
     },
     {
-      id: 'boss_arena',
-      name: 'TITAN SHOWDOWN',
-      desc: 'Immediate high-stakes encounter against the multi-phase Apex Cyber-Colossus.',
+      id: 'hard',
+      name: 'HARD',
+      desc: 'High-octane challenge: aggressive androids, rapid speed, lethal damage, and heavy enemy swarms.',
       icon: <Skull size={20} color="#e11d48" />,
       color: '#e11d48'
+    },
+    {
+      id: 'free_mode',
+      name: 'FREE MODE',
+      desc: 'Endless target shooting range: only targets (no live enemies), infinite shooting freely.',
+      icon: <Target size={20} color="#a855f7" />,
+      color: '#a855f7'
     }
   ];
 
