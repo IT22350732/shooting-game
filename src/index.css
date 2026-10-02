@@ -389,6 +389,90 @@ canvas {
   flex-shrink: 0;
 }
 
+/* Tactical Corner Selectors (Dropdowns) */
+.menu-corner-selectors {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  z-index: 20;
+  position: relative;
+  align-self: flex-start;
+}
+
+.menu-dropdown-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1.5px solid rgba(2, 132, 199, 0.4);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.menu-dropdown-wrapper:hover,
+.menu-dropdown-wrapper:active {
+  border-color: #0284c7;
+  box-shadow: 0 4px 18px rgba(2, 132, 199, 0.3);
+  transform: translateY(-1px);
+}
+
+.menu-dropdown-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.menu-dropdown-content {
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.menu-dropdown-tag {
+  font-family: var(--font-display);
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: #0284c7;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+.menu-dropdown-val {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.menu-select-arrow {
+  margin-left: 4px;
+  pointer-events: none;
+}
+
+/* Invisible Full-Overlay Native Select for 100% Mobile Clickability */
+.menu-native-select-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 10;
+  -webkit-appearance: menulist;
+}
+
 .menu-center-hero {
   display: flex;
   flex-direction: column;
@@ -485,10 +569,22 @@ canvas {
     gap: 10px !important;
   }
 
-  .menu-mission-card {
+  .menu-corner-selectors {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    margin-top: 4px !important;
+  }
+
+  .menu-dropdown-wrapper {
     width: 100% !important;
     justify-content: space-between !important;
-    padding: 10px 14px !important;
+    padding: 8px 10px !important;
+  }
+
+  .menu-mission-card {
+    display: none !important;
   }
 
   .menu-deploy-btn {

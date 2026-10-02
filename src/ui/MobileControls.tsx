@@ -417,12 +417,12 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
         </div>
       </div>
 
-      {/* QUICK WEAPON CYCLE SWITCHER (BOTTOM CENTER-RIGHT) */}
+      {/* QUICK WEAPON CYCLE SWITCHER (RIGHT CORNER CLUSTER) */}
       <div
         style={{
           position: 'absolute',
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)',
-          right: 'calc(env(safe-area-inset-right, 0px) + 185px)',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 182px)',
+          right: 'calc(env(safe-area-inset-right, 0px) + 18px)',
           display: 'flex',
           gap: 8,
           pointerEvents: 'auto',
@@ -431,6 +431,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
       >
         <button
           onTouchStart={handlePrevWeapon}
+          onTouchEnd={(e) => e.preventDefault()}
           onMouseDown={handlePrevWeapon}
           style={{
             width: 44,
@@ -454,6 +455,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
 
         <button
           onTouchStart={handleNextWeapon}
+          onTouchEnd={(e) => e.preventDefault()}
           onMouseDown={handleNextWeapon}
           style={{
             width: 44,

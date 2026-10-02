@@ -549,7 +549,7 @@ export const HUD: React.FC<HUDProps> = ({
           })}
         </div>
 
-        {/* Current Weapon Stats & Ammo Counter Card */}
+        {/* Current Weapon Stats & Ammo Counter Card with Corner Dropdown Selector */}
         <div
           className="glass-panel hud-weapon-card"
           style={{
@@ -558,12 +558,37 @@ export const HUD: React.FC<HUDProps> = ({
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-end',
-            gap: 4
+            gap: 4,
+            position: 'relative',
+            cursor: 'pointer'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Native Mobile Dropdown Overlay for Instant Weapon Selection */}
+          <select
+            value={stats.activeWeaponId}
+            onChange={(e) => onSwitchWeapon(e.target.value as WeaponId)}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              opacity: 0,
+              cursor: 'pointer',
+              zIndex: 10
+            }}
+            aria-label="Switch Weapon"
+          >
+            {(['assault_rifle', 'shotgun', 'smg', 'sniper', 'plasma_rifle'] as WeaponId[]).map((wId) => (
+              <option key={wId} value={wId}>
+                {BASE_WEAPONS[wId].name}
+              </option>
+            ))}
+          </select>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'none' }}>
             <span className="hud-weapon-name" style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
-              {activeWeapon.name}
+              {activeWeapon.name} ▾
             </span>
           </div>
 

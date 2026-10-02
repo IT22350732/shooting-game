@@ -13,6 +13,7 @@ import {
   Compass,
   Layers,
   ChevronRight,
+  ChevronDown,
   X,
   ShieldCheck,
   Maximize,
@@ -311,6 +312,57 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           >
             {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
           </button>
+        </div>
+      </div>
+
+      {/* TACTICAL SELECTION OPTIONS (CORNER DROPDOWN HUB) */}
+      <div className="menu-corner-selectors">
+        {/* Mode Selector Dropdown */}
+        <div className="menu-dropdown-wrapper">
+          <div className="menu-dropdown-icon">
+            <Crosshair size={14} color="#0284c7" />
+          </div>
+          <div className="menu-dropdown-content">
+            <span className="menu-dropdown-tag">MODE</span>
+            <span className="menu-dropdown-val">{currentModeInfo.name}</span>
+          </div>
+          <ChevronDown size={14} color="#0284c7" className="menu-select-arrow" />
+          <select
+            value={selectedMode}
+            onChange={(e) => setSelectedMode(e.target.value as GameMode)}
+            className="menu-native-select-overlay"
+            aria-label="Select Game Mode"
+          >
+            {MODES.map((m) => (
+              <option key={m.id} value={m.id}>
+                MODE: {m.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Map / Arena Selector Dropdown */}
+        <div className="menu-dropdown-wrapper">
+          <div className="menu-dropdown-icon">
+            <Layers size={14} color="#0284c7" />
+          </div>
+          <div className="menu-dropdown-content">
+            <span className="menu-dropdown-tag">ARENA</span>
+            <span className="menu-dropdown-val">{currentArenaInfo.name}</span>
+          </div>
+          <ChevronDown size={14} color="#0284c7" className="menu-select-arrow" />
+          <select
+            value={selectedArena}
+            onChange={(e) => handleSelectArena(e.target.value as ArenaId)}
+            className="menu-native-select-overlay"
+            aria-label="Select Combat Arena"
+          >
+            {ARENAS.map((a) => (
+              <option key={a.id} value={a.id}>
+                MAP: {a.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
