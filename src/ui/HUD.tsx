@@ -74,7 +74,6 @@ export const HUD: React.FC<HUDProps> = ({
 
   const currentWeaponIdx = WEAPON_LIST.indexOf(stats.activeWeaponId);
   const nextWeaponIdx = (currentWeaponIdx + 1) % WEAPON_LIST.length;
-  const nextWeapon = BASE_WEAPONS[WEAPON_LIST[nextWeaponIdx]];
 
   const handleCycleWeaponNext = (e?: React.SyntheticEvent) => {
     if (e) {
@@ -558,7 +557,7 @@ export const HUD: React.FC<HUDProps> = ({
       {/* BOTTOM RIGHT: WEAPONS INVENTORY & AMMO */}
       <div className="hud-weapon-panel" style={{ pointerEvents: 'auto', zIndex: 60 }}>
         {isMobileView ? (
-          /* MOBILE VIEW: Single One-Tap Weapon Cycler Button (1 click -> next weapon) */
+          /* MOBILE VIEW: Small compact weapon cycler button (no full name, unobtrusive) */
           <button
             type="button"
             onClick={handleCycleWeaponNext}
@@ -568,67 +567,33 @@ export const HUD: React.FC<HUDProps> = ({
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 12,
-              padding: '8px 14px',
-              background: 'rgba(255, 255, 255, 0.96)',
-              border: '2px solid #0284c7',
-              borderRadius: 14,
-              boxShadow: '0 4px 20px rgba(2, 132, 199, 0.35)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
+              justifyContent: 'center',
+              gap: 6,
+              padding: '6px 12px',
+              background: 'rgba(255, 255, 255, 0.94)',
+              border: '1.5px solid #0284c7',
+              borderRadius: 20,
+              boxShadow: '0 2px 10px rgba(2, 132, 199, 0.25)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
               cursor: 'pointer',
               userSelect: 'none',
               WebkitUserSelect: 'none',
               touchAction: 'manipulation',
               pointerEvents: 'auto',
-              minWidth: 185
+              minWidth: 'auto',
+              width: 'auto'
             }}
-            aria-label="Switch Weapon"
+            aria-label={`Switch Weapon: ${activeWeapon.name.split(' ')[0]}`}
+            title="Tap to switch weapon"
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, pointerEvents: 'none' }}>
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#ffffff',
-                  boxShadow: '0 2px 10px rgba(2, 132, 199, 0.4)',
-                  flexShrink: 0
-                }}
-              >
-                <RotateCw size={18} strokeWidth={2.6} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#0284c7', letterSpacing: '0.06em', lineHeight: 1 }}>
-                  WEAPON [{currentWeaponIdx + 1}/5] • TAP
-                </span>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.92rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.15 }}>
-                  {activeWeapon.name}
-                </span>
-              </div>
-            </div>
-
-            <div
-              style={{
-                padding: '4px 10px',
-                borderRadius: 8,
-                background: 'rgba(2, 132, 199, 0.12)',
-                border: '1.5px solid rgba(2, 132, 199, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                pointerEvents: 'none'
-              }}
-            >
-              <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#0284c7' }}>
-                NEXT: {nextWeapon.name.split(' ')[0]} ➔
-              </span>
-            </div>
+            <RotateCw size={14} color="#0284c7" strokeWidth={2.5} style={{ flexShrink: 0 }} />
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.74rem', fontWeight: 800, color: '#0284c7' }}>
+              [{currentWeaponIdx + 1}/5]
+            </span>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.8rem', fontWeight: 800, color: '#0f172a' }}>
+              {activeWeapon.name.split(' ')[0]}
+            </span>
           </button>
         ) : (
           /* DESKTOP VIEW: WEAPON SLOTS [1-5] (Keys 1, 2, 3, 4, 5 or Click) */
@@ -670,21 +635,21 @@ export const HUD: React.FC<HUDProps> = ({
         <div
           className="glass-panel hud-weapon-card"
           style={{
-            padding: '12px 18px',
-            minWidth: 190,
+            padding: isMobileView ? '6px 12px' : '12px 18px',
+            minWidth: isMobileView ? 'auto' : 190,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-end',
-            gap: 4
+            gap: isMobileView ? 2 : 4
           }}
         >
           {/* Ammo display */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: isMobileView ? 4 : 6 }}>
             <span
               className="hud-ammo-big"
               style={{
                 fontFamily: 'var(--font-display)',
-                fontSize: '2.5rem',
+                fontSize: isMobileView ? '1.6rem' : '2.5rem',
                 fontWeight: 900,
                 color: stats.ammo <= 5 ? '#e11d48' : '#0284c7',
                 lineHeight: 1
@@ -692,34 +657,34 @@ export const HUD: React.FC<HUDProps> = ({
             >
               {stats.ammo}
             </span>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: '#94a3b8', fontWeight: 700 }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: isMobileView ? '0.85rem' : '1.1rem', color: '#94a3b8', fontWeight: 700 }}>
               / {stats.maxAmmo}
             </span>
           </div>
 
           {/* Reload Progress or Warning */}
           {stats.isReloading ? (
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-              <span style={{ fontSize: '0.72rem', fontFamily: 'var(--font-display)', color: '#d97706', fontWeight: 800 }}>RELOADING...</span>
-              <div style={{ width: '100%', height: 4, background: 'rgba(15, 23, 42, 0.1)', borderRadius: 2 }}>
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-end' }}>
+              <span style={{ fontSize: '0.65rem', fontFamily: 'var(--font-display)', color: '#d97706', fontWeight: 800 }}>RELOADING...</span>
+              <div style={{ width: '100%', height: 3, background: 'rgba(15, 23, 42, 0.1)', borderRadius: 2 }}>
                 <div style={{ width: `${stats.reloadProgress * 100}%`, height: '100%', background: '#d97706' }} />
               </div>
             </div>
           ) : stats.ammo === 0 ? (
             <span
               style={{
-                fontSize: '0.78rem',
+                fontSize: isMobileView ? '0.68rem' : '0.78rem',
                 fontFamily: 'var(--font-display)',
                 color: '#e11d48',
                 animation: 'pulseGlow 0.8s infinite alternate',
                 fontWeight: 800
               }}
             >
-              RELOAD NEEDED [R]
+              {isMobileView ? 'RELOAD!' : 'RELOAD NEEDED [R]'}
             </span>
           ) : (
-            <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-display)', color: '#64748b', fontWeight: 700 }}>
-              [R] RELOAD
+            <span style={{ fontSize: isMobileView ? '0.62rem' : '0.68rem', fontFamily: 'var(--font-display)', color: '#64748b', fontWeight: 700 }}>
+              {isMobileView ? 'AMMO' : '[R] RELOAD'}
             </span>
           )}
         </div>

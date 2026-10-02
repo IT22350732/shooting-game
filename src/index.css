@@ -264,27 +264,28 @@ canvas {
 .hud-weapon-mobile-cycler {
   display: flex !important;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 8px 14px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 2px solid #0284c7;
-  border-radius: 12px;
-  box-shadow: 0 4px 18px rgba(2, 132, 199, 0.3);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1.5px solid #0284c7;
+  border-radius: 20px;
+  box-shadow: 0 2px 10px rgba(2, 132, 199, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
   pointer-events: auto !important;
   z-index: 100 !important;
-  min-width: 180px;
+  min-width: auto;
+  width: auto;
   transition: transform 0.1s ease, background 0.15s ease;
 }
 
 .hud-weapon-mobile-cycler:active {
-  transform: scale(0.96);
+  transform: scale(0.95);
   background: rgba(2, 132, 199, 0.18) !important;
 }
 
@@ -297,10 +298,10 @@ canvas {
   }
 
   .hud-health-panel {
-    bottom: calc(var(--safe-bottom) + 155px) !important;
+    bottom: calc(var(--safe-bottom) + 140px) !important;
     left: calc(var(--safe-left) + 14px) !important;
-    min-width: 160px !important;
-    max-width: 190px !important;
+    min-width: 150px !important;
+    max-width: 180px !important;
     padding: 8px 12px !important;
     gap: 6px !important;
   }
@@ -314,20 +315,20 @@ canvas {
   }
 
   .hud-weapon-panel {
-    bottom: calc(var(--safe-bottom) + 155px) !important;
-    right: calc(var(--safe-right) + 14px) !important;
-    gap: 6px !important;
+    bottom: calc(var(--safe-bottom) + 140px) !important;
+    right: calc(var(--safe-right) + 12px) !important;
+    gap: 4px !important;
     z-index: 65 !important;
   }
 
   .hud-weapon-card {
-    min-width: 150px !important;
-    padding: 8px 12px !important;
+    min-width: auto !important;
+    padding: 6px 12px !important;
     gap: 2px !important;
   }
 
   .hud-ammo-big {
-    font-size: 1.85rem !important;
+    font-size: 1.6rem !important;
   }
 
   .hud-top-wave {
@@ -354,33 +355,34 @@ canvas {
 /* Compact Landscape View (Landscape Mobile, e.g. height <= 520px) */
 @media (max-height: 520px) {
   .hud-health-panel {
-    bottom: calc(var(--safe-bottom) + 120px) !important;
+    bottom: calc(var(--safe-bottom) + 115px) !important;
     left: calc(var(--safe-left) + 12px) !important;
-    min-width: 145px !important;
-    max-width: 175px !important;
+    min-width: 140px !important;
+    max-width: 170px !important;
     padding: 6px 10px !important;
     gap: 4px !important;
   }
 
   .hud-weapon-panel {
-    bottom: calc(var(--safe-bottom) + 120px) !important;
+    bottom: calc(var(--safe-bottom) + 115px) !important;
     right: calc(var(--safe-right) + 12px) !important;
-    gap: 4px !important;
+    gap: 3px !important;
     z-index: 65 !important;
   }
 
   .hud-weapon-mobile-cycler {
-    padding: 6px 10px !important;
-    min-width: 165px !important;
+    padding: 5px 10px !important;
+    min-width: auto !important;
+    width: auto !important;
   }
 
   .hud-weapon-card {
-    min-width: 130px !important;
-    padding: 6px 10px !important;
+    min-width: auto !important;
+    padding: 4px 10px !important;
   }
 
   .hud-ammo-big {
-    font-size: 1.6rem !important;
+    font-size: 1.4rem !important;
   }
 }
 
