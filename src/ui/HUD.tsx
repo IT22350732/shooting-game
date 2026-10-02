@@ -7,10 +7,13 @@ import {
   Clock,
   Sparkles,
   Award,
-  Pause
+  Pause,
+  Maximize,
+  Minimize
 } from 'lucide-react';
 import { WeaponId, PowerupActiveState, HitMarkerInfo, FloatingDamageNumber, GameSettings } from '../types/game';
 import { BASE_WEAPONS } from '../game/entities/Weapon';
+import { useFullscreen } from '../utils/fullscreen';
 
 interface HUDProps {
   stats: {
@@ -52,6 +55,7 @@ export const HUD: React.FC<HUDProps> = ({
   onSwitchWeapon,
   onPause
 }) => {
+  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
   const [showHitmarker, setShowHitmarker] = useState(false);
   const [hitmarkerCrit, setHitmarkerCrit] = useState(false);
 
@@ -200,17 +204,20 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       ))}
 
-      {/* TOP-LEFT: TACTICAL PAUSE BUTTON */}
-      {onPause && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(env(safe-area-inset-top, 0px) + 16px)',
-            left: 'calc(env(safe-area-inset-left, 0px) + 16px)',
-            zIndex: 45,
-            pointerEvents: 'auto'
-          }}
-        >
+      {/* TOP-LEFT: TACTICAL CONTROLS (PAUSE & FULLSCREEN) */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 'calc(env(safe-area-inset-top, 0px) + 16px)',
+          left: 'calc(env(safe-area-inset-left, 0px) + 16px)',
+          zIndex: 45,
+          pointerEvents: 'auto',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8
+        }}
+      >
+        {onPause && (
           <button
             onClick={onPause}
             className="glass-panel"
@@ -228,11 +235,34 @@ export const HUD: React.FC<HUDProps> = ({
               boxShadow: '0 4px 15px rgba(2, 132, 199, 0.2)'
             }}
             aria-label="Pause Combat Simulation"
+            title="Pause Simulation"
           >
             <Pause size={20} />
           </button>
-        </div>
-      )}
+        )}
+
+        <button
+          onClick={() => toggleFullscreen()}
+          className="glass-panel"
+          style={{
+            width: 44,
+            height: 44,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 10,
+            border: isFullscreen ? '1.5px solid #0284c7' : '1.5px solid rgba(15, 23, 42, 0.15)',
+            background: isFullscreen ? 'rgba(2, 132, 199, 0.15)' : 'rgba(255, 255, 255, 0.94)',
+            color: isFullscreen ? '#0284c7' : '#0f172a',
+            cursor: 'pointer',
+            boxShadow: isFullscreen ? '0 0 14px rgba(2, 132, 199, 0.35)' : '0 4px 15px rgba(15, 23, 42, 0.1)'
+          }}
+          aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+          title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+        >
+          {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+        </button>
+      </div>
 
       {/* TOP BAR: WAVE / BOSS HEALTH */}
       <div

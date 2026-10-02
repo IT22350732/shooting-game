@@ -1,5 +1,6 @@
 import React from 'react';
-import { Play, RotateCcw, Sliders, Home } from 'lucide-react';
+import { Play, RotateCcw, Sliders, Home, Maximize, Minimize } from 'lucide-react';
+import { useFullscreen } from '../utils/fullscreen';
 
 interface PauseModalProps {
   onResume: () => void;
@@ -14,6 +15,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onOpenSettings,
   onMainMenu
 }) => {
+  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
   return (
     <div
       style={{
@@ -72,6 +74,22 @@ export const PauseModal: React.FC<PauseModalProps> = ({
           >
             <RotateCcw size={18} />
             RESTART MISSION
+          </button>
+
+          <button
+            onClick={() => toggleFullscreen()}
+            className="btn-cyber"
+            style={{
+              width: '100%',
+              padding: '12px 18px',
+              fontSize: '0.95rem',
+              background: isFullscreen ? 'rgba(2, 132, 199, 0.1)' : 'rgba(255,255,255,0.85)',
+              borderColor: isFullscreen ? '#0284c7' : 'rgba(15, 23, 42, 0.15)',
+              color: isFullscreen ? '#0284c7' : '#0f172a'
+            }}
+          >
+            {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+            {isFullscreen ? 'EXIT FULLSCREEN' : 'ENTER FULLSCREEN'}
           </button>
 
           <button

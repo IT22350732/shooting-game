@@ -1,8 +1,9 @@
 import React from 'react';
-import { X, Sliders } from 'lucide-react';
+import { X, Sliders, Maximize, Minimize } from 'lucide-react';
 import { GameSettings } from '../types/game';
 import { saveManager } from '../game/managers/SaveManager';
 import { soundManager } from '../audio/SoundManager';
+import { useFullscreen } from '../utils/fullscreen';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -11,6 +12,7 @@ interface SettingsModalProps {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onSettingsChanged }) => {
   const [settings, setSettings] = React.useState<GameSettings>(() => saveManager.getData().settings);
+  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
 
   const updateSetting = <K extends keyof GameSettings>(key: K, value: GameSettings[K]) => {
     const updated = { ...settings, [key]: value };
@@ -192,6 +194,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onSetting
               }}
             >
               {settings.screenShake ? 'ENABLED' : 'DISABLED'}
+            </button>
+          </div>
+
+          {/* Fullscreen Display Toggle */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem', color: '#0f172a', fontWeight: 700, display: 'block' }}>
+                FULLSCREEN DISPLAY
+              </span>
+              <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 500 }}>
+                Immersive full-display mode for desktop web and mobile browsers
+              </span>
+            </div>
+            <button
+              onClick={() => toggleFullscreen()}
+              className="glass-panel"
+              style={{
+                padding: '6px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                border: isFullscreen ? '1.5px solid #0284c7' : '1px solid rgba(15, 23, 42, 0.12)',
+                background: isFullscreen ? 'rgba(2, 132, 199, 0.12)' : 'transparent',
+                color: isFullscreen ? '#0284c7' : '#64748b',
+                fontFamily: 'var(--font-display)',
+                fontSize: '0.82rem',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+            >
+              {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
+              {isFullscreen ? 'ACTIVE' : 'ENTER'}
             </button>
           </div>
         </div>

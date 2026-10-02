@@ -8,9 +8,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Smartphone,
-  X
+  X,
+  Maximize
 } from 'lucide-react';
 import { GameEngine } from '../game/core/GameEngine';
+import { useFullscreen } from '../utils/fullscreen';
 
 interface MobileControlsProps {
   engine: GameEngine | null;
@@ -18,6 +20,7 @@ interface MobileControlsProps {
 }
 
 export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
+  const { toggle: toggleFullscreen } = useFullscreen();
   // Joystick state
   const joystickBaseRef = useRef<HTMLDivElement>(null);
   const joystickKnobRef = useRef<HTMLDivElement>(null);
@@ -284,6 +287,26 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
           <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.74rem', color: '#0f172a', fontWeight: 700 }}>
             ROTATE TO LANDSCAPE FOR WIDER VISION
           </span>
+          <button
+            onClick={() => toggleFullscreen()}
+            style={{
+              background: '#0284c7',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: 12,
+              padding: '3px 8px',
+              fontSize: '0.66rem',
+              fontWeight: 800,
+              fontFamily: 'var(--font-display)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4
+            }}
+          >
+            <Maximize size={11} />
+            FULLSCREEN
+          </button>
           <button
             onClick={() => setShowRotateNotice(false)}
             style={{

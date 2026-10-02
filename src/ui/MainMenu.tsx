@@ -14,10 +14,13 @@ import {
   Layers,
   ChevronRight,
   X,
-  ShieldCheck
+  ShieldCheck,
+  Maximize,
+  Minimize
 } from 'lucide-react';
 import { GameMode, ArenaId } from '../types/game';
 import { saveManager } from '../game/managers/SaveManager';
+import { useFullscreen } from '../utils/fullscreen';
 
 interface MainMenuProps {
   onStartGame: (mode: GameMode, arena: ArenaId) => void;
@@ -42,6 +45,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   const [selectedArena, setSelectedArena] = useState<ArenaId>('industrial');
   const [showMissionSelect, setShowMissionSelect] = useState(false);
   const [activeTab, setActiveTab] = useState<'mode' | 'arena'>('mode');
+  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
 
   const savedData = saveManager.getData();
 
@@ -277,6 +281,31 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             aria-label="Manual & Guide"
           >
             <HelpCircle size={18} />
+          </button>
+
+          {/* Fullscreen Toggle Button */}
+          <button
+            onClick={() => toggleFullscreen()}
+            className="glass-panel"
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: isFullscreen ? '1.5px solid #0284c7' : '1.5px solid rgba(15, 23, 42, 0.15)',
+              background: isFullscreen ? 'rgba(2, 132, 199, 0.14)' : 'rgba(255, 255, 255, 0.9)',
+              color: isFullscreen ? '#0284c7' : '#0f172a',
+              cursor: 'pointer',
+              boxShadow: isFullscreen ? '0 0 12px rgba(2, 132, 199, 0.3)' : '0 4px 12px rgba(15, 23, 42, 0.1)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)'
+            }}
+            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+          >
+            {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
           </button>
         </div>
       </div>
