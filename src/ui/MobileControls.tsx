@@ -154,15 +154,34 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
   const handleLookTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     // Only capture if we don't already have an active look touch
     if (lookTouchIdRef.current !== null) return;
-    const target = e.target as HTMLElement;
-    if (target?.closest?.('.hud-weapon-panel, .hud-weapon-slots, .hud-weapon-card, .mobile-joystick, button, select, [role="button"]')) {
+    const touch = e.changedTouches[0];
+    if (!touch) return;
+
+    // Never capture touches in top-left tactical buttons zone (Pause, Info, Fullscreen)
+    if (touch.clientY < 80 && touch.clientX < 200) {
       return;
     }
+
+    // Never capture touches in the bottom-left joystick zone
+    if (touch.clientY > window.innerHeight - 170 && touch.clientX < 170) {
+      return;
+    }
+
+    // Never capture touches in the bottom-right action buttons zone
+    if (touch.clientY > window.innerHeight - 200 && touch.clientX > window.innerWidth - 220) {
+      return;
+    }
+
+    const target = e.target as HTMLElement;
+    if (target?.closest?.('.hud-top-actions, .hud-weapon-panel, .hud-weapon-slots, .hud-weapon-card, .mobile-joystick, .mobile-action-cluster, button, select, [role="button"]')) {
+      return;
+    }
+
     for (let i = 0; i < e.changedTouches.length; i++) {
-      const touch = e.changedTouches[i];
-      if (touch.identifier !== joystickTouchIdRef.current) {
-        lookTouchIdRef.current = touch.identifier;
-        lookLastPosRef.current = { x: touch.clientX, y: touch.clientY };
+      const t = e.changedTouches[i];
+      if (t.identifier !== joystickTouchIdRef.current) {
+        lookTouchIdRef.current = t.identifier;
+        lookLastPosRef.current = { x: t.clientX, y: t.clientY };
         break;
       }
     }
@@ -251,7 +270,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
         position: 'absolute',
         inset: 0,
         pointerEvents: 'none',
-        zIndex: 75,
+        zIndex: 50,
         touchAction: 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none'

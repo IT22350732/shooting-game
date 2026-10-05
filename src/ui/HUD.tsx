@@ -135,7 +135,7 @@ export const HUD: React.FC<HUDProps> = ({
   const isLowHp = hpPercent <= 25;
 
   return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 40 }}>
+    <div className="hud-root-layer" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
       {/* Low Health Red Vignette Pulse */}
       {isLowHp && (
         <div
@@ -563,13 +563,14 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       ))}
 
-      {/* TOP-LEFT: TACTICAL CONTROLS (PAUSE & FULLSCREEN) */}
+      {/* TOP-LEFT: TACTICAL CONTROLS (PAUSE, INFO & FULLSCREEN) */}
       <div
+        className="hud-top-actions"
         style={{
           position: 'absolute',
           top: 'calc(env(safe-area-inset-top, 0px) + 16px)',
           left: 'calc(env(safe-area-inset-left, 0px) + 16px)',
-          zIndex: 45,
+          zIndex: 90,
           pointerEvents: 'auto',
           display: 'flex',
           alignItems: 'center',
@@ -579,6 +580,11 @@ export const HUD: React.FC<HUDProps> = ({
         {onPause && (
           <button
             onClick={onPause}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onPause();
+            }}
             className="glass-panel"
             style={{
               width: 44,
@@ -591,7 +597,9 @@ export const HUD: React.FC<HUDProps> = ({
               background: 'rgba(255, 255, 255, 0.94)',
               color: '#0284c7',
               cursor: 'pointer',
-              boxShadow: '0 4px 15px rgba(2, 132, 199, 0.2)'
+              boxShadow: '0 4px 15px rgba(2, 132, 199, 0.2)',
+              pointerEvents: 'auto',
+              touchAction: 'manipulation'
             }}
             aria-label="Pause Combat Simulation"
             title="Pause Simulation"
@@ -603,6 +611,12 @@ export const HUD: React.FC<HUDProps> = ({
         {onOpenTutorial && (
           <button
             onClick={() => {
+              if (onPause) onPause();
+              onOpenTutorial();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               if (onPause) onPause();
               onOpenTutorial();
             }}
@@ -618,7 +632,9 @@ export const HUD: React.FC<HUDProps> = ({
               background: 'rgba(255, 255, 255, 0.94)',
               color: '#0284c7',
               cursor: 'pointer',
-              boxShadow: '0 4px 15px rgba(2, 132, 199, 0.2)'
+              boxShadow: '0 4px 15px rgba(2, 132, 199, 0.2)',
+              pointerEvents: 'auto',
+              touchAction: 'manipulation'
             }}
             aria-label="Gameplay Info & Instructions"
             title="Gameplay Info & Instructions"
@@ -631,6 +647,7 @@ export const HUD: React.FC<HUDProps> = ({
           onClick={() => toggleFullscreen()}
           onTouchEnd={(e) => {
             e.preventDefault();
+            e.stopPropagation();
             toggleFullscreen();
           }}
           className="glass-panel"
@@ -645,7 +662,9 @@ export const HUD: React.FC<HUDProps> = ({
             background: isFullscreen ? 'rgba(2, 132, 199, 0.15)' : 'rgba(255, 255, 255, 0.94)',
             color: isFullscreen ? '#0284c7' : '#0f172a',
             cursor: 'pointer',
-            boxShadow: isFullscreen ? '0 0 14px rgba(2, 132, 199, 0.35)' : '0 4px 15px rgba(15, 23, 42, 0.1)'
+            boxShadow: isFullscreen ? '0 0 14px rgba(2, 132, 199, 0.35)' : '0 4px 15px rgba(15, 23, 42, 0.1)',
+            pointerEvents: 'auto',
+            touchAction: 'manipulation'
           }}
           aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
           title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
