@@ -1085,12 +1085,12 @@ export const HUD: React.FC<HUDProps> = ({
           onTouchStart={isMobileView ? (e) => e.stopPropagation() : undefined}
           onTouchEnd={isMobileView ? handleCycleWeaponNext : undefined}
           style={{
-            padding: isMobileView ? '6px 12px' : '12px 18px',
+            padding: isMobileView ? '5px 14px' : '12px 18px',
             minWidth: isMobileView ? 'auto' : 190,
             display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-end',
-            gap: isMobileView ? 2 : 4,
+            flexDirection: isMobileView ? 'row' : 'column',
+            alignItems: isMobileView ? 'center' : 'flex-end',
+            gap: isMobileView ? 10 : 4,
             cursor: isMobileView ? 'pointer' : 'default',
             userSelect: 'none',
             WebkitUserSelect: 'none'
@@ -1098,57 +1098,64 @@ export const HUD: React.FC<HUDProps> = ({
           title={isMobileView ? 'Tap to switch weapon' : undefined}
         >
           {isMobileView && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 1 }}>
-              <RotateCw size={11} color="#0284c7" strokeWidth={2.5} />
-              <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#0284c7' }}>
-                [{currentWeaponIdx + 1}/5] {activeWeapon.name.split(' ')[0]}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, borderRight: '1px solid rgba(56, 189, 248, 0.25)', paddingRight: 10 }}>
+              <RotateCw size={13} color="#38bdf8" strokeWidth={2.5} />
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '0.52rem', fontFamily: 'var(--font-display)', fontWeight: 700, color: '#94a3b8' }}>
+                  WEAPON [{currentWeaponIdx + 1}/5]
+                </span>
+                <span style={{ fontSize: '0.74rem', fontFamily: 'var(--font-display)', fontWeight: 900, color: '#ffffff' }}>
+                  {activeWeapon.name.split(' ')[0]}
+                </span>
+              </div>
             </div>
           )}
           {/* Ammo display */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: isMobileView ? 4 : 6 }}>
-            <span
-              className="hud-ammo-big"
-              style={{
-                fontFamily: "'Rajdhani', var(--font-display), sans-serif",
-                fontSize: isMobileView ? '1.5rem' : '2.5rem',
-                fontWeight: 900,
-                color: stats.ammo <= 5 ? '#e11d48' : '#0284c7',
-                lineHeight: 1
-              }}
-            >
-              {stats.ammo}
-            </span>
-            <span style={{ fontFamily: "'Rajdhani', var(--font-display), sans-serif", fontSize: isMobileView ? '0.95rem' : '1.15rem', color: '#94a3b8', fontWeight: 800 }}>
-              / {stats.maxAmmo}
-            </span>
-          </div>
-
-          {/* Reload Progress or Warning */}
-          {stats.isReloading ? (
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-end' }}>
-              <span style={{ fontSize: '0.65rem', fontFamily: 'var(--font-display)', color: '#d97706', fontWeight: 800 }}>RELOADING...</span>
-              <div style={{ width: '100%', height: 3, background: 'rgba(15, 23, 42, 0.1)', borderRadius: 2 }}>
-                <div style={{ width: `${stats.reloadProgress * 100}%`, height: '100%', background: '#d97706' }} />
-              </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: isMobileView ? 'flex-start' : 'flex-end', gap: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: isMobileView ? 4 : 6 }}>
+              <span
+                className="hud-ammo-big"
+                style={{
+                  fontFamily: "'Rajdhani', var(--font-display), sans-serif",
+                  fontSize: isMobileView ? '1.45rem' : '2.5rem',
+                  fontWeight: 900,
+                  color: stats.ammo <= 5 ? '#e11d48' : '#38bdf8',
+                  lineHeight: 1
+                }}
+              >
+                {stats.ammo}
+              </span>
+              <span style={{ fontFamily: "'Rajdhani', var(--font-display), sans-serif", fontSize: isMobileView ? '0.90rem' : '1.15rem', color: '#94a3b8', fontWeight: 800 }}>
+                / {stats.maxAmmo}
+              </span>
             </div>
-          ) : stats.ammo === 0 ? (
-            <span
-              style={{
-                fontSize: isMobileView ? '0.68rem' : '0.78rem',
-                fontFamily: 'var(--font-display)',
-                color: '#e11d48',
-                animation: 'pulseGlow 0.8s infinite alternate',
-                fontWeight: 800
-              }}
-            >
-              {isMobileView ? 'RELOAD!' : 'RELOAD NEEDED [R]'}
-            </span>
-          ) : (
-            <span style={{ fontSize: isMobileView ? '0.62rem' : '0.68rem', fontFamily: 'var(--font-display)', color: '#64748b', fontWeight: 700 }}>
-              {isMobileView ? 'AMMO' : '[R] RELOAD'}
-            </span>
-          )}
+
+            {/* Reload Progress or Warning */}
+            {stats.isReloading ? (
+              <div style={{ width: '100%', minWidth: 60, display: 'flex', flexDirection: 'column', gap: 2, alignItems: isMobileView ? 'flex-start' : 'flex-end' }}>
+                <span style={{ fontSize: '0.55rem', fontFamily: 'var(--font-display)', color: '#f59e0b', fontWeight: 800 }}>RELOADING...</span>
+                <div style={{ width: '100%', height: 3, background: 'rgba(255, 255, 255, 0.15)', borderRadius: 2 }}>
+                  <div style={{ width: `${stats.reloadProgress * 100}%`, height: '100%', background: '#f59e0b' }} />
+                </div>
+              </div>
+            ) : stats.ammo === 0 ? (
+              <span
+                style={{
+                  fontSize: '0.62rem',
+                  fontFamily: 'var(--font-display)',
+                  color: '#e11d48',
+                  animation: 'pulseGlow 0.8s infinite alternate',
+                  fontWeight: 900
+                }}
+              >
+                RELOAD!
+              </span>
+            ) : (
+              <span style={{ fontSize: '0.55rem', fontFamily: 'var(--font-display)', color: '#94a3b8', fontWeight: 700 }}>
+                AMMO
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>

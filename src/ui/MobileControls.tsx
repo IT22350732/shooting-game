@@ -55,64 +55,64 @@ export interface MobileLayoutConfig {
 // --- DEFAULT PRESETS ---
 
 const DEFAULT_PRESET_TWO_THUMB: Record<ControlId, ControlPos> = {
-  joystick: { x: 0.12, y: 0.78, size: 132 },
+  joystick: { x: 0.12, y: 0.78, size: 130 },
   sprintLock: { x: 0.12, y: 0.52, size: 44 },
-  fire: { x: 0.88, y: 0.76, size: 126 },
-  leftFire: { x: 0.12, y: 0.24, size: 66 },
-  ads: { x: 0.74, y: 0.80, size: 58 },
-  jump: { x: 0.90, y: 0.49, size: 54 },
-  crouch: { x: 0.80, y: 0.56, size: 52 },
-  prone: { x: 0.70, y: 0.61, size: 50 },
-  reload: { x: 0.90, y: 0.32, size: 52 },
-  weaponSwitch: { x: 0.78, y: 0.40, size: 54 },
-  melee: { x: 0.67, y: 0.45, size: 48 },
-  grenade: { x: 0.58, y: 0.50, size: 48 },
-  interact: { x: 0.62, y: 0.72, size: 50 },
-  customize: { x: 0.96, y: 0.14, size: 40 }
+  fire: { x: 0.88, y: 0.78, size: 120 },
+  leftFire: { x: 0.10, y: 0.22, size: 68 },
+  ads: { x: 0.75, y: 0.78, size: 56 },
+  crouch: { x: 0.88, y: 0.57, size: 50 },
+  prone: { x: 0.77, y: 0.63, size: 48 },
+  jump: { x: 0.92, y: 0.40, size: 52 },
+  reload: { x: 0.81, y: 0.47, size: 48 },
+  weaponSwitch: { x: 0.71, y: 0.47, size: 48 },
+  melee: { x: 0.92, y: 0.25, size: 44 },
+  grenade: { x: 0.81, y: 0.32, size: 44 },
+  interact: { x: 0.70, y: 0.34, size: 46 },
+  customize: { x: 0.96, y: 0.13, size: 38 }
 };
 
 const DEFAULT_PRESET_THREE_CLAW: Record<ControlId, ControlPos> = {
-  joystick: { x: 0.12, y: 0.78, size: 132 },
-  sprintLock: { x: 0.12, y: 0.54, size: 44 },
-  fire: { x: 0.88, y: 0.76, size: 118 },
-  leftFire: { x: 0.10, y: 0.20, size: 76 },
-  ads: { x: 0.74, y: 0.79, size: 58 },
-  jump: { x: 0.90, y: 0.50, size: 54 },
-  crouch: { x: 0.80, y: 0.58, size: 52 },
-  prone: { x: 0.71, y: 0.63, size: 50 },
-  reload: { x: 0.90, y: 0.34, size: 52 },
-  weaponSwitch: { x: 0.80, y: 0.42, size: 54 },
-  melee: { x: 0.68, y: 0.47, size: 48 },
-  grenade: { x: 0.58, y: 0.52, size: 48 },
-  interact: { x: 0.62, y: 0.72, size: 50 },
-  customize: { x: 0.96, y: 0.14, size: 40 }
+  joystick: { x: 0.12, y: 0.78, size: 130 },
+  sprintLock: { x: 0.12, y: 0.52, size: 44 },
+  fire: { x: 0.88, y: 0.78, size: 116 },
+  leftFire: { x: 0.10, y: 0.18, size: 76 },
+  ads: { x: 0.75, y: 0.78, size: 56 },
+  crouch: { x: 0.88, y: 0.57, size: 50 },
+  prone: { x: 0.77, y: 0.63, size: 48 },
+  jump: { x: 0.92, y: 0.40, size: 52 },
+  reload: { x: 0.81, y: 0.47, size: 48 },
+  weaponSwitch: { x: 0.71, y: 0.47, size: 48 },
+  melee: { x: 0.92, y: 0.25, size: 44 },
+  grenade: { x: 0.81, y: 0.32, size: 44 },
+  interact: { x: 0.70, y: 0.34, size: 46 },
+  customize: { x: 0.96, y: 0.13, size: 38 }
 };
 
 const DEFAULT_PRESET_FOUR_CLAW: Record<ControlId, ControlPos> = {
-  joystick: { x: 0.12, y: 0.78, size: 132 },
-  sprintLock: { x: 0.12, y: 0.54, size: 44 },
+  joystick: { x: 0.12, y: 0.78, size: 130 },
+  sprintLock: { x: 0.12, y: 0.52, size: 44 },
   fire: { x: 0.88, y: 0.78, size: 110 },
   leftFire: { x: 0.10, y: 0.18, size: 78 },
-  ads: { x: 0.88, y: 0.18, size: 70 },
-  jump: { x: 0.76, y: 0.20, size: 58 },
-  crouch: { x: 0.88, y: 0.54, size: 54 },
-  prone: { x: 0.78, y: 0.58, size: 52 },
-  reload: { x: 0.66, y: 0.24, size: 52 },
-  weaponSwitch: { x: 0.77, y: 0.76, size: 56 },
-  melee: { x: 0.68, y: 0.46, size: 48 },
-  grenade: { x: 0.58, y: 0.52, size: 48 },
-  interact: { x: 0.66, y: 0.66, size: 50 },
-  customize: { x: 0.50, y: 0.12, size: 40 }
+  ads: { x: 0.88, y: 0.18, size: 68 },
+  jump: { x: 0.76, y: 0.18, size: 54 },
+  crouch: { x: 0.88, y: 0.56, size: 50 },
+  prone: { x: 0.77, y: 0.62, size: 46 },
+  reload: { x: 0.88, y: 0.38, size: 48 },
+  weaponSwitch: { x: 0.76, y: 0.78, size: 50 },
+  melee: { x: 0.76, y: 0.38, size: 44 },
+  grenade: { x: 0.76, y: 0.50, size: 44 },
+  interact: { x: 0.65, y: 0.60, size: 46 },
+  customize: { x: 0.50, y: 0.12, size: 38 }
 };
 
-const STORAGE_KEY = 'shooting_game_mobile_controls_v3';
+const STORAGE_KEY = 'shooting_game_mobile_controls_v4';
 
 function loadStoredConfig(): MobileLayoutConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.version === 3) {
+      if (parsed.version === 4) {
         return parsed;
       }
     }
@@ -121,7 +121,7 @@ function loadStoredConfig(): MobileLayoutConfig {
   }
 
   return {
-    version: 3,
+    version: 4,
     opacity: 0.82,
     cameraSensitivity: 100,
     adsSensitivity: 80,
