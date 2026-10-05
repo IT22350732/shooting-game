@@ -290,18 +290,18 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
                 <KeyCard
                   keys={['LEFT JOYSTICK']}
-                  label="Movement & Gun Aim"
-                  detail="Drag joystick to walk and steer gun aim; push to outer rim to sprint"
+                  label="Movement Only"
+                  detail="Drag joystick to walk in any direction; push to outer rim to sprint"
                 />
                 <KeyCard
-                  keys={['RIGHT TOUCH DRAG']}
-                  label="Aim & Look Camera"
-                  detail="Swipe right half of screen to look and direct crosshair freely"
+                  keys={['RIGHT FIRE JOYSTICK']}
+                  label="Aim & Fire Controller"
+                  detail="Touch and drag to steer gun aim and continuously discharge firearm"
                 />
                 <KeyCard
-                  keys={['CROSSHAIR BUTTON']}
-                  label="Shoot / Fire"
-                  detail="Hold or tap to continuously discharge your selected weapon"
+                  keys={['FREE TOUCH DRAG']}
+                  label="Camera Look"
+                  detail="Swipe screen background to look around without firing"
                 />
                 <KeyCard
                   keys={['EYE (ADS) BUTTON']}

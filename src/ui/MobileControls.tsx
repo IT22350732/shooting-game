@@ -32,6 +32,13 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
   const lookTouchIdRef = useRef<number | null>(null);
   const lookLastPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
+  // Fire & Aim Joystick state (twin controller for aiming and firing simultaneously)
+  const fireBaseRef = useRef<HTMLDivElement>(null);
+  const fireKnobRef = useRef<HTMLDivElement>(null);
+  const fireTouchIdRef = useRef<number | null>(null);
+  const fireCenterRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const fireLastPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
   // Aim ADS state
   const [isAiming, setIsAiming] = useState(false);
   const [isFiring, setIsFiring] = useState(false);
@@ -75,7 +82,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
     }
   };
 
-  // --- JOYSTICK TOUCH HANDLERS ---
+  // --- MOVEMENT JOYSTICK TOUCH HANDLERS (WALKING & RUNNING ONLY) ---
   const handleJoystickTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     e.stopPropagation();
     if (joystickTouchIdRef.current !== null) return;
@@ -126,7 +133,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
     const isSprintPushed = normY > 0.78 || isSprintLocked;
     setIsSprintingAuto(isSprintPushed);
 
-    // Apply to engine
+    // Apply to engine (walking and running only)
     engine.setAnalogMove(normX, normY, isSprintPushed);
 
     // Update UI knob position
@@ -150,7 +157,121 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
     }
   };
 
-  // --- TOUCH AIM / CAMERA LOOK HANDLERS ---
+  // --- FIRE & AIM CONTROLLER HANDLERS (AIM GUN & FIRE BOTH) ---
+  const handleFireJoystickTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    if (fireTouchIdRef.current !== null) return;
+    const touch = e.changedTouches[0];
+    fireTouchIdRef.current = touch.identifier;
+
+    if (fireBaseRef.current) {
+      const rect = fireBaseRef.current.getBoundingClientRect();
+      fireCenterRef.current = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      };
+    }
+    fireLastPosRef.current = { x: touch.clientX, y: touch.clientY };
+
+    setIsFiring(true);
+    triggerHaptic(16);
+    engine?.setFiring(true);
+
+    handleFireJoystickMove(touch.clientX, touch.clientY);
+  };
+
+  const handleFireJoystickTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const touch = e.changedTouches[i];
+      if (touch.identifier === fireTouchIdRef.current) {
+        handleFireJoystickMove(touch.clientX, touch.clientY);
+        break;
+      }
+    }
+  };
+
+  const handleFireJoystickMove = (clientX: number, clientY: number) => {
+    if (!engine || !fireKnobRef.current) return;
+
+    // 1. Aim camera & gun movement via touch delta
+    const deltaX = clientX - fireLastPosRef.current.x;
+    const deltaY = clientY - fireLastPosRef.current.y;
+    fireLastPosRef.current = { x: clientX, y: clientY };
+
+    if (deltaX !== 0 || deltaY !== 0) {
+      engine.rotateCameraTouch(deltaX, deltaY);
+    }
+
+    // 2. Visual knob deflection inside the fire controller
+    const maxRadius = 46;
+    const dx = clientX - fireCenterRef.current.x;
+    const dy = clientY - fireCenterRef.current.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    let clampedX = dx;
+    let clampedY = dy;
+    if (dist > maxRadius) {
+      clampedX = (dx / dist) * maxRadius;
+      clampedY = (dy / dist) * maxRadius;
+    }
+
+    fireKnobRef.current.style.transform = `translate(${clampedX}px, ${clampedY}px)`;
+  };
+
+  const handleFireJoystickTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === fireTouchIdRef.current) {
+        fireTouchIdRef.current = null;
+        setIsFiring(false);
+
+        if (fireKnobRef.current) {
+          fireKnobRef.current.style.transform = 'translate(0px, 0px)';
+        }
+        if (engine) {
+          engine.setFiring(false);
+        }
+        break;
+      }
+    }
+  };
+
+  // Mouse fallback for desktop browser testing of Fire Controller
+  const handleFireMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (fireBaseRef.current) {
+      const rect = fireBaseRef.current.getBoundingClientRect();
+      fireCenterRef.current = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      };
+    }
+    fireLastPosRef.current = { x: e.clientX, y: e.clientY };
+    setIsFiring(true);
+    triggerHaptic(14);
+    engine?.setFiring(true);
+
+    const onMouseMove = (ev: MouseEvent) => {
+      handleFireJoystickMove(ev.clientX, ev.clientY);
+    };
+
+    const onMouseUp = () => {
+      setIsFiring(false);
+      if (fireKnobRef.current) {
+        fireKnobRef.current.style.transform = 'translate(0px, 0px)';
+      }
+      engine?.setFiring(false);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  // --- TOUCH AIM / BACKGROUND CAMERA LOOK HANDLERS ---
   const handleLookTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     // Only capture if we don't already have an active look touch
     if (lookTouchIdRef.current !== null) return;
@@ -162,24 +283,24 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
       return;
     }
 
-    // Never capture touches in the bottom-left joystick zone
+    // Never capture touches in the bottom-left moving joystick zone
     if (touch.clientY > window.innerHeight - 170 && touch.clientX < 170) {
       return;
     }
 
-    // Never capture touches in the bottom-right action buttons zone
-    if (touch.clientY > window.innerHeight - 200 && touch.clientX > window.innerWidth - 220) {
+    // Never capture touches in the bottom-right fire controller & action buttons zone
+    if (touch.clientY > window.innerHeight - 240 && touch.clientX > window.innerWidth - 250) {
       return;
     }
 
     const target = e.target as HTMLElement;
-    if (target?.closest?.('.hud-top-actions, .hud-weapon-panel, .hud-weapon-slots, .hud-weapon-card, .mobile-joystick, .mobile-action-cluster, button, select, [role="button"]')) {
+    if (target?.closest?.('.hud-top-actions, .hud-weapon-panel, .hud-weapon-slots, .hud-weapon-card, .mobile-joystick, .mobile-fire-joystick, .mobile-action-cluster, button, select, [role="button"]')) {
       return;
     }
 
     for (let i = 0; i < e.changedTouches.length; i++) {
       const t = e.changedTouches[i];
-      if (t.identifier !== joystickTouchIdRef.current) {
+      if (t.identifier !== joystickTouchIdRef.current && t.identifier !== fireTouchIdRef.current) {
         lookTouchIdRef.current = t.identifier;
         lookLastPosRef.current = { x: t.clientX, y: t.clientY };
         break;
@@ -212,20 +333,6 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
   }, []);
 
   // --- ACTION BUTTON HANDLERS ---
-  const handleFireStart = (e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsFiring(true);
-    triggerHaptic(15);
-    engine?.setFiring(true);
-  };
-
-  const handleFireEnd = (e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsFiring(false);
-    engine?.setFiring(false);
-  };
 
   const handleJumpStart = (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
@@ -431,222 +538,269 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
         </div>
       </div>
 
-      {/* RIGHT-SIDE TACTICAL ACTION BUTTONS CLUSTER */}
+      {/* RIGHT-SIDE AIM & FIRE CONTROLLER (TWIN CONTROLLER FOR AIMING & SHOOTING) */}
+      <div
+        ref={fireBaseRef}
+        className="mobile-fire-joystick"
+        onTouchStart={handleFireJoystickTouchStart}
+        onTouchMove={handleFireJoystickTouchMove}
+        onTouchEnd={handleFireJoystickTouchEnd}
+        onTouchCancel={handleFireJoystickTouchEnd}
+        onMouseDown={handleFireMouseDown}
+        style={{
+          position: 'absolute',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)',
+          right: 'calc(env(safe-area-inset-right, 0px) + 20px)',
+          width: 130,
+          height: 130,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(30, 41, 59, 0.90) 0%, rgba(15, 23, 42, 0.96) 100%)',
+          border: isFiring ? '2.5px solid #f43f5e' : '2px solid rgba(255, 255, 255, 0.75)',
+          boxShadow: isFiring
+            ? '0 0 30px rgba(244, 63, 94, 0.85), inset 0 0 15px rgba(244, 63, 94, 0.4)'
+            : '0 4px 25px rgba(0, 0, 0, 0.6), 0 0 15px rgba(225, 29, 72, 0.35), inset 0 0 15px rgba(255, 255, 255, 0.12)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          pointerEvents: 'auto',
+          touchAction: 'none',
+          zIndex: 85,
+          cursor: 'pointer',
+          transition: 'border 0.2s, box-shadow 0.2s'
+        }}
+      >
+        {/* Cardinal Direction Indicators */}
+        <div style={{ position: 'absolute', top: 6, width: 8, height: 2, background: 'rgba(255, 255, 255, 0.8)', borderRadius: 1 }} />
+        <div style={{ position: 'absolute', bottom: 6, width: 8, height: 2, background: 'rgba(255, 255, 255, 0.8)', borderRadius: 1 }} />
+        <div style={{ position: 'absolute', left: 6, width: 2, height: 8, background: 'rgba(255, 255, 255, 0.8)', borderRadius: 1 }} />
+        <div style={{ position: 'absolute', right: 6, width: 2, height: 8, background: 'rgba(255, 255, 255, 0.8)', borderRadius: 1 }} />
+
+        {/* Aim & Fire Header Badge */}
+        <span
+          style={{
+            position: 'absolute',
+            top: 14,
+            fontSize: '0.62rem',
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            color: isFiring ? '#f43f5e' : '#fb7185',
+            letterSpacing: '0.05em'
+          }}
+        >
+          AIM & FIRE
+        </span>
+
+        {/* Fire Joystick Thumb Knob */}
+        <div
+          ref={fireKnobRef}
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: '50%',
+            background: isFiring
+              ? 'linear-gradient(135deg, #e11d48, #f43f5e)'
+              : 'linear-gradient(135deg, #be123c, #e11d48)',
+            border: '2.5px solid #ffffff',
+            boxShadow: isFiring
+              ? '0 0 25px rgba(244, 63, 94, 0.95), 0 4px 15px rgba(0, 0, 0, 0.5)'
+              : '0 4px 15px rgba(0, 0, 0, 0.5), 0 0 14px rgba(225, 29, 72, 0.7)',
+            pointerEvents: 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 1,
+            transition: 'transform 0.05s ease-out'
+          }}
+        >
+          <Crosshair size={22} color="#ffffff" strokeWidth={2.8} />
+          <span
+            style={{
+              fontSize: '0.50rem',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 900,
+              color: '#ffffff',
+              letterSpacing: '0.04em'
+            }}
+          >
+            FIRE
+          </span>
+        </div>
+      </div>
+
+      {/* TACTICAL ACTION BUTTONS (ALIGNED CONVENIENTLY ABOVE FIRE CONTROLLER) */}
       <div
         className="mobile-action-cluster"
         style={{
           position: 'absolute',
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 162px)',
           right: 'calc(env(safe-area-inset-right, 0px) + 16px)',
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: 10,
+          gap: 9,
+          alignItems: 'center',
           pointerEvents: 'auto',
           zIndex: 85
         }}
       >
-        {/* UPPER ROW: SPRINT LOCK, RELOAD & AIM (ADS) BUTTONS */}
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          {/* Sprint Lock Toggle Button */}
-          <button
-            onTouchStart={handleToggleSprintLock}
-            onMouseDown={handleToggleSprintLock}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: isSprintLocked ? 'linear-gradient(135deg, #f97316, #fb923c)' : 'linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96))',
-              border: isSprintLocked ? '2.5px solid #ffffff' : '2px solid #f97316',
-              color: '#ffffff',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              boxShadow: isSprintLocked ? '0 0 20px rgba(249, 115, 22, 0.8), 0 4px 12px rgba(0, 0, 0, 0.5)' : '0 4px 14px rgba(0, 0, 0, 0.5), 0 0 8px rgba(249, 115, 22, 0.35)',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-            aria-label="Toggle Sprint Lock"
-          >
-            <Zap size={18} fill={isSprintLocked ? '#ffffff' : '#f97316'} color={isSprintLocked ? '#ffffff' : '#f97316'} />
-          </button>
+        {/* Sprint Lock Toggle Button */}
+        <button
+          onTouchStart={handleToggleSprintLock}
+          onMouseDown={handleToggleSprintLock}
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: isSprintLocked ? 'linear-gradient(135deg, #f97316, #fb923c)' : 'linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96))',
+            border: isSprintLocked ? '2.5px solid #ffffff' : '2px solid #f97316',
+            color: '#ffffff',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            boxShadow: isSprintLocked ? '0 0 20px rgba(249, 115, 22, 0.8), 0 4px 12px rgba(0, 0, 0, 0.5)' : '0 4px 14px rgba(0, 0, 0, 0.5), 0 0 8px rgba(249, 115, 22, 0.35)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
+          }}
+          aria-label="Toggle Sprint Lock"
+        >
+          <Zap size={17} fill={isSprintLocked ? '#ffffff' : '#f97316'} color={isSprintLocked ? '#ffffff' : '#f97316'} />
+        </button>
 
-          {/* Quick Weapon Switch Button */}
-          <button
-            onTouchStart={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              triggerHaptic(12);
-              engine?.cycleWeapon(1);
-            }}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              triggerHaptic(12);
-              engine?.cycleWeapon(1);
-            }}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: '50%',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'linear-gradient(135deg, #0284c7, #0ea5e9)',
-              border: '2px solid #ffffff',
-              color: '#ffffff',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              boxShadow: '0 0 16px rgba(14, 165, 233, 0.8), 0 4px 12px rgba(0, 0, 0, 0.5)',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-            aria-label="Cycle Weapon"
-          >
-            <ArrowRightLeft size={16} strokeWidth={2.6} />
-            <span style={{ fontSize: '0.46rem', fontWeight: 900, fontFamily: 'var(--font-display)', marginTop: 1, letterSpacing: '0.04em' }}>GUN</span>
-          </button>
+        {/* Quick Weapon Switch Button */}
+        <button
+          onTouchStart={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            triggerHaptic(12);
+            engine?.cycleWeapon(1);
+          }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            triggerHaptic(12);
+            engine?.cycleWeapon(1);
+          }}
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: '50%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, #0284c7, #0ea5e9)',
+            border: '2px solid #ffffff',
+            color: '#ffffff',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            boxShadow: '0 0 16px rgba(14, 165, 233, 0.8), 0 4px 12px rgba(0, 0, 0, 0.5)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
+          }}
+          aria-label="Cycle Weapon"
+        >
+          <ArrowRightLeft size={16} strokeWidth={2.6} />
+          <span style={{ fontSize: '0.44rem', fontWeight: 900, fontFamily: 'var(--font-display)', marginTop: 1, letterSpacing: '0.04em' }}>GUN</span>
+        </button>
 
-          {/* Reload Button */}
-          <button
-            onTouchStart={handleReload}
-            onMouseDown={handleReload}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96))',
-              border: '2px solid rgba(255, 255, 255, 0.85)',
-              color: '#ffffff',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              boxShadow: '0 0 12px rgba(255, 255, 255, 0.25), 0 4px 12px rgba(0, 0, 0, 0.5)',
-              cursor: 'pointer'
-            }}
-            aria-label="Reload Weapon"
-          >
-            <RotateCw size={19} strokeWidth={2.4} />
-          </button>
+        {/* Reload Button */}
+        <button
+          onTouchStart={handleReload}
+          onMouseDown={handleReload}
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96))',
+            border: '2px solid rgba(255, 255, 255, 0.85)',
+            color: '#ffffff',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            boxShadow: '0 0 12px rgba(255, 255, 255, 0.25), 0 4px 12px rgba(0, 0, 0, 0.5)',
+            cursor: 'pointer'
+          }}
+          aria-label="Reload Weapon"
+        >
+          <RotateCw size={18} strokeWidth={2.4} />
+        </button>
 
-          {/* Aim / ADS Toggle Button */}
-          <button
-            onTouchStart={handleToggleAim}
-            onMouseDown={handleToggleAim}
-            style={{
-              width: 50,
-              height: 50,
-              borderRadius: '50%',
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: isAiming ? 'linear-gradient(135deg, #0284c7, #38bdf8)' : 'linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96))',
-              border: isAiming ? '2.5px solid #ffffff' : '2px solid #38bdf8',
-              color: '#ffffff',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              boxShadow: isAiming ? '0 0 25px rgba(56, 189, 248, 1), 0 4px 15px rgba(0, 0, 0, 0.5)' : '0 0 14px rgba(56, 189, 248, 0.5), 0 4px 14px rgba(0, 0, 0, 0.5)',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-            aria-label="Toggle Aim Down Sights / Zoom"
-          >
-            <Eye size={22} strokeWidth={2.4} />
-            {isAiming && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: -4,
-                  right: -4,
-                  background: '#0284c7',
-                  border: '1.5px solid #ffffff',
-                  borderRadius: 8,
-                  fontSize: '0.52rem',
-                  fontWeight: 900,
-                  padding: '1px 4px',
-                  color: '#ffffff',
-                  boxShadow: '0 0 8px rgba(14, 165, 233, 1)'
-                }}
-              >
-                {engine ? `${engine.getZoomLevel()}X` : 'ADS'}
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* LOWER ROW: JUMP & MAIN FIRE TRIGGER */}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          {/* Jump Button */}
-          <button
-            onTouchStart={handleJumpStart}
-            onTouchEnd={handleJumpEnd}
-            onTouchCancel={handleJumpEnd}
-            onMouseDown={handleJumpStart}
-            onMouseUp={handleJumpEnd}
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96))',
-              border: '2px solid rgba(255, 255, 255, 0.85)',
-              color: '#ffffff',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              boxShadow: '0 0 14px rgba(255, 255, 255, 0.25), 0 4px 14px rgba(0, 0, 0, 0.5)',
-              cursor: 'pointer'
-            }}
-            aria-label="Jump"
-          >
-            <ArrowUp size={24} strokeWidth={2.6} />
-          </button>
-
-          {/* Primary FIRE Trigger Button */}
-          <button
-            onTouchStart={handleFireStart}
-            onTouchEnd={handleFireEnd}
-            onTouchCancel={handleFireEnd}
-            onMouseDown={handleFireStart}
-            onMouseUp={handleFireEnd}
-            style={{
-              width: 74,
-              height: 74,
-              borderRadius: '50%',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 2,
-              background: isFiring
-                ? 'linear-gradient(135deg, #e11d48, #f43f5e)'
-                : 'radial-gradient(circle, rgba(244, 63, 94, 0.9) 0%, rgba(225, 29, 72, 0.98) 100%)',
-              border: isFiring ? '3px solid #ffffff' : '2.5px solid #ffffff',
-              color: '#ffffff',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              boxShadow: isFiring
-                ? '0 0 40px rgba(225, 29, 72, 1), inset 0 0 14px rgba(255, 255, 255, 0.8)'
-                : '0 0 25px rgba(244, 63, 94, 0.85), 0 4px 16px rgba(0, 0, 0, 0.6)',
-              cursor: 'pointer',
-              transform: isFiring ? 'scale(0.95)' : 'scale(1)',
-              transition: 'transform 0.08s ease, background 0.1s, box-shadow 0.1s'
-            }}
-            aria-label="Fire Weapon"
-          >
-            <Crosshair size={30} strokeWidth={2.6} />
-            <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-display)', fontWeight: 900, letterSpacing: '0.08em', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>
-              FIRE
+        {/* Aim / ADS Zoom Button */}
+        <button
+          onTouchStart={handleToggleAim}
+          onMouseDown={handleToggleAim}
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: '50%',
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: isAiming ? 'linear-gradient(135deg, #0284c7, #38bdf8)' : 'linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96))',
+            border: isAiming ? '2.5px solid #ffffff' : '2px solid #38bdf8',
+            color: '#ffffff',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            boxShadow: isAiming ? '0 0 25px rgba(56, 189, 248, 1), 0 4px 15px rgba(0, 0, 0, 0.5)' : '0 0 14px rgba(56, 189, 248, 0.5), 0 4px 14px rgba(0, 0, 0, 0.5)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
+          }}
+          aria-label="Toggle Aim Down Sights / Zoom"
+        >
+          <Eye size={21} strokeWidth={2.4} />
+          {isAiming && (
+            <span
+              style={{
+                position: 'absolute',
+                top: -4,
+                right: -4,
+                background: '#0284c7',
+                border: '1.5px solid #ffffff',
+                borderRadius: 8,
+                fontSize: '0.50rem',
+                fontWeight: 900,
+                padding: '1px 4px',
+                color: '#ffffff',
+                boxShadow: '0 0 8px rgba(14, 165, 233, 1)'
+              }}
+            >
+              {engine ? `${engine.getZoomLevel()}X` : 'ADS'}
             </span>
-          </button>
-        </div>
+          )}
+        </button>
+
+        {/* Combat Jump Button */}
+        <button
+          onTouchStart={handleJumpStart}
+          onTouchEnd={handleJumpEnd}
+          onTouchCancel={handleJumpEnd}
+          onMouseDown={handleJumpStart}
+          onMouseUp={handleJumpEnd}
+          style={{
+            width: 50,
+            height: 50,
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96))',
+            border: '2px solid rgba(255, 255, 255, 0.85)',
+            color: '#ffffff',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            boxShadow: '0 0 14px rgba(255, 255, 255, 0.25), 0 4px 14px rgba(0, 0, 0, 0.5)',
+            cursor: 'pointer'
+          }}
+          aria-label="Jump"
+        >
+          <ArrowUp size={24} strokeWidth={2.6} />
+        </button>
       </div>
     </div>
   );

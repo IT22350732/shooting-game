@@ -1298,22 +1298,7 @@ export class GameEngine {
     const hasSlowMotion = this.player.hasPowerup('slow_motion');
     const enemyDelta = hasSlowMotion ? delta * 0.35 : delta;
 
-    // 2. Mobile movement controller gun aim & camera steering
-    if (Math.abs(this.analogMove.x) > 0.04) {
-      const isAiming = this.isAimingActive();
-      let adsDamp = 1.0;
-      if (this.zoomLevel >= 2) {
-        adsDamp = 0.38;
-      } else if (isAiming || this.zoomLevel === 1) {
-        adsDamp = 0.58;
-      }
-      // Non-linear response curve: gentle precision on slight push, rapid tactical turn at edge
-      const inputX = this.analogMove.x;
-      const curvedX = Math.sign(inputX) * Math.pow(Math.abs(inputX), 1.25);
-      const turnSpeed = 2.6 * (this.touchSensitivity / 50) * adsDamp;
-      this.player.yaw -= curvedX * turnSpeed * delta;
-    }
-
+    // 2. Player Update (tactical steady pace when zoomed)
     const saved = saveManager.getData();
     const effectiveKeys = {
       ...this.keys,
@@ -1333,7 +1318,7 @@ export class GameEngine {
     );
 
     // 3. Weapon Update
-    this.currentWeapon.update(delta, walkTime, isMoving, this.analogMove.x);
+    this.currentWeapon.update(delta, walkTime, isMoving);
     this.handlePlayerShooting(now);
 
     // 4. Wave Manager Update

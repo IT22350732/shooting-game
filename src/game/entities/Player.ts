@@ -238,7 +238,7 @@ export class Player {
     if (hasAnalog) {
       // y > 0 is forward, y < 0 is backward; x > 0 is right, x < 0 is left
       moveDir.addScaledVector(forward, analogMove.y);
-      moveDir.addScaledVector(right, analogMove.x * 0.55);
+      moveDir.addScaledVector(right, analogMove.x);
     } else {
       if (keys.forward) moveDir.add(forward);
       if (keys.backward) moveDir.sub(forward);
