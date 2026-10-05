@@ -46,9 +46,9 @@ A fast-paced, high-octane 3D Arcade First-Person Shooter (FPS) built directly fo
 | **W, A, S, D** | Move operative |
 | **Mouse Aim** | Look around / Aim reticle |
 | **Left Click** | Shoot weapon |
-| **Right Click** | Aim Down Sights (ADS) / Sniper Zoom Scope |
+| **Z / Right Click** | Aim Down Sights (ADS) / Tactical Zoom Scope |
+| **Left Shift / C** | High-velocity sprint |
 | **R** | Reload magazine |
-| **Left Shift** | High-velocity sprint |
 | **Space** | Jump / Evade |
 | **1, 2, 3, 4, 5** | Switch weapons |
 | **ESC** | Tactical pause menu |

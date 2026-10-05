@@ -186,9 +186,9 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
                     desc="Walk forward, backward, and strafe laterally"
                   />
                   <HighlightKeyItem
-                    keys={['SHIFT']}
+                    keys={['Z']}
                     altKeys={['RIGHT CLICK']}
-                    action="PRESS SHIFT TO ZOOM"
+                    action="PRESS Z TO ZOOM"
                     desc="Engage optical ADS, narrow spread & lock targets"
                   />
                   <HighlightKeyItem
@@ -217,10 +217,10 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
                     detail="Omni-directional ground movement and tactical strafing"
                   />
                   <KeyCard
-                    keys={['SHIFT']}
+                    keys={['Z']}
                     secondaryKey="Right Click"
                     label="Zoom & Aim Assist"
-                    detail="Hold or tap Shift to zoom in and lock onto hostile weakpoints"
+                    detail="Hold or tap Z to zoom in and lock onto hostile weakpoints"
                   />
                   <KeyCard
                     keys={['SPACE']}
@@ -238,7 +238,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
                     detail="Smooth 360° pitch and yaw aim targeting"
                   />
                   <KeyCard
-                    keys={['C', 'CTRL']}
+                    keys={['SHIFT', 'C']}
                     label="Tactical Sprint"
                     detail="High-speed dash to escape enemy squads or reposition"
                   />
@@ -306,7 +306,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
                 <KeyCard
                   keys={['EYE (ADS) BUTTON']}
                   label="Toggle Zoom Scope"
-                  detail="Activates Shift-Zoom optic mode with target acquisition assist"
+                  detail="Activates Tactical Zoom optic mode with target acquisition assist"
                 />
                 <KeyCard
                   keys={['ARROW UP BUTTON']}
@@ -343,8 +343,8 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
                 <TipCard
                   icon={<Eye size={20} color="#0284c7" />}
-                  title="SHIFT-ZOOM TARGET ASSIST"
-                  desc="Engaging Zoom (Shift key) significantly tightens bullet spread and automatically activates magnetic aim-assist, keeping your crosshair locked onto enemy centroids."
+                  title="TACTICAL ZOOM TARGET ASSIST"
+                  desc="Engaging Zoom (Z key or Right Click) significantly tightens bullet spread and automatically activates magnetic aim-assist, keeping your crosshair locked onto enemy centroids."
                 />
                 <TipCard
                   icon={<Crosshair size={20} color="#d97706" />}
