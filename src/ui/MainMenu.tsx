@@ -286,7 +286,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           {/* Gameplay Instructions & Controls Info Button */}
           <button
             onClick={onOpenTutorial}
-            className="glass-panel"
+            className="glass-panel menu-top-info-btn"
             style={{
               height: 42,
               padding: '0 12px',
@@ -398,6 +398,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
       {/* CENTER HERO: WIDE OPEN CINEMATIC 3D VIEW */}
       <div className="menu-center-hero">
         <div
+          className="menu-hero-badge"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -420,6 +421,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         <img
           src="/logo.png"
           alt="Shoot Arena"
+          className="menu-hero-logo"
           style={{
             width: 'clamp(95px, 14vw, 150px)',
             height: 'clamp(95px, 14vw, 150px)',
@@ -432,6 +434,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         />
 
         <h1
+          className="menu-hero-title"
           style={{
             fontFamily: 'var(--font-display)',
             fontSize: 'clamp(1.8rem, 5vw, 3rem)',
@@ -446,6 +449,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           SHOOT <span style={{ color: '#38bdf8' }}>ARENA</span>
         </h1>
         <p
+          className="menu-hero-sub"
           style={{
             fontFamily: 'var(--font-sub)',
             fontSize: 'clamp(0.75rem, 1.8vw, 0.95rem)',
@@ -469,7 +473,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               setActiveTab('missions');
               setShowMissionSelect(true);
             }}
-            className="btn-cyber"
+            className={`btn-cyber menu-dock-btn ${selectedMission ? 'menu-dock-active' : ''}`}
             style={{
               padding: '10px 18px',
               fontSize: '0.85rem',
@@ -488,7 +492,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
           <button
             onClick={onOpenArmory}
-            className="btn-cyber"
+            className="btn-cyber menu-dock-btn"
             style={{
               padding: '10px 18px',
               fontSize: '0.85rem',
@@ -504,7 +508,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
           <button
             onClick={onOpenUpgrades}
-            className="btn-cyber btn-cyber-gold"
+            className="btn-cyber btn-cyber-gold menu-dock-btn"
             style={{
               padding: '10px 18px',
               fontSize: '0.85rem',
@@ -519,7 +523,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
           <button
             onClick={onOpenTutorial}
-            className="btn-cyber"
+            className="btn-cyber menu-dock-btn"
             style={{
               padding: '10px 18px',
               fontSize: '0.85rem',
@@ -635,6 +639,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
       {/* OWNER & COPYRIGHT FOOTER */}
       <div
+        className="menu-owner-footer-wrap"
         style={{
           width: '100%',
           display: 'flex',
@@ -646,7 +651,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         }}
       >
         <div
-          className="glass-panel"
+          className="glass-panel menu-owner-footer"
           style={{
             display: 'inline-flex',
             alignItems: 'center',

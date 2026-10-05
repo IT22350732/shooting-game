@@ -832,7 +832,7 @@ export const HUD: React.FC<HUDProps> = ({
                 </div>
               )}
               <Award size={18} color="#0284c7" />
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 900, color: '#0f172a' }}>
+              <span style={{ fontFamily: "'Rajdhani', var(--font-display), sans-serif", fontSize: '1.25rem', fontWeight: 900, color: '#0f172a' }}>
                 WAVE {stats.wave}
               </span>
             </div>
@@ -841,7 +841,7 @@ export const HUD: React.FC<HUDProps> = ({
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748b', fontFamily: 'var(--font-sub)' }}>
               <span>ENEMIES LEFT:</span>
-              <span style={{ color: '#0284c7', fontWeight: 800, fontSize: '1.15rem' }}>
+              <span style={{ color: '#0284c7', fontWeight: 900, fontSize: '1.25rem', fontFamily: "'Rajdhani', var(--font-display), sans-serif" }}>
                 {stats.enemiesRemaining}
               </span>
             </div>
@@ -913,14 +913,14 @@ export const HUD: React.FC<HUDProps> = ({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'var(--font-display)', fontWeight: 700 }}>SCORE</span>
-            <span style={{ fontSize: '1.35rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: '#0f172a' }}>
+            <span style={{ fontSize: '1.45rem', fontWeight: 900, fontFamily: "'Rajdhani', var(--font-display), sans-serif", color: '#0f172a', lineHeight: 1.1 }}>
               {stats.score.toLocaleString()}
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#d97706', fontSize: '0.85rem', fontFamily: 'var(--font-display)', fontWeight: 800 }}>
             <Coins size={14} />
-            <span>{stats.coins}</span>
+            <span style={{ fontFamily: "'Rajdhani', var(--font-display), sans-serif", fontSize: '1.1rem', fontWeight: 900, lineHeight: 1 }}>{stats.coins}</span>
           </div>
         </div>
 
@@ -974,8 +974,8 @@ export const HUD: React.FC<HUDProps> = ({
               <Heart size={15} fill="#e11d48" />
               <span className="stat-label">HEALTH</span>
             </div>
-            <span className="stat-val" style={{ fontFamily: 'var(--font-sub)', fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>
-              {stats.health} <span style={{ color: '#64748b', fontSize: '0.75rem' }}>/ {stats.maxHealth}</span>
+            <span className="stat-val" style={{ fontFamily: "'Rajdhani', var(--font-sub), sans-serif", fontSize: '1.15rem', fontWeight: 900, color: '#0f172a' }}>
+              {stats.health} <span style={{ color: '#64748b', fontSize: '0.78rem' }}>/ {stats.maxHealth}</span>
             </span>
           </div>
 
@@ -999,8 +999,8 @@ export const HUD: React.FC<HUDProps> = ({
               <Shield size={15} fill="#0284c7" />
               <span className="stat-label">ARMOR</span>
             </div>
-            <span className="stat-val" style={{ fontFamily: 'var(--font-sub)', fontSize: '1.05rem', fontWeight: 900, color: '#0f172a' }}>
-              {stats.armor} <span style={{ color: '#64748b', fontSize: '0.75rem' }}>/ {stats.maxArmor}</span>
+            <span className="stat-val" style={{ fontFamily: "'Rajdhani', var(--font-sub), sans-serif", fontSize: '1.15rem', fontWeight: 900, color: '#0f172a' }}>
+              {stats.armor} <span style={{ color: '#64748b', fontSize: '0.78rem' }}>/ {stats.maxArmor}</span>
             </span>
           </div>
 
@@ -1088,8 +1088,8 @@ export const HUD: React.FC<HUDProps> = ({
             <span
               className="hud-ammo-big"
               style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: isMobileView ? '1.6rem' : '2.5rem',
+                fontFamily: "'Rajdhani', var(--font-display), sans-serif",
+                fontSize: isMobileView ? '1.5rem' : '2.5rem',
                 fontWeight: 900,
                 color: stats.ammo <= 5 ? '#e11d48' : '#0284c7',
                 lineHeight: 1
@@ -1097,7 +1097,7 @@ export const HUD: React.FC<HUDProps> = ({
             >
               {stats.ammo}
             </span>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: isMobileView ? '0.85rem' : '1.1rem', color: '#94a3b8', fontWeight: 700 }}>
+            <span style={{ fontFamily: "'Rajdhani', var(--font-display), sans-serif", fontSize: isMobileView ? '0.95rem' : '1.15rem', color: '#94a3b8', fontWeight: 800 }}>
               / {stats.maxAmmo}
             </span>
           </div>

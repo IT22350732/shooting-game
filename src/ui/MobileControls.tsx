@@ -4,6 +4,7 @@ import {
   Eye,
   ArrowUp,
   RotateCw,
+  ArrowRightLeft,
   Zap,
   Smartphone,
   X,
@@ -414,27 +415,28 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
 
       {/* RIGHT-SIDE TACTICAL ACTION BUTTONS CLUSTER */}
       <div
+        className="mobile-action-cluster"
         style={{
           position: 'absolute',
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 18px)',
-          right: 'calc(env(safe-area-inset-right, 0px) + 18px)',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+          right: 'calc(env(safe-area-inset-right, 0px) + 16px)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'flex-end',
-          gap: 12,
+          gap: 10,
           pointerEvents: 'auto',
           zIndex: 40
         }}
       >
         {/* UPPER ROW: SPRINT LOCK, RELOAD & AIM (ADS) BUTTONS */}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           {/* Sprint Lock Toggle Button */}
           <button
             onTouchStart={handleToggleSprintLock}
             onMouseDown={handleToggleSprintLock}
             style={{
-              width: 46,
-              height: 46,
+              width: 44,
+              height: 44,
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
@@ -450,7 +452,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
             }}
             aria-label="Toggle Sprint Lock"
           >
-            <Zap size={20} fill={isSprintLocked ? '#ffffff' : 'none'} />
+            <Zap size={18} fill={isSprintLocked ? '#ffffff' : 'none'} />
           </button>
 
           {/* Quick Weapon Switch Button */}
@@ -468,8 +470,8 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
               engine?.cycleWeapon(1);
             }}
             style={{
-              width: 46,
-              height: 46,
+              width: 44,
+              height: 44,
               borderRadius: '50%',
               display: 'flex',
               flexDirection: 'column',
@@ -486,8 +488,8 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
             }}
             aria-label="Cycle Weapon"
           >
-            <RotateCw size={17} strokeWidth={2.5} />
-            <span style={{ fontSize: '0.48rem', fontWeight: 900, fontFamily: 'var(--font-display)', marginTop: 1, letterSpacing: '0.04em' }}>GUN</span>
+            <ArrowRightLeft size={16} strokeWidth={2.4} />
+            <span style={{ fontSize: '0.46rem', fontWeight: 900, fontFamily: 'var(--font-display)', marginTop: 1, letterSpacing: '0.04em' }}>GUN</span>
           </button>
 
           {/* Reload Button */}
@@ -495,8 +497,8 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
             onTouchStart={handleReload}
             onMouseDown={handleReload}
             style={{
-              width: 46,
-              height: 46,
+              width: 44,
+              height: 44,
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
@@ -511,7 +513,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
             }}
             aria-label="Reload Weapon"
           >
-            <RotateCw size={20} />
+            <RotateCw size={19} />
           </button>
 
           {/* Aim / ADS Toggle Button */}
@@ -519,8 +521,8 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
             onTouchStart={handleToggleAim}
             onMouseDown={handleToggleAim}
             style={{
-              width: 54,
-              height: 54,
+              width: 50,
+              height: 50,
               borderRadius: '50%',
               position: 'relative',
               display: 'flex',
@@ -537,7 +539,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
             }}
             aria-label="Toggle Aim Down Sights / Zoom"
           >
-            <Eye size={24} />
+            <Eye size={22} />
             {isAiming && (
               <span
                 style={{
@@ -547,7 +549,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
                   background: '#0284c7',
                   border: '1px solid #ffffff',
                   borderRadius: 8,
-                  fontSize: '0.55rem',
+                  fontSize: '0.52rem',
                   fontWeight: 900,
                   padding: '1px 4px',
                   color: '#ffffff',
@@ -561,7 +563,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
         </div>
 
         {/* LOWER ROW: JUMP & MAIN FIRE TRIGGER */}
-        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           {/* Jump Button */}
           <button
             onTouchStart={handleJumpStart}
@@ -570,8 +572,8 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
             onMouseDown={handleJumpStart}
             onMouseUp={handleJumpEnd}
             style={{
-              width: 56,
-              height: 56,
+              width: 52,
+              height: 52,
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
@@ -586,7 +588,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
             }}
             aria-label="Jump"
           >
-            <ArrowUp size={26} strokeWidth={2.5} />
+            <ArrowUp size={24} strokeWidth={2.5} />
           </button>
 
           {/* Primary FIRE Trigger Button */}
@@ -597,8 +599,8 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
             onMouseDown={handleFireStart}
             onMouseUp={handleFireEnd}
             style={{
-              width: 78,
-              height: 78,
+              width: 74,
+              height: 74,
               borderRadius: '50%',
               display: 'flex',
               flexDirection: 'column',
@@ -621,8 +623,8 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
             }}
             aria-label="Fire Weapon"
           >
-            <Crosshair size={32} strokeWidth={2.4} />
-            <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-display)', fontWeight: 900, letterSpacing: '0.08em' }}>
+            <Crosshair size={30} strokeWidth={2.4} />
+            <span style={{ fontSize: '0.6rem', fontFamily: 'var(--font-display)', fontWeight: 900, letterSpacing: '0.08em' }}>
               FIRE
             </span>
           </button>
