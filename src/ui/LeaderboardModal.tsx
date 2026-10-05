@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Trophy,
   Award,
@@ -12,7 +12,8 @@ import {
   ChevronRight,
   ShieldCheck,
   Zap,
-  Sparkles
+  Sparkles,
+  Cloud
 } from 'lucide-react';
 import { userManager } from '../game/managers/UserManager';
 import { LeaderboardCategory, LeaderboardEntry, AVATAR_OPTIONS } from '../types/user';
@@ -26,6 +27,13 @@ interface LeaderboardModalProps {
 export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose, onOpenAuth }) => {
   const [category, setCategory] = useState<LeaderboardCategory>('score');
   const [searchQuery, setSearchQuery] = useState('');
+  const [, setRefreshCount] = useState(0);
+
+  useEffect(() => {
+    userManager.refreshCloudLeaderboard().then(() => {
+      setRefreshCount(v => v + 1);
+    });
+  }, []);
 
   const currentUser = userManager.getCurrentUser();
   const rawLeaderboard = userManager.getLeaderboard(category);

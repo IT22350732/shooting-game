@@ -13,7 +13,12 @@ import {
   Trash2,
   LogIn,
   Sparkles,
-  Flame
+  Flame,
+  Cloud,
+  Copy,
+  Download,
+  Loader2,
+  Share2
 } from 'lucide-react';
 import { userManager } from '../game/managers/UserManager';
 import { AVATAR_OPTIONS, UserProfile } from '../types/user';
@@ -22,11 +27,11 @@ import { soundManager } from '../audio/SoundManager';
 interface AuthModalProps {
   onClose: () => void;
   onUserChanged: (user: UserProfile) => void;
-  initialTab?: 'switch' | 'login' | 'register';
+  initialTab?: 'switch' | 'login' | 'register' | 'sync';
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, initialTab = 'login' }) => {
-  const [activeTab, setActiveTab] = useState<'switch' | 'login' | 'register'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'switch' | 'login' | 'register' | 'sync'>(initialTab);
   const [usersList, setUsersList] = useState<UserProfile[]>(() => userManager.getAllUsers());
   const currentUser = userManager.getCurrentUser();
 
@@ -41,23 +46,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [selectedAvatarId, setSelectedAvatarId] = useState(AVATAR_OPTIONS[0].id);
 
+  // Key sync state
+  const [importKeyInput, setImportKeyInput] = useState('');
+  const [copiedKey, setCopiedKey] = useState(false);
+
   // Status feedback
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const clearMessages = () => {
     setErrorMsg(null);
     setSuccessMsg(null);
   };
 
-  const handleTabChange = (tab: 'switch' | 'login' | 'register') => {
+  const handleTabChange = (tab: 'switch' | 'login' | 'register' | 'sync') => {
     soundManager.playClick(0, 1600, 0.2);
     clearMessages();
     setActiveTab(tab);
     setUsersList(userManager.getAllUsers());
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearMessages();
 
@@ -66,40 +76,92 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
       return;
     }
 
-    const res = userManager.login(loginUsername, loginPassword);
-    if (res.success && res.user) {
-      soundManager.playPowerup();
-      setSuccessMsg(res.message);
-      onUserChanged(res.user);
-      setTimeout(() => {
-        onClose();
-      }, 700);
-    } else {
-      soundManager.playEmptyClick();
-      setErrorMsg(res.message);
+    setIsSubmitting(true);
+    try {
+      const res = await userManager.login(loginUsername, loginPassword);
+      if (res.success && res.user) {
+        soundManager.playPowerup();
+        setSuccessMsg(res.message);
+        setUsersList(userManager.getAllUsers());
+        onUserChanged(res.user);
+        setTimeout(() => {
+          onClose();
+        }, 800);
+      } else {
+        soundManager.playEmptyClick();
+        setErrorMsg(res.message);
+      }
+    } catch (err) {
+      setErrorMsg('Connection error during cloud authentication. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearMessages();
 
     const selectedAvatar = AVATAR_OPTIONS.find(a => a.id === selectedAvatarId);
-    const res = userManager.register(
-      regUsername,
-      regPassword,
-      selectedAvatar?.id,
-      selectedAvatar?.color
-    );
+    setIsSubmitting(true);
+    try {
+      const res = await userManager.register(
+        regUsername,
+        regPassword,
+        selectedAvatar?.id,
+        selectedAvatar?.color
+      );
 
+      if (res.success && res.user) {
+        soundManager.playPowerup();
+        setSuccessMsg(res.message);
+        setUsersList(userManager.getAllUsers());
+        onUserChanged(res.user);
+        setTimeout(() => {
+          onClose();
+        }, 900);
+      } else {
+        soundManager.playEmptyClick();
+        setErrorMsg(res.message);
+      }
+    } catch (err) {
+      setErrorMsg('Registration error. Please check your connection and try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCopyPasskey = () => {
+    const key = userManager.exportAccountKey();
+    if (!key) return;
+    navigator.clipboard.writeText(key).then(() => {
+      soundManager.playPowerup();
+      setCopiedKey(true);
+      setSuccessMsg('Operative Passkey copied to clipboard! Paste it on your phone or other device.');
+      setTimeout(() => setCopiedKey(false), 3000);
+    }).catch(() => {
+      setErrorMsg('Unable to copy automatically. Please copy the key manually.');
+    });
+  };
+
+  const handleImportPasskey = (e: React.FormEvent) => {
+    e.preventDefault();
+    clearMessages();
+    if (!importKeyInput.trim()) {
+      setErrorMsg('Please paste an Operative Key starting with CYBER_KEY_');
+      return;
+    }
+
+    const res = userManager.importAccountKey(importKeyInput.trim());
     if (res.success && res.user) {
       soundManager.playPowerup();
       setSuccessMsg(res.message);
       setUsersList(userManager.getAllUsers());
       onUserChanged(res.user);
+      setImportKeyInput('');
       setTimeout(() => {
         onClose();
-      }, 800);
+      }, 900);
     } else {
       soundManager.playEmptyClick();
       setErrorMsg(res.message);
@@ -187,11 +249,33 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
               <ShieldCheck size={22} />
             </div>
             <div>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '0.04em' }}>
-                OPERATIVE TERMINAL
-              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '0.04em' }}>
+                  OPERATIVE TERMINAL
+                </h2>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    background: 'rgba(16, 185, 129, 0.1)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    borderRadius: 20,
+                    padding: '2px 8px',
+                    color: '#059669',
+                    fontSize: '0.62rem',
+                    fontWeight: 800,
+                    fontFamily: 'var(--font-display)',
+                    letterSpacing: '0.04em'
+                  }}
+                  title="Cross-device cloud synchronization is online and active"
+                >
+                  <Cloud size={11} />
+                  CLOUD SYNC ACTIVE
+                </span>
+              </div>
               <span style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'var(--font-sub)', fontWeight: 600 }}>
-                AUTHENTICATION & PROFILE MANAGEMENT
+                CROSS-DEVICE AUTHENTICATION & PROFILE PERSISTENCE
               </span>
             </div>
           </div>
@@ -219,54 +303,57 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
             background: 'rgba(15, 23, 42, 0.05)',
             padding: 4,
             borderRadius: 12,
-            border: '1px solid rgba(15, 23, 42, 0.08)'
+            border: '1px solid rgba(15, 23, 42, 0.08)',
+            overflowX: 'auto'
           }}
         >
           <button
             onClick={() => handleTabChange('switch')}
             style={{
               flex: 1,
-              padding: '8px 12px',
+              minWidth: 80,
+              padding: '8px 10px',
               borderRadius: 8,
               border: 'none',
               background: activeTab === 'switch' ? '#0284c7' : 'transparent',
               color: activeTab === 'switch' ? '#ffffff' : '#475569',
               fontFamily: 'var(--font-display)',
               fontWeight: 800,
-              fontSize: '0.74rem',
+              fontSize: '0.72rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 6,
+              gap: 5,
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
           >
-            <Users size={15} />
-            SAVED OPERATIVES ({usersList.length})
+            <Users size={14} />
+            PROFILES ({usersList.length})
           </button>
 
           <button
             onClick={() => handleTabChange('login')}
             style={{
               flex: 1,
-              padding: '8px 12px',
+              minWidth: 80,
+              padding: '8px 10px',
               borderRadius: 8,
               border: 'none',
               background: activeTab === 'login' ? '#0284c7' : 'transparent',
               color: activeTab === 'login' ? '#ffffff' : '#475569',
               fontFamily: 'var(--font-display)',
               fontWeight: 800,
-              fontSize: '0.74rem',
+              fontSize: '0.72rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 6,
+              gap: 5,
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
           >
-            <LogIn size={15} />
+            <LogIn size={14} />
             LOGIN
           </button>
 
@@ -274,24 +361,50 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
             onClick={() => handleTabChange('register')}
             style={{
               flex: 1,
-              padding: '8px 12px',
+              minWidth: 80,
+              padding: '8px 10px',
               borderRadius: 8,
               border: 'none',
               background: activeTab === 'register' ? '#0284c7' : 'transparent',
               color: activeTab === 'register' ? '#ffffff' : '#475569',
               fontFamily: 'var(--font-display)',
               fontWeight: 800,
-              fontSize: '0.74rem',
+              fontSize: '0.72rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 6,
+              gap: 5,
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
           >
-            <UserPlus size={15} />
-            REGISTER NEW
+            <UserPlus size={14} />
+            REGISTER
+          </button>
+
+          <button
+            onClick={() => handleTabChange('sync')}
+            style={{
+              flex: 1,
+              minWidth: 90,
+              padding: '8px 10px',
+              borderRadius: 8,
+              border: 'none',
+              background: activeTab === 'sync' ? '#0284c7' : 'transparent',
+              color: activeTab === 'sync' ? '#ffffff' : '#475569',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: '0.72rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 5,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Share2 size={14} />
+            PASSKEY SYNC
           </button>
         </div>
 
@@ -474,6 +587,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
         {/* --- TAB 2: LOGIN --- */}
         {activeTab === 'login' && (
           <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 12px',
+                borderRadius: 8,
+                background: 'rgba(2, 132, 199, 0.08)',
+                border: '1px solid rgba(2, 132, 199, 0.2)',
+                fontSize: '0.72rem',
+                color: '#0369a1',
+                fontFamily: 'var(--font-sub)',
+                fontWeight: 600
+              }}
+            >
+              <Cloud size={16} style={{ flexShrink: 0 }} />
+              <span>Cross-device enabled: Use your codename & PIN from your MacBook or other device to log in directly here.</span>
+            </div>
+
             <div>
               <label style={{ display: 'block', fontSize: '0.72rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#334155', marginBottom: 5 }}>
                 OPERATIVE CODENAME / USERNAME
@@ -542,16 +674,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
 
             <button
               type="submit"
+              disabled={isSubmitting}
               className="btn-cyber btn-cyber-primary"
               style={{
                 padding: '12px 20px',
                 fontSize: '0.90rem',
                 justifyContent: 'center',
-                marginTop: 6
+                marginTop: 6,
+                opacity: isSubmitting ? 0.7 : 1,
+                cursor: isSubmitting ? 'not-allowed' : 'pointer'
               }}
             >
-              <LogIn size={16} />
-              AUTHENTICATE & LOG IN
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  AUTHENTICATING WITH CLOUD...
+                </>
+              ) : (
+                <>
+                  <LogIn size={16} />
+                  AUTHENTICATE & LOG IN
+                </>
+              )}
             </button>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
@@ -711,16 +855,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
 
             <button
               type="submit"
+              disabled={isSubmitting}
               className="btn-cyber btn-cyber-primary"
               style={{
                 padding: '12px 20px',
                 fontSize: '0.90rem',
                 justifyContent: 'center',
-                marginTop: 6
+                marginTop: 6,
+                opacity: isSubmitting ? 0.7 : 1,
+                cursor: isSubmitting ? 'not-allowed' : 'pointer'
               }}
             >
-              <Sparkles size={16} />
-              ENLIST & CREATE OPERATIVE
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  REGISTERING ON CLOUD NETWORK...
+                </>
+              ) : (
+                <>
+                  <Sparkles size={16} />
+                  ENLIST & SYNC NEW OPERATIVE
+                </>
+              )}
             </button>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
@@ -759,7 +915,102 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
             </div>
           </form>
         )}
+
+        {/* --- TAB 4: PASSKEY SYNC --- */}
+        {activeTab === 'sync' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Export Current Key */}
+            <div
+              style={{
+                padding: 14,
+                borderRadius: 12,
+                background: 'rgba(2, 132, 199, 0.05)',
+                border: '1.5px solid rgba(2, 132, 199, 0.2)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.80rem', color: '#0369a1' }}>
+                  EXPORT PASSKEY: {currentUser.username}
+                </span>
+                <span style={{ fontSize: '0.62rem', color: '#64748b' }}>FOR OFFLINE / INSTANT TRANSFER</span>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.72rem', color: '#475569', lineHeight: 1.4 }}>
+                Copy your encrypted Operative Passkey to instantly migrate your profile, weapons, coins, and records to any device without typing.
+              </p>
+              <button
+                onClick={handleCopyPasskey}
+                className="btn-cyber btn-cyber-primary"
+                style={{
+                  padding: '9px 16px',
+                  fontSize: '0.78rem',
+                  justifyContent: 'center',
+                  gap: 8
+                }}
+              >
+                {copiedKey ? <Check size={16} /> : <Copy size={16} />}
+                {copiedKey ? 'COPIED TO CLIPBOARD!' : 'COPY OPERATIVE PASSKEY'}
+              </button>
+            </div>
+
+            {/* Import Key */}
+            <form
+              onSubmit={handleImportPasskey}
+              style={{
+                padding: 14,
+                borderRadius: 12,
+                background: 'rgba(248, 250, 252, 0.8)',
+                border: '1.5px solid rgba(15, 23, 42, 0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.80rem', color: '#0f172a' }}>
+                  IMPORT OPERATIVE PASSKEY
+                </span>
+                <span style={{ fontSize: '0.62rem', color: '#64748b' }}>RESTORE ON THIS DEVICE</span>
+              </div>
+              <textarea
+                rows={3}
+                placeholder="Paste your CYBER_KEY_... code here"
+                value={importKeyInput}
+                onChange={(e) => setImportKeyInput(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: 10,
+                  borderRadius: 8,
+                  border: '1.5px solid rgba(15, 23, 42, 0.15)',
+                  fontFamily: 'monospace',
+                  fontSize: '0.74rem',
+                  outline: 'none',
+                  resize: 'none',
+                  background: '#ffffff'
+                }}
+              />
+              <button
+                type="submit"
+                className="btn-cyber"
+                style={{
+                  padding: '9px 16px',
+                  fontSize: '0.78rem',
+                  justifyContent: 'center',
+                  gap: 8,
+                  background: '#0f172a',
+                  color: '#ffffff'
+                }}
+              >
+                <Download size={15} />
+                RESTORE OPERATIVE FROM KEY
+              </button>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );
 };
+

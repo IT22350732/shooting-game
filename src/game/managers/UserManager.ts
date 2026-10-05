@@ -1,5 +1,6 @@
 import { UserProfile, LeaderboardEntry, LeaderboardCategory, computeUserTier, AVATAR_OPTIONS } from '../../types/user';
 import { SaveData, saveManager } from './SaveManager';
+import { cloudAuthService } from './CloudAuthService';
 
 const USERS_STORAGE_KEY = 'CYBERSTRIKE_USERS_V2';
 const ACTIVE_USER_ID_KEY = 'CYBERSTRIKE_ACTIVE_USER_ID_V2';
@@ -135,9 +136,21 @@ export class UserManager {
   private users: Map<string, UserProfile> = new Map();
   private currentUserId: string = '';
 
+  private cloudRivals: Omit<LeaderboardEntry, 'rank' | 'isCurrentUser'>[] = [];
+
   constructor() {
     this.loadFromStorage();
     saveManager.setOnSaveCallback((data) => this.syncCurrentUserData(data));
+    this.refreshCloudLeaderboard();
+  }
+
+  public async refreshCloudLeaderboard(): Promise<void> {
+    try {
+      const entries = await cloudAuthService.getCloudLeaderboard();
+      if (entries && entries.length > 0) {
+        this.cloudRivals = entries;
+      }
+    } catch {}
   }
 
   private loadFromStorage() {
@@ -210,12 +223,12 @@ export class UserManager {
     return Array.from(this.users.values()).sort((a, b) => b.lastLoginAt - a.lastLoginAt);
   }
 
-  public register(
+  public async register(
     username: string,
     password: string,
     avatarId: string = 'soldier_apex',
     avatarColor?: string
-  ): { success: boolean; message: string; user?: UserProfile } {
+  ): Promise<{ success: boolean; message: string; user?: UserProfile }> {
     const trimmed = username.trim();
     if (trimmed.length < 3 || trimmed.length > 16) {
       return { success: false, message: 'Username must be 3-16 characters long.' };
@@ -229,11 +242,24 @@ export class UserManager {
       return { success: false, message: 'PIN/Password must be at least 3 characters.' };
     }
 
-    // Check if username already exists
+    // Check if username already exists locally
     for (const u of this.users.values()) {
       if (u.username.toLowerCase() === trimmed.toLowerCase()) {
-        return { success: false, message: `Operative "${trimmed}" already exists.` };
+        return { success: false, message: `Operative "${trimmed}" already exists on this device.` };
       }
+    }
+
+    // Check if username already exists in cloud
+    try {
+      const existingCloudUser = await cloudAuthService.getCloudUser(trimmed);
+      if (existingCloudUser) {
+        return {
+          success: false,
+          message: `Operative "${trimmed}" already exists on the cloud network. Please switch to LOGIN.`
+        };
+      }
+    } catch {
+      // Offline fallback: continue
     }
 
     const selectedAvatar = AVATAR_OPTIONS.find(a => a.id === avatarId) || AVATAR_OPTIONS[0];
@@ -264,18 +290,22 @@ export class UserManager {
     // Sync save manager with new user's fresh save
     saveManager.loadFromUserData(newUser.saveData);
 
+    // Save to global cloud KV store so it is immediately accessible from phone / other devices
+    cloudAuthService.saveCloudUser(newUser).catch(err => console.warn('Cloud sync error on register:', err));
+
     return {
       success: true,
-      message: `Operative "${trimmed}" registered successfully!`,
+      message: `Operative "${trimmed}" registered & cloud-synced!`,
       user: newUser
     };
   }
 
-  public login(
+  public async login(
     username: string,
     password: string
-  ): { success: boolean; message: string; user?: UserProfile } {
+  ): Promise<{ success: boolean; message: string; user?: UserProfile }> {
     const trimmed = username.trim().toLowerCase();
+    const inputHash = hashString(password);
     let targetUser: UserProfile | null = null;
 
     for (const u of this.users.values()) {
@@ -285,27 +315,74 @@ export class UserManager {
       }
     }
 
-    if (!targetUser) {
-      return { success: false, message: 'Operative not found with this username.' };
-    }
+    // Found locally in this browser
+    if (targetUser) {
+      if (targetUser.passwordHash === inputHash) {
+        targetUser.lastLoginAt = Date.now();
+        this.currentUserId = targetUser.id;
+        this.saveToStorage();
 
-    const inputHash = hashString(password);
-    if (targetUser.passwordHash !== inputHash) {
+        // Load target user's save data into the active save manager
+        saveManager.loadFromUserData(targetUser.saveData);
+
+        // Keep cloud backup updated in background
+        cloudAuthService.saveCloudUser(targetUser).catch(() => {});
+
+        return {
+          success: true,
+          message: `Welcome back, ${targetUser.username}!`,
+          user: targetUser
+        };
+      }
+
+      // Password mismatch locally: check cloud in case user updated credentials on another device
+      try {
+        const cloudUser = await cloudAuthService.getCloudUser(trimmed);
+        if (cloudUser && cloudUser.passwordHash === inputHash) {
+          this.users.set(cloudUser.id, cloudUser);
+          this.currentUserId = cloudUser.id;
+          this.saveToStorage();
+          saveManager.loadFromUserData(cloudUser.saveData);
+          return {
+            success: true,
+            message: `Cloud credentials verified! Welcome back, ${cloudUser.username}!`,
+            user: cloudUser
+          };
+        }
+      } catch {}
+
       return { success: false, message: 'Incorrect PIN or Password.' };
     }
 
-    targetUser.lastLoginAt = Date.now();
-    this.currentUserId = targetUser.id;
-    this.saveToStorage();
+    // Operative NOT found locally on this device (e.g. registered on MacBook, logging in on Phone!)
+    try {
+      const cloudUser = await cloudAuthService.getCloudUser(trimmed);
+      if (!cloudUser) {
+        return { success: false, message: `Operative "${username.trim()}" not found locally or in cloud registry.` };
+      }
 
-    // Load target user's save data into the active save manager
-    saveManager.loadFromUserData(targetUser.saveData);
+      if (cloudUser.passwordHash !== inputHash) {
+        return { success: false, message: 'Incorrect PIN or Password for cloud operative.' };
+      }
 
-    return {
-      success: true,
-      message: `Welcome back, ${targetUser.username}!`,
-      user: targetUser
-    };
+      // Successful cloud verification & cross-device download!
+      cloudUser.lastLoginAt = Date.now();
+      this.users.set(cloudUser.id, cloudUser);
+      this.currentUserId = cloudUser.id;
+      this.saveToStorage();
+      saveManager.loadFromUserData(cloudUser.saveData);
+
+      return {
+        success: true,
+        message: `Cloud profile synchronized to this device! Welcome, ${cloudUser.username}!`,
+        user: cloudUser
+      };
+    } catch (err) {
+      return {
+        success: false,
+        message: 'Could not connect to cloud registry. Please verify connection or use Operative Key.'
+      };
+    }
   }
 
   public switchUser(userId: string): boolean {
@@ -353,6 +430,9 @@ export class UserManager {
     current.tier = computeUserTier(current.highScore, current.totalKills);
 
     this.saveToStorage();
+
+    // Sync to cloud network in background
+    cloudAuthService.saveCloudUser(current).catch(() => {});
   }
 
   public recordGameResult(
@@ -391,6 +471,9 @@ export class UserManager {
 
     this.saveToStorage();
 
+    // Push high score update to cloud edge store
+    cloudAuthService.saveCloudUser(current).catch(() => {});
+
     // Determine new rank
     const newLeaderboard = this.getLeaderboard('score');
     const newRankEntry = newLeaderboard.find(e => e.userId === current.id);
@@ -405,9 +488,88 @@ export class UserManager {
     };
   }
 
+  // --- ONE-CLICK OPERATIVE KEY EXPORT / IMPORT ---
+  public exportAccountKey(): string {
+    const current = this.getCurrentUser();
+    const payload = {
+      u: current.username,
+      h: current.passwordHash,
+      a: current.avatarId,
+      c: current.avatarColor,
+      s: current.saveData,
+      hs: current.highScore,
+      hw: current.highestWave,
+      tk: current.totalKills,
+      hs_cnt: current.headshots,
+      gp: current.gamesPlayed
+    };
+    try {
+      const jsonStr = JSON.stringify(payload);
+      return 'CYBER_KEY_' + btoa(encodeURIComponent(jsonStr));
+    } catch (err) {
+      console.error('Failed to export key:', err);
+      return '';
+    }
+  }
+
+  public importAccountKey(rawKey: string): { success: boolean; message: string; user?: UserProfile } {
+    const clean = rawKey.trim();
+    if (!clean.startsWith('CYBER_KEY_')) {
+      return { success: false, message: 'Invalid Operative Key format. Must start with CYBER_KEY_' };
+    }
+    try {
+      const base64 = clean.replace('CYBER_KEY_', '');
+      const jsonStr = decodeURIComponent(atob(base64));
+      const p = JSON.parse(jsonStr);
+
+      if (!p.u || !p.h) {
+        return { success: false, message: 'Corrupted Operative Key data.' };
+      }
+
+      // Check if operative already exists locally
+      let user = Array.from(this.users.values()).find(u => u.username.toLowerCase() === p.u.toLowerCase());
+      if (!user) {
+        user = {
+          id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          username: p.u,
+          displayName: p.u,
+          passwordHash: p.h,
+          avatarId: p.a || 'soldier_apex',
+          avatarColor: p.c || '#0284c7',
+          tier: computeUserTier(p.hs || 0, p.tk || 0),
+          createdAt: Date.now(),
+          lastLoginAt: Date.now(),
+          highScore: p.hs || 0,
+          highestWave: p.hw || 1,
+          totalKills: p.tk || 0,
+          headshots: p.hs_cnt || 0,
+          gamesPlayed: p.gp || 0,
+          saveData: p.s || JSON.parse(JSON.stringify(saveManager.getDefaultSaveData()))
+        };
+        this.users.set(user.id, user);
+      } else {
+        user.passwordHash = p.h;
+        user.highScore = Math.max(user.highScore, p.hs || 0);
+        user.highestWave = Math.max(user.highestWave, p.hw || 1);
+        user.totalKills = Math.max(user.totalKills, p.tk || 0);
+        user.saveData = p.s || user.saveData;
+      }
+
+      this.currentUserId = user.id;
+      this.saveToStorage();
+      saveManager.loadFromUserData(user.saveData);
+      cloudAuthService.saveCloudUser(user).catch(() => {});
+
+      return { success: true, message: `Operative "${user.username}" imported successfully!`, user };
+    } catch (err) {
+      return { success: false, message: 'Failed to decode operative key: ' + (err as Error).message };
+    }
+  }
+
   public getLeaderboard(category: LeaderboardCategory = 'score'): LeaderboardEntry[] {
     const current = this.getCurrentUser();
     const entries: LeaderboardEntry[] = [];
+    const seenUsernames = new Set<string>();
 
     // 1. Add all registered users
     for (const u of this.users.values()) {
@@ -427,20 +589,35 @@ export class UserManager {
         isRival: false,
         dateAchieved: u.lastLoginAt
       });
+      seenUsernames.add(u.username.toLowerCase());
     }
 
-    // 2. Add rivals (skipping any if user took same username)
+    // 2. Add real players from cloud sync
+    for (const cr of this.cloudRivals) {
+      if (!seenUsernames.has(cr.username.toLowerCase())) {
+        entries.push({
+          ...cr,
+          rank: 0,
+          isCurrentUser: false,
+          isRival: false
+        });
+        seenUsernames.add(cr.username.toLowerCase());
+      }
+    }
+
+    // 3. Add rivals (skipping any if user or cloud took same username)
     for (const r of INITIAL_RIVALS) {
-      if (!entries.some(e => e.username.toLowerCase() === r.username.toLowerCase())) {
+      if (!seenUsernames.has(r.username.toLowerCase())) {
         entries.push({
           ...r,
           rank: 0,
           isCurrentUser: false
         });
+        seenUsernames.add(r.username.toLowerCase());
       }
     }
 
-    // 3. Sort by chosen category
+    // 4. Sort by chosen category
     entries.sort((a, b) => {
       if (category === 'score') {
         if (b.highScore !== a.highScore) return b.highScore - a.highScore;
@@ -455,7 +632,7 @@ export class UserManager {
       return b.highScore - a.highScore;
     });
 
-    // 4. Assign 1-indexed ranks
+    // 5. Assign 1-indexed ranks
     entries.forEach((entry, idx) => {
       entry.rank = idx + 1;
     });
