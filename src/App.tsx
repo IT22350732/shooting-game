@@ -24,6 +24,9 @@ import { TutorialModal } from './ui/TutorialModal';
 import { MobileControls } from './ui/MobileControls';
 import { IOSFullscreenModal } from './ui/IOSFullscreenModal';
 import { OPEN_IOS_GUIDE_EVENT } from './utils/fullscreen';
+import { userManager } from './game/managers/UserManager';
+import { AuthModal } from './ui/AuthModal';
+import { LeaderboardModal } from './ui/LeaderboardModal';
 
 export const App: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -85,6 +88,8 @@ export const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   useEffect(() => {
     const handleOpenGuide = () => setShowIOSGuide(true);
@@ -125,6 +130,12 @@ export const App: React.FC = () => {
         setGameState(newState);
         if (newState === 'GAME_OVER' || newState === 'VICTORY') {
           const currentP = engine.player.stats;
+          userManager.recordGameResult(
+            currentP.score,
+            currentP.wave,
+            currentP.kills,
+            currentP.headshots
+          );
           setEndStats({
             score: currentP.score,
             wave: currentP.wave,
@@ -217,6 +228,8 @@ export const App: React.FC = () => {
           onOpenUpgrades={() => setShowUpgrades(true)}
           onOpenSettings={() => setShowSettings(true)}
           onOpenTutorial={() => setShowTutorial(true)}
+          onOpenAuth={() => setShowAuth(true)}
+          onOpenLeaderboard={() => setShowLeaderboard(true)}
           coins={coins}
         />
       )}
@@ -266,6 +279,7 @@ export const App: React.FC = () => {
             }
           }}
           onOpenUpgrades={() => setShowUpgrades(true)}
+          onOpenLeaderboard={() => setShowLeaderboard(true)}
           onMainMenu={() => {
             setGameState('MENU');
             engineRef.current?.showMenu();
@@ -310,6 +324,28 @@ export const App: React.FC = () => {
       {showIOSGuide && (
         <IOSFullscreenModal
           onClose={() => setShowIOSGuide(false)}
+        />
+      )}
+
+      {/* AUTHENTICATION & OPERATIVE SWITCHER MODAL */}
+      {showAuth && (
+        <AuthModal
+          onClose={() => setShowAuth(false)}
+          onUserChanged={() => {
+            refreshCoins();
+            setSettings(saveManager.getData().settings);
+          }}
+        />
+      )}
+
+      {/* LEADERBOARD & OPERATIVE RANKINGS MODAL */}
+      {showLeaderboard && (
+        <LeaderboardModal
+          onClose={() => setShowLeaderboard(false)}
+          onOpenAuth={() => {
+            setShowLeaderboard(false);
+            setShowAuth(true);
+          }}
         />
       )}
     </div>

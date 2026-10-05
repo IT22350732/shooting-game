@@ -21,11 +21,15 @@ import {
   Minimize,
   Lock,
   CheckCircle2,
-  Clock
+  Clock,
+  Trophy,
+  User
 } from 'lucide-react';
 import { GameMode, ArenaId, MissionConfig } from '../types/game';
 import { MISSIONS } from '../game/missions/MissionData';
 import { saveManager } from '../game/managers/SaveManager';
+import { userManager } from '../game/managers/UserManager';
+import { AVATAR_OPTIONS } from '../types/user';
 import { useFullscreen } from '../utils/fullscreen';
 
 interface MainMenuProps {
@@ -35,6 +39,8 @@ interface MainMenuProps {
   onOpenUpgrades: () => void;
   onOpenSettings: () => void;
   onOpenTutorial: () => void;
+  onOpenAuth: () => void;
+  onOpenLeaderboard: () => void;
   coins: number;
 }
 
@@ -45,6 +51,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenUpgrades,
   onOpenSettings,
   onOpenTutorial,
+  onOpenAuth,
+  onOpenLeaderboard,
   coins
 }) => {
   const savedDifficulty = (saveManager.getData().settings.difficulty || 'medium') as GameMode;
@@ -65,6 +73,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   };
 
   const savedData = saveManager.getData();
+  const currentUser = userManager.getCurrentUser();
+  const currentAvatar = AVATAR_OPTIONS.find(a => a.id === currentUser?.avatarId) || AVATAR_OPTIONS[0];
 
   const ARENAS: { id: ArenaId; name: string; desc: string; tag: string; environment: string }[] = [
     {
@@ -168,20 +178,24 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
       {/* TOP BAR: OPERATIVE STATUS & RESOURCE HUD */}
       <div className="menu-top-bar">
-        {/* Operative Profile Pill */}
+        {/* Operative Profile Pill (Click to Switch/Login) */}
         <div
+          onClick={onOpenAuth}
           className="glass-panel menu-top-profile"
           style={{
             padding: '8px 14px',
             display: 'flex',
             alignItems: 'center',
             gap: 12,
-            border: '1.5px solid rgba(2, 132, 199, 0.4)',
-            background: 'rgba(255, 255, 255, 0.9)',
+            border: '1.5px solid rgba(2, 132, 199, 0.5)',
+            background: 'rgba(255, 255, 255, 0.94)',
             boxShadow: '0 4px 20px rgba(15, 23, 42, 0.15)',
             backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)'
+            WebkitBackdropFilter: 'blur(12px)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
           }}
+          title="Click to switch operative profile or login"
         >
           <div
             className="menu-top-profile-badge"
@@ -189,22 +203,22 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               width: 36,
               height: 36,
               borderRadius: 8,
-              background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
+              background: `linear-gradient(135deg, ${currentAvatar.color}, ${currentAvatar.accentColor})`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#ffffff',
-              boxShadow: '0 2px 8px rgba(2, 132, 199, 0.4)',
+              boxShadow: `0 2px 8px ${currentAvatar.color}55`,
               flexShrink: 0
             }}
           >
-            <ShieldCheck size={20} strokeWidth={2.4} />
+            <User size={20} strokeWidth={2.4} />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem', color: '#0f172a', fontWeight: 900, letterSpacing: '0.04em' }}>
-                OPERATIVE-01
+                {currentUser.username}
               </span>
               <span
                 style={{
@@ -217,17 +231,17 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                   borderRadius: 4
                 }}
               >
-                TIER 1
+                {currentUser.tier.replace('_', ' ')}
               </span>
             </div>
 
             <div className="menu-top-profile-stats" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
               <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'var(--font-sub)', fontWeight: 600 }}>
-                RECORD: <strong style={{ color: '#0284c7' }}>{savedData.highestScore.toLocaleString()}</strong>
+                RECORD: <strong style={{ color: '#0284c7' }}>{currentUser.highScore.toLocaleString()}</strong>
               </span>
               <span style={{ width: 3, height: 3, borderRadius: '50%', background: '#94a3b8' }} />
               <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'var(--font-sub)', fontWeight: 600 }}>
-                BEST: <strong style={{ color: '#f97316' }}>WAVE {savedData.highestWave}</strong>
+                BEST: <strong style={{ color: '#f97316' }}>WAVE {currentUser.highestWave}</strong>
               </span>
             </div>
           </div>
@@ -258,6 +272,31 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               </span>
             </div>
           </div>
+
+          {/* Leaderboard Trophy Quick Button */}
+          <button
+            onClick={onOpenLeaderboard}
+            className="glass-panel"
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1.5px solid rgba(234, 179, 8, 0.45)',
+              background: 'rgba(255, 255, 255, 0.92)',
+              color: '#d97706',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(234, 179, 8, 0.2)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)'
+            }}
+            aria-label="Leaderboard & High Scores"
+            title="High Scores & Leaderboard"
+          >
+            <Trophy size={18} />
+          </button>
 
           {/* Settings Button */}
           <button
@@ -513,6 +552,23 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           >
             <Zap size={18} />
             <span>UPGRADES</span>
+          </button>
+
+          <button
+            onClick={onOpenLeaderboard}
+            className="btn-cyber menu-dock-btn"
+            style={{
+              background: 'rgba(255, 255, 255, 0.94)',
+              boxShadow: '0 6px 20px rgba(234, 179, 8, 0.2)',
+              border: '1.5px solid rgba(234, 179, 8, 0.5)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              color: '#d97706',
+              fontWeight: 800
+            }}
+          >
+            <Trophy size={18} color="#d97706" />
+            <span>RANKS</span>
           </button>
 
           <button

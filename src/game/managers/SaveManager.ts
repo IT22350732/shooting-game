@@ -56,9 +56,27 @@ const DEFAULT_SAVE: SaveData = {
 
 export class SaveManager {
   private data: SaveData;
+  private onSaveCallback: ((data: SaveData) => void) | null = null;
 
   constructor() {
     this.data = this.load();
+  }
+
+  public setOnSaveCallback(cb: (data: SaveData) => void) {
+    this.onSaveCallback = cb;
+  }
+
+  public getDefaultSaveData(): SaveData {
+    return JSON.parse(JSON.stringify(DEFAULT_SAVE));
+  }
+
+  public loadFromUserData(userData: SaveData) {
+    this.data = JSON.parse(JSON.stringify(userData));
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
+    } catch {
+      // Storage quota or disabled
+    }
   }
 
   public getData(): SaveData {
@@ -94,6 +112,9 @@ export class SaveManager {
       localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
     } catch {
       // Storage quota or disabled
+    }
+    if (this.onSaveCallback) {
+      this.onSaveCallback(this.data);
     }
   }
 

@@ -1,6 +1,7 @@
 import React from 'react';
-import { RotateCcw, Zap, Home, Award, Flame, Skull, Crosshair, Coins, Play, CheckCircle } from 'lucide-react';
+import { RotateCcw, Zap, Home, Award, Flame, Skull, Crosshair, Coins, Play, CheckCircle, Trophy, User } from 'lucide-react';
 import { saveManager } from '../game/managers/SaveManager';
+import { userManager } from '../game/managers/UserManager';
 import { MissionConfig } from '../types/game';
 
 interface GameOverModalProps {
@@ -16,6 +17,7 @@ interface GameOverModalProps {
   hasNextMission?: boolean;
   onRestart: () => void;
   onOpenUpgrades: () => void;
+  onOpenLeaderboard?: () => void;
   onMainMenu: () => void;
 }
 
@@ -32,9 +34,14 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   hasNextMission = false,
   onRestart,
   onOpenUpgrades,
+  onOpenLeaderboard,
   onMainMenu
 }) => {
   const savedData = saveManager.getData();
+  const currentUser = userManager.getCurrentUser();
+  const leaderboard = userManager.getLeaderboard('score');
+  const userEntry = leaderboard.find(e => e.userId === currentUser.id);
+  const currentRank = userEntry ? userEntry.rank : 1;
   const isHighScore = score >= savedData.highestScore && score > 0;
 
   return (
@@ -140,6 +147,33 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               <span>NEW PERSONAL HIGH SCORE!</span>
             </div>
           )}
+
+          {/* Operative & Leaderboard Rank Pill */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 10,
+              background: 'rgba(2, 132, 199, 0.08)',
+              border: '1.5px solid rgba(2, 132, 199, 0.35)',
+              padding: '5px 14px',
+              borderRadius: 20,
+              fontSize: '0.74rem',
+              fontFamily: 'var(--font-display)',
+              color: '#0284c7',
+              fontWeight: 800
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <User size={14} />
+              <span>{currentUser.username} ({currentUser.tier.replace('_', ' ')})</span>
+            </div>
+            <span>•</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: currentRank <= 3 ? '#d97706' : '#0284c7' }}>
+              <Trophy size={14} />
+              <span>LEADERBOARD RANK #{currentRank}</span>
+            </div>
+          </div>
         </div>
 
         {/* Stats Grid */}
@@ -174,10 +208,32 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             {isVictory ? 'REPLAY' : 'TRY AGAIN'}
           </button>
 
+          {onOpenLeaderboard && (
+            <button
+              onClick={onOpenLeaderboard}
+              className="btn-cyber"
+              style={{
+                flex: '1 1 130px',
+                padding: '12px 16px',
+                fontSize: '0.92rem',
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1.5px solid #d97706',
+                color: '#b45309',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6
+              }}
+            >
+              <Trophy size={18} color="#d97706" />
+              RANKS
+            </button>
+          )}
+
           <button
             onClick={onOpenUpgrades}
             className="btn-cyber btn-cyber-gold"
-            style={{ flex: '1 1 140px', padding: '12px 18px', fontSize: '0.92rem' }}
+            style={{ flex: '1 1 130px', padding: '12px 18px', fontSize: '0.92rem' }}
           >
             <Zap size={18} />
             UPGRADES
@@ -186,7 +242,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           <button
             onClick={onMainMenu}
             className="btn-cyber"
-            style={{ flex: '1 1 80px', padding: '12px 18px', background: 'rgba(255,255,255,0.9)', borderColor: 'rgba(15, 23, 42, 0.15)', color: '#0f172a' }}
+            style={{ flex: '1 1 70px', padding: '12px 18px', background: 'rgba(255,255,255,0.9)', borderColor: 'rgba(15, 23, 42, 0.15)', color: '#0f172a' }}
             aria-label="Main Menu"
           >
             <Home size={18} />

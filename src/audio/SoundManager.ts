@@ -199,19 +199,21 @@ export class SoundManager {
     this.playClick(this.ctx.currentTime, 2400, 0.25);
   }
 
-  private playClick(time: number, freq: number, vol: number) {
+  public playClick(time?: number, freq: number = 1400, vol: number = 0.2) {
+    this.initContext();
     if (!this.ctx || !this.sfxGain) return;
+    const t = time !== undefined && time > 0 ? time : this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(freq, time);
-    osc.frequency.exponentialRampToValueAtTime(100, time + 0.04);
-    gain.gain.setValueAtTime(vol, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+    osc.frequency.setValueAtTime(freq, t);
+    osc.frequency.exponentialRampToValueAtTime(100, t + 0.04);
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
     osc.connect(gain);
     gain.connect(this.sfxGain);
-    osc.start(time);
-    osc.stop(time + 0.05);
+    osc.start(t);
+    osc.stop(t + 0.05);
   }
 
   // --- HIT FEEDBACK ---
