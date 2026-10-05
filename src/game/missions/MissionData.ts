@@ -48,7 +48,7 @@ export const MISSIONS: MissionConfig[] = [
     tagline: 'Adobe Terraces Precision Duel',
     arena: 'desert',
     arenaName: 'DESERT OASIS SETTLEMENT',
-    briefing: 'Enemy marksmen and demolition squads are deeply entrenched high atop the desert adobe terraces. Take position, engage Tactical Zoom (Z key) to lock onto critical sensors, and achieve 8 headshots while clearing 25 hostiles.',
+    briefing: 'Enemy marksmen and demolition squads are deeply entrenched high atop the desert adobe terraces. Take position, engage Tactical Zoom (Q key) to lock onto critical sensors, and achieve 8 headshots while clearing 25 hostiles.',
     primaryObjective: 'Achieve 8 critical headshots & eliminate 25 desert hostiles',
     targetKills: 25,
     targetHeadshots: 8,

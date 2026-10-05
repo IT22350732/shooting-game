@@ -108,8 +108,8 @@ export class GameEngine {
   private isPointerLocked: boolean = false;
   private isLeftMouseDown: boolean = false;
   private isRightMouseDown: boolean = false;
-  private isZDown: boolean = false;
-  private zPressedTime: number = 0;
+  private isQDown: boolean = false;
+  private qPressedTime: number = 0;
   private zoomLevel: number = 0; // 0 = normal, 1 = tactical ADS, 2 = precision target zoom
   private baseFov: number = 75;
   private currentZoomFovKick: number = 0;
@@ -377,10 +377,10 @@ export class GameEngine {
           }
           break;
         }
-        case 'KeyZ': {
-          if (!this.isZDown) {
-            this.isZDown = true;
-            this.zPressedTime = performance.now();
+        case 'KeyQ': {
+          if (!this.isQDown) {
+            this.isQDown = true;
+            this.qPressedTime = performance.now();
             this.cycleZoomLevel();
           }
           break;
@@ -412,10 +412,10 @@ export class GameEngine {
           this.keys.sprint = false;
           break;
         }
-        case 'KeyZ': {
-          if (this.isZDown) {
-            this.isZDown = false;
-            const heldDuration = performance.now() - this.zPressedTime;
+        case 'KeyQ': {
+          if (this.isQDown) {
+            this.isQDown = false;
+            const heldDuration = performance.now() - this.qPressedTime;
             // If held for longer than 260ms, release zoom on key up (hold to zoom)
             // If quick tap (< 260ms), leave zoom active (tap to toggle/cycle zoom)!
             if (heldDuration > 260) {
@@ -450,7 +450,7 @@ export class GameEngine {
         this.isLeftMouseDown = false;
       } else if (e.button === 2) {
         this.isRightMouseDown = false;
-        if (!this.isZDown) {
+        if (!this.isQDown) {
           this.setZoomLevel(0);
         }
       }
@@ -499,7 +499,7 @@ export class GameEngine {
       this.keys.sprint = false;
       this.isLeftMouseDown = false;
       this.isRightMouseDown = false;
-      this.isZDown = false;
+      this.isQDown = false;
     });
 
     // Pointer Lock events - only pause if pointer lock was actively engaged and then lost
@@ -541,7 +541,7 @@ export class GameEngine {
       this.keys.sprint = false;
       this.isLeftMouseDown = false;
       this.isRightMouseDown = false;
-      this.isZDown = false;
+      this.isQDown = false;
       this.exitPointerLock();
       this.callbacks.onGameStateChange('PAUSED');
     }

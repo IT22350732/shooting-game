@@ -483,7 +483,7 @@ export const HUD: React.FC<HUDProps> = ({
                 letterSpacing: '0.05em'
               }}
             >
-              {isMobile ? 'TAP ADS TO CYCLE ZOOM' : 'Z: CYCLE ZOOM / HOLD  •  SHIFT: SPRINT  •  CLICK: FIRE'}
+              {isMobile ? 'TAP ADS TO CYCLE ZOOM' : 'Q: CYCLE ZOOM / HOLD  •  SHIFT: SPRINT  •  CLICK: FIRE'}
             </span>
           </div>
         </div>
