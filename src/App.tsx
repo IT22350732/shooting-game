@@ -27,6 +27,7 @@ import { OPEN_IOS_GUIDE_EVENT } from './utils/fullscreen';
 import { userManager } from './game/managers/UserManager';
 import { AuthModal } from './ui/AuthModal';
 import { LeaderboardModal } from './ui/LeaderboardModal';
+import { MultiplayerModal } from './ui/multiplayer/MultiplayerModal';
 
 export const App: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -90,6 +91,7 @@ export const App: React.FC = () => {
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [showAuth, setShowAuth] = useState(true);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showMultiplayer, setShowMultiplayer] = useState(false);
 
   useEffect(() => {
     const handleOpenGuide = () => setShowIOSGuide(true);
@@ -230,6 +232,7 @@ export const App: React.FC = () => {
           onOpenTutorial={() => setShowTutorial(true)}
           onOpenAuth={() => setShowAuth(true)}
           onOpenLeaderboard={() => setShowLeaderboard(true)}
+          onOpenMultiplayer={() => setShowMultiplayer(true)}
           coins={coins}
         />
       )}
@@ -348,6 +351,20 @@ export const App: React.FC = () => {
           onOpenAuth={() => {
             setShowLeaderboard(false);
             setShowAuth(true);
+          }}
+        />
+      )}
+
+      {/* MULTIPLAYER LOBBY & MATCHMAKING MODAL */}
+      {showMultiplayer && (
+        <MultiplayerModal
+          isOpen={showMultiplayer}
+          onClose={() => setShowMultiplayer(false)}
+          onLaunchMatch={(arena, mode) => {
+            setShowMultiplayer(false);
+            if (engineRef.current) {
+              engineRef.current.startMultiplayerGame(arena, mode);
+            }
           }}
         />
       )}

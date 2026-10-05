@@ -23,7 +23,8 @@ import {
   CheckCircle2,
   Clock,
   Trophy,
-  User
+  User,
+  Users
 } from 'lucide-react';
 import { GameMode, ArenaId, MissionConfig } from '../types/game';
 import { MISSIONS } from '../game/missions/MissionData';
@@ -41,6 +42,7 @@ interface MainMenuProps {
   onOpenTutorial: () => void;
   onOpenAuth: () => void;
   onOpenLeaderboard: () => void;
+  onOpenMultiplayer: () => void;
   coins: number;
 }
 
@@ -53,6 +55,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onOpenTutorial,
   onOpenAuth,
   onOpenLeaderboard,
+  onOpenMultiplayer,
   coins
 }) => {
   const savedDifficulty = (saveManager.getData().settings.difficulty || 'medium') as GameMode;
@@ -552,6 +555,23 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           >
             <Zap size={18} />
             <span>UPGRADES</span>
+          </button>
+
+          <button
+            onClick={onOpenMultiplayer}
+            className="btn-cyber menu-dock-btn pulse-glow"
+            style={{
+              background: 'linear-gradient(135deg, #0284c7, #8b5cf6)',
+              boxShadow: '0 6px 22px rgba(2, 132, 199, 0.45)',
+              border: '1.5px solid rgba(255, 255, 255, 0.45)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              color: '#ffffff',
+              fontWeight: 900
+            }}
+          >
+            <Users size={18} color="#ffffff" />
+            <span>MULTIPLAYER</span>
           </button>
 
           <button

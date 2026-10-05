@@ -12,7 +12,9 @@ import {
   Minimize,
   RotateCw,
   Target,
-  HelpCircle
+  HelpCircle,
+  Wifi,
+  Skull
 } from 'lucide-react';
 import {
   WeaponId,
@@ -27,6 +29,10 @@ import {
 } from '../types/game';
 import { BASE_WEAPONS } from '../game/entities/Weapon';
 import { useFullscreen } from '../utils/fullscreen';
+import { KillFeed } from './multiplayer/KillFeed';
+import { MultiplayerScoreboard } from './multiplayer/MultiplayerScoreboard';
+import { multiplayerService } from '../game/multiplayer/MultiplayerService';
+import { KillFeedEntry } from '../game/multiplayer/MultiplayerTypes';
 
 interface HUDProps {
   stats: {
@@ -55,6 +61,14 @@ interface HUDProps {
     mode?: GameMode;
     missionObjective?: MissionObjectiveInfo | null;
     activeMission?: MissionConfig | null;
+    isMultiplayer?: boolean;
+    isRespawning?: boolean;
+    respawnCountdown?: number;
+    killerName?: string;
+    multiplayerAlphaScore?: number;
+    multiplayerBravoScore?: number;
+    multiplayerScoreLimit?: number;
+    multiplayerPing?: number;
   };
   hitMarker: HitMarkerInfo | null;
   damageNumbers: FloatingDamageNumber[];
@@ -128,6 +142,31 @@ export const HUD: React.FC<HUDProps> = ({
       return () => clearTimeout(timer);
     }
   }, [hitMarker]);
+
+  const [killFeed, setKillFeed] = useState<KillFeedEntry[]>([]);
+  const [showScoreboard, setShowScoreboard] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Tab') {
+        e.preventDefault();
+        setShowScoreboard(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    multiplayerService.setEvents({
+      onKillFeed: (entry) => {
+        setKillFeed(prev => [...prev.slice(-5), entry]);
+        setTimeout(() => {
+          setKillFeed(prev => prev.filter(k => k.id !== entry.id));
+        }, 4500);
+      }
+    });
+  }, []);
 
   const activeWeapon = BASE_WEAPONS[stats.activeWeaponId];
   const hpPercent = Math.max(0, Math.min(100, (stats.health / stats.maxHealth) * 100));
@@ -722,6 +761,72 @@ export const HUD: React.FC<HUDProps> = ({
               />
             </div>
           </div>
+        ) : stats.isMultiplayer ? (
+          // MULTIPLAYER MATCH COMBAT HEADER
+          <div
+            className="glass-panel"
+            style={{
+              padding: '8px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+              border: '1.5px solid rgba(2, 132, 199, 0.45)',
+              background: 'rgba(15, 23, 42, 0.92)'
+            }}
+          >
+            {multiplayerService.room?.mode === 'multiplayer_tdm' ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Shield size={16} color="#38bdf8" />
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 900, color: '#38bdf8' }}>
+                    ALPHA {stats.multiplayerAlphaScore ?? 0}
+                  </span>
+                </div>
+                <span style={{ color: '#64748b', fontWeight: 900, fontSize: '0.8rem' }}>VS</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 900, color: '#f87171' }}>
+                    {stats.multiplayerBravoScore ?? 0} BRAVO
+                  </span>
+                  <Skull size={16} color="#f87171" />
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#c084fc', fontFamily: 'var(--font-display)', fontWeight: 900 }}>
+                <Target size={18} />
+                <span>FREE-FOR-ALL • LIMIT: {stats.multiplayerScoreLimit || 15} KILLS</span>
+              </div>
+            )}
+
+            <div style={{ width: 1.5, height: 20, background: 'rgba(255, 255, 255, 0.15)' }} />
+
+            {/* Scoreboard Button */}
+            <button
+              type="button"
+              onClick={() => setShowScoreboard(true)}
+              className="btn-cyber"
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.72rem',
+                fontWeight: 900,
+                background: 'rgba(2, 132, 199, 0.2)',
+                border: '1px solid rgba(2, 132, 199, 0.5)',
+                color: '#38bdf8',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                pointerEvents: 'auto',
+                cursor: 'pointer'
+              }}
+            >
+              <span>RANKS [TAB]</span>
+            </button>
+
+            {/* Ping */}
+            <span style={{ fontSize: '0.72rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Wifi size={13} color="#22c55e" />
+              {stats.multiplayerPing ?? 20}ms
+            </span>
+          </div>
         ) : stats.mode === 'free_mode' ? (
           // Free Mode: Target Practice Range Display
           <div
@@ -1158,6 +1263,60 @@ export const HUD: React.FC<HUDProps> = ({
           </div>
         </div>
       </div>
+
+      {/* MULTIPLAYER KILL FEED */}
+      <KillFeed entries={killFeed} />
+
+      {/* MULTIPLAYER TAB SCOREBOARD */}
+      {showScoreboard && (
+        <MultiplayerScoreboard
+          room={multiplayerService.room}
+          players={Array.from(multiplayerService.players.values())}
+          localPlayerId={multiplayerService.localPlayerId}
+          onClose={() => setShowScoreboard(false)}
+        />
+      )}
+
+      {/* MULTIPLAYER RESPAWN OVERLAY */}
+      {stats.isRespawning && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(220, 38, 38, 0.3)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 90,
+            pointerEvents: 'none'
+          }}
+        >
+          <div
+            style={{
+              background: 'rgba(15, 23, 42, 0.95)',
+              border: '2px solid #ef4444',
+              borderRadius: 16,
+              padding: '24px 40px',
+              textAlign: 'center',
+              boxShadow: '0 0 60px rgba(239, 68, 68, 0.65)',
+              animation: 'pulseGlow 1s infinite alternate'
+            }}
+          >
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem', color: '#ef4444', fontWeight: 900, letterSpacing: 2 }}>
+              TACTICAL ELIMINATION
+            </span>
+            <h2 style={{ margin: '8px 0 16px 0', fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: '#ffffff', fontWeight: 900 }}>
+              ELIMINATED BY {stats.killerName || 'RIVAL OPERATIVE'}
+            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, color: '#38bdf8', fontSize: '1.15rem', fontWeight: 900, fontFamily: 'var(--font-display)' }}>
+              <span>RESPAWNING IN {stats.respawnCountdown || 3} SECONDS...</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

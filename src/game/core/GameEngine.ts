@@ -28,6 +28,9 @@ import { WaveManager } from '../managers/WaveManager';
 import { saveManager } from '../managers/SaveManager';
 import { soundManager } from '../../audio/SoundManager';
 import { MISSIONS, getMissionById } from '../missions/MissionData';
+import { multiplayerService } from '../multiplayer/MultiplayerService';
+import { RemotePlayer } from '../entities/RemotePlayer';
+import { NetworkPlayerState } from '../multiplayer/MultiplayerTypes';
 
 export interface HUDStats {
   health: number;
@@ -55,6 +58,14 @@ export interface HUDStats {
   mode?: GameMode;
   missionObjective?: MissionObjectiveInfo | null;
   activeMission?: MissionConfig | null;
+  isMultiplayer?: boolean;
+  isRespawning?: boolean;
+  respawnCountdown?: number;
+  killerName?: string;
+  multiplayerAlphaScore?: number;
+  multiplayerBravoScore?: number;
+  multiplayerScoreLimit?: number;
+  multiplayerPing?: number;
 }
 
 export interface GameEngineCallbacks {
@@ -89,6 +100,14 @@ export class GameEngine {
   public boss: Boss | null = null;
   public projectiles: Projectile[] = [];
   public powerups: Powerup[] = [];
+
+  // Multiplayer State
+  public isMultiplayer: boolean = false;
+  public remotePlayers: Map<string, RemotePlayer> = new Map();
+  public isRespawning: boolean = false;
+  public respawnCountdown: number = 0;
+  public killerName: string = '';
+  private multiplayerBroadcastTimer: number = 0;
 
   // State
   public state: GameState = 'MENU';
@@ -180,6 +199,7 @@ export class GameEngine {
 
     // Setup Event Listeners
     this.setupInputs();
+    this.setupMultiplayerListeners();
     window.addEventListener('resize', this.onWindowResize);
     window.addEventListener('orientationchange', this.onWindowResize);
     if (window.visualViewport) {
@@ -218,7 +238,151 @@ export class GameEngine {
     soundManager.playReload();
   }
 
+  public startMultiplayerGame(arenaId: ArenaId, mode: GameMode) {
+    this.isMultiplayer = true;
+    this.isRespawning = false;
+    this.respawnCountdown = 0;
+    this.currentMission = null;
+    this.mode = mode;
+    this.currentArenaId = arenaId;
+    this.state = 'PLAYING';
+    this.setZoomLevel(0);
+    this.missionCompletedTriggered = false;
+
+    const saved = saveManager.getData();
+    this.mouseSensitivity = saved.settings.mouseSensitivity;
+    this.player.reset(saved.upgrades);
+    this.weapons.forEach(w => w.applyUpgrades(saved.upgrades));
+
+    this.clearAllEntities();
+
+    // Load arena
+    this.arena.loadArena(arenaId);
+    this.particles.initAtmosphere(arenaId);
+
+    // Spawn player at valid spawn point
+    const spawn = this.arena.getValidSpawnPoint(new THREE.Vector3(0, 0, 0));
+    this.player.position.copy(spawn);
+    this.player.activatePowerup('shield', 3.5);
+
+    soundManager.startMusic();
+    soundManager.playMatchStartCountdown(0);
+
+    this.callbacks.onGameStateChange('PLAYING');
+    this.currentWeapon.meshGroup.visible = true;
+    this.camera.position.copy(this.player.position);
+    this.camera.rotation.set(0, 0, 0);
+    this.camera.rotation.order = 'YXZ';
+
+    this.syncMultiplayerPeers();
+
+    if (!this.isTouchDevice) {
+      this.requestPointerLock();
+    }
+  }
+
+  public syncMultiplayerPeers() {
+    this.remotePlayers.forEach(r => {
+      this.scene.remove(r.mesh);
+      r.dispose();
+    });
+    this.remotePlayers.clear();
+
+    multiplayerService.players.forEach(p => {
+      if (p.id !== multiplayerService.localPlayerId) {
+        const remote = new RemotePlayer(p);
+        this.remotePlayers.set(p.id, remote);
+        this.scene.add(remote.mesh);
+      }
+    });
+  }
+
+  private setupMultiplayerListeners() {
+    multiplayerService.setEvents({
+      onRemotePlayerSnapshot: (state) => {
+        if (!this.isMultiplayer) return;
+        let remote = this.remotePlayers.get(state.id);
+        if (!remote) {
+          remote = new RemotePlayer(state);
+          this.remotePlayers.set(state.id, remote);
+          this.scene.add(remote.mesh);
+        }
+        remote.updateState(state);
+      },
+      onPlayerJoined: (player) => {
+        if (!this.isMultiplayer) return;
+        if (!this.remotePlayers.has(player.id)) {
+          const remote = new RemotePlayer(player);
+          this.remotePlayers.set(player.id, remote);
+          this.scene.add(remote.mesh);
+        }
+      },
+      onPlayerLeft: (playerId) => {
+        const remote = this.remotePlayers.get(playerId);
+        if (remote) {
+          this.scene.remove(remote.mesh);
+          remote.dispose();
+          this.remotePlayers.delete(playerId);
+        }
+      },
+      onRemotePlayerShoot: (shooterId, origin, direction, weaponId) => {
+        if (!this.isMultiplayer) return;
+        const originVec = new THREE.Vector3(origin.x, origin.y, origin.z);
+        const dirVec = new THREE.Vector3(direction.x, direction.y, direction.z).normalize();
+        const targetPoint = originVec.clone().addScaledVector(dirVec, 70);
+
+        this.particles.addTracer(originVec, targetPoint, weaponId === 'plasma_rifle' ? 0x06b6d4 : 0xf59e0b);
+        this.particles.spawnSparks(originVec, dirVec, 0xf59e0b, 8);
+
+        const dist = this.player.position.distanceTo(originVec);
+        if (dist < 80) {
+          soundManager.playGunshot(weaponId === 'plasma_rifle' ? 'plasma' : weaponId === 'sniper' ? 'sniper' : weaponId === 'shotgun' ? 'shotgun' : 'rifle');
+        }
+      },
+      onRemotePlayerHit: (shooterId, targetId, damage, isHeadshot, hitPoint) => {
+        if (!this.isMultiplayer) return;
+        if (targetId === multiplayerService.localPlayerId) {
+          const hitVec = new THREE.Vector3(hitPoint.x, hitPoint.y, hitPoint.z);
+          const dead = this.player.takeDamage(damage, hitVec);
+          if (dead) {
+            const killer = multiplayerService.players.get(shooterId);
+            this.handleMultiplayerDeath(killer ? killer.name : 'Rival Operative');
+          }
+        }
+      },
+      onRemotePlayerRespawn: (playerId, position) => {
+        if (!this.isMultiplayer) return;
+        const remote = this.remotePlayers.get(playerId);
+        if (remote) {
+          remote.respawn(position);
+        }
+      },
+      onMatchStart: (arena, mode) => {
+        this.startMultiplayerGame(arena, mode);
+      },
+      onMatchEnd: (winnerTeam) => {
+        if (!this.isMultiplayer) return;
+        this.state = (winnerTeam === multiplayerService.localPlayer?.team || (winnerTeam !== 'draw' && multiplayerService.room?.mode === 'multiplayer_ffa')) ? 'VICTORY' : 'GAME_OVER';
+        this.exitPointerLock();
+        soundManager.stopMusic();
+        if (this.state === 'VICTORY') {
+          soundManager.playMatchWon();
+        } else {
+          soundManager.playMatchLost();
+        }
+        this.callbacks.onGameStateChange(this.state);
+      }
+    });
+  }
+
+  private handleMultiplayerDeath(killerName: string) {
+    this.isRespawning = true;
+    this.respawnCountdown = 3.0;
+    this.killerName = killerName;
+  }
+
   public startNewGame(mode: GameMode, arenaId: ArenaId) {
+    this.isMultiplayer = false;
     if (mode !== 'mission') {
       this.currentMission = null;
     }
@@ -353,6 +517,12 @@ export class GameEngine {
     });
     this.powerups = [];
     this.killsSinceHealthPack = 0;
+
+    this.remotePlayers.forEach(r => {
+      this.scene.remove(r.mesh);
+      r.dispose();
+    });
+    this.remotePlayers.clear();
   }
 
   // --- INPUT HANDLING ---
@@ -969,6 +1139,8 @@ export class GameEngine {
 
   public showMenu() {
     this.state = 'MENU';
+    this.isMultiplayer = false;
+    multiplayerService.leaveRoom();
     this.setZoomLevel(0);
     if (this.currentWeapon) {
       this.currentWeapon.meshGroup.visible = false;
@@ -1021,6 +1193,14 @@ export class GameEngine {
 
       const shootData = this.player.getShootRay();
 
+      if (this.isMultiplayer) {
+        multiplayerService.broadcastShoot(
+          { x: shootData.origin.x, y: shootData.origin.y, z: shootData.origin.z },
+          { x: shootData.direction.x, y: shootData.direction.y, z: shootData.direction.z },
+          this.currentWeapon.config.id
+        );
+      }
+
       if (this.currentWeapon.config.id === 'plasma_rifle') {
         // Spawn Plasma Projectile
         const proj = new Projectile(
@@ -1065,6 +1245,11 @@ export class GameEngine {
 
     // Collect all shootable objects
     const targets: THREE.Object3D[] = [];
+    if (this.isMultiplayer) {
+      this.remotePlayers.forEach(r => {
+        if (r.isAlive) targets.push(r.mesh);
+      });
+    }
     this.enemies.forEach(e => targets.push(e.mesh));
     this.practiceTargets.forEach(t => {
       if (!t.isDead) targets.push(t.mesh);
@@ -1084,6 +1269,56 @@ export class GameEngine {
 
       // Add Bullet Tracer
       this.particles.addTracer(origin, hitPoint, parseInt(this.currentWeapon.config.projectileColor.replace('#', '0x')));
+
+      // Check Remote Player Hit (Multiplayer)
+      if (this.isMultiplayer) {
+        for (const [, remote] of this.remotePlayers) {
+          if (!remote.isAlive) continue;
+          if (this.mode === 'multiplayer_tdm' && remote.team === multiplayerService.localPlayer?.team) {
+            continue; // No friendly fire
+          }
+
+          let isPartOfRemote = false;
+          let isHeadshot = false;
+
+          hit.object.traverseAncestors(ancestor => {
+            if (ancestor === remote.mesh) isPartOfRemote = true;
+          });
+          if (hit.object === remote.mesh) isPartOfRemote = true;
+
+          if (isPartOfRemote) {
+            if (hit.object === remote.headMesh || hit.object.parent === remote.headMesh) {
+              isHeadshot = true;
+            }
+
+            const baseDmg = this.currentWeapon.config.damage * (hasDamageBoost ? 2.0 : 1.0);
+            const res = remote.takeDamage(baseDmg, isHeadshot);
+
+            this.particles.spawnSparks(hitPoint, hitNormal, isHeadshot ? 0xfef08a : 0xef4444, 16);
+            this.triggerHitFeedback(hitPoint, res.finalDamage, isHeadshot);
+
+            multiplayerService.reportHit(
+              remote.id,
+              res.finalDamage,
+              isHeadshot,
+              { x: hitPoint.x, y: hitPoint.y, z: hitPoint.z }
+            );
+
+            if (res.killed) {
+              if (isHeadshot) {
+                soundManager.playHeadshotKill();
+                this.player.stats.headshots++;
+              } else {
+                soundManager.playKillConfirmed();
+              }
+              this.player.stats.kills++;
+              this.player.stats.score += isHeadshot ? 150 : 100;
+              multiplayerService.reportKill(remote.id, this.currentWeapon.config.id, isHeadshot);
+            }
+            return;
+          }
+        }
+      }
 
       // Check Explosive Barrel
       for (const barrel of this.arena.explosiveBarrels) {
@@ -1450,43 +1685,84 @@ export class GameEngine {
     this.currentWeapon.update(delta, walkTime, isMoving);
     this.handlePlayerShooting(now);
 
-    // 4. Wave Manager Update
-    const isGameOver = this.waveManager.update(
-      delta,
-      (type: EnemyType) => {
-        const spawnPos = this.arena.getValidSpawnPoint(this.player.position);
-        const waveMultiplier = 1 + (this.waveManager.currentWave - 1) * 0.18;
-        const savedDiff = saveManager.getData().settings.difficulty || 'medium';
-        const effectiveDiff = (this.mode === 'easy' || this.mode === 'medium' || this.mode === 'hard')
-          ? this.mode
-          : (this.mode === 'free_mode' ? 'free_mode' : savedDiff);
-        const diffMultipliers: Record<string, { hp: number; dmg: number; speed: number }> = {
-          easy: { hp: 0.65, dmg: 0.5, speed: 0.75 },
-          medium: { hp: 1.0, dmg: 1.0, speed: 1.0 },
-          hard: { hp: 1.4, dmg: 1.5, speed: 1.25 },
-          survival: { hp: 1.0, dmg: 1.0, speed: 1.0 },
-          time_attack: { hp: 0.9, dmg: 0.9, speed: 1.0 },
-          boss_arena: { hp: 1.0, dmg: 1.0, speed: 1.0 },
-          free_mode: { hp: 1.0, dmg: 0, speed: 0 }
-        };
-        const diff = diffMultipliers[effectiveDiff] || diffMultipliers.medium;
-        const enemy = new Enemy(Math.random().toString(), type, spawnPos, waveMultiplier, diff);
-        this.enemies.push(enemy);
-        this.scene.add(enemy.mesh);
-      },
-      () => {
-        // Spawn Boss
-        if (!this.boss) {
-          const waveMultiplier = 1 + (this.waveManager.currentWave - 1) * 0.25;
-          this.boss = new Boss(waveMultiplier);
-          this.scene.add(this.boss.mesh);
+    // 4. Wave Manager Update (Singleplayer only)
+    if (!this.isMultiplayer) {
+      const isGameOver = this.waveManager.update(
+        delta,
+        (type: EnemyType) => {
+          const spawnPos = this.arena.getValidSpawnPoint(this.player.position);
+          const waveMultiplier = 1 + (this.waveManager.currentWave - 1) * 0.18;
+          const savedDiff = saveManager.getData().settings.difficulty || 'medium';
+          const effectiveDiff = (this.mode === 'easy' || this.mode === 'medium' || this.mode === 'hard')
+            ? this.mode
+            : (this.mode === 'free_mode' ? 'free_mode' : savedDiff);
+          const diffMultipliers: Record<string, { hp: number; dmg: number; speed: number }> = {
+            easy: { hp: 0.65, dmg: 0.5, speed: 0.75 },
+            medium: { hp: 1.0, dmg: 1.0, speed: 1.0 },
+            hard: { hp: 1.4, dmg: 1.5, speed: 1.25 },
+            survival: { hp: 1.0, dmg: 1.0, speed: 1.0 },
+            time_attack: { hp: 0.9, dmg: 0.9, speed: 1.0 },
+            boss_arena: { hp: 1.0, dmg: 1.0, speed: 1.0 },
+            free_mode: { hp: 1.0, dmg: 0, speed: 0 }
+          };
+          const diff = diffMultipliers[effectiveDiff] || diffMultipliers.medium;
+          const enemy = new Enemy(Math.random().toString(), type, spawnPos, waveMultiplier, diff);
+          this.enemies.push(enemy);
+          this.scene.add(enemy.mesh);
+        },
+        () => {
+          // Spawn Boss
+          if (!this.boss) {
+            const waveMultiplier = 1 + (this.waveManager.currentWave - 1) * 0.25;
+            this.boss = new Boss(waveMultiplier);
+            this.scene.add(this.boss.mesh);
+          }
+        }
+      );
+
+      if (isGameOver) {
+        this.triggerGameOver();
+        return;
+      }
+    } else {
+      // Multiplayer Update Loop
+      // 1. Respawn handling
+      if (this.isRespawning) {
+        this.respawnCountdown -= delta;
+        if (this.respawnCountdown <= 0) {
+          this.isRespawning = false;
+          const spawn = this.arena.getValidSpawnPoint(new THREE.Vector3(0, 0, 0));
+          this.player.position.copy(spawn);
+          this.player.velocity.set(0, 0, 0);
+          this.player.stats.health = this.player.stats.maxHealth;
+          this.player.stats.armor = this.player.stats.maxArmor;
+          this.player.activatePowerup('shield', 3.5);
+          multiplayerService.broadcastRespawn({ x: spawn.x, y: spawn.y, z: spawn.z });
         }
       }
-    );
 
-    if (isGameOver) {
-      this.triggerGameOver();
-      return;
+      // 2. Update Remote Players
+      for (const [, remote] of this.remotePlayers) {
+        remote.update(delta);
+      }
+
+      // 3. Broadcast snapshot at ~30Hz (every 33ms)
+      this.multiplayerBroadcastTimer += delta;
+      if (this.multiplayerBroadcastTimer >= 0.033) {
+        this.multiplayerBroadcastTimer = 0;
+        multiplayerService.broadcastSnapshot({
+          position: { x: this.player.position.x, y: this.player.position.y, z: this.player.position.z },
+          yaw: this.player.yaw,
+          pitch: this.player.pitch,
+          stance: this.player.stance,
+          velocity: { x: this.player.velocity.x, y: this.player.velocity.y, z: this.player.velocity.z },
+          isMoving,
+          health: this.player.stats.health,
+          armor: this.player.stats.armor,
+          activeWeapon: this.currentWeaponId,
+          isFiring: this.isLeftMouseDown || this.isTouchShooting
+        });
+      }
     }
 
     // 5. Enemies Update
@@ -1628,6 +1904,28 @@ export class GameEngine {
           }
         }
 
+        // Player Plasma Projectile hits remote player (Multiplayer)
+        if (!proj.isDead && this.isMultiplayer) {
+          for (const [, remote] of this.remotePlayers) {
+            if (!remote.isAlive) continue;
+            if (this.mode === 'multiplayer_tdm' && remote.team === multiplayerService.localPlayer?.team) continue;
+            if (remote.position.distanceTo(proj.position) < (1.2 + proj.radius)) {
+              const res = remote.takeDamage(proj.damage, false);
+              this.particles.spawnExplosion(proj.position, 20);
+              this.triggerHitFeedback(proj.position, res.finalDamage, false);
+              multiplayerService.reportHit(remote.id, res.finalDamage, false, { x: proj.position.x, y: proj.position.y, z: proj.position.z });
+              if (res.killed) {
+                soundManager.playKillConfirmed();
+                this.player.stats.kills++;
+                this.player.stats.score += 100;
+                multiplayerService.reportKill(remote.id, 'plasma_rifle', false);
+              }
+              proj.isDead = true;
+              break;
+            }
+          }
+        }
+
         // Player Plasma Projectile hits enemy
         if (!proj.isDead) {
           for (const enemy of this.enemies) {
@@ -1717,7 +2015,15 @@ export class GameEngine {
       targetLock: this.targetLock,
       mode: this.mode,
       missionObjective: this.getMissionObjectiveInfo(),
-      activeMission: this.currentMission
+      activeMission: this.currentMission,
+      isMultiplayer: this.isMultiplayer,
+      isRespawning: this.isRespawning,
+      respawnCountdown: Math.ceil(this.respawnCountdown),
+      killerName: this.killerName,
+      multiplayerAlphaScore: multiplayerService.room?.teamAlphaScore,
+      multiplayerBravoScore: multiplayerService.room?.teamBravoScore,
+      multiplayerScoreLimit: multiplayerService.room?.scoreLimit,
+      multiplayerPing: multiplayerService.currentPing
     });
 
     const activeList: PowerupActiveState[] = [];
@@ -1759,6 +2065,7 @@ export class GameEngine {
     if (window.visualViewport) {
       window.visualViewport.removeEventListener('resize', this.onWindowResize);
     }
+    multiplayerService.destroy();
     this.clearAllEntities();
     this.particles.dispose();
     this.renderer.dispose();
