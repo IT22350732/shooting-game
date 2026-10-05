@@ -251,7 +251,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
         position: 'absolute',
         inset: 0,
         pointerEvents: 'none',
-        zIndex: 35,
+        zIndex: 75,
         touchAction: 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none'
@@ -352,27 +352,27 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
           width: 130,
           height: 130,
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, rgba(15, 23, 42, 0.35) 100%)',
-          border: isSprintingAuto ? '2px solid #f97316' : '1.5px solid rgba(255, 255, 255, 0.3)',
+          background: 'radial-gradient(circle, rgba(30, 41, 59, 0.88) 0%, rgba(15, 23, 42, 0.95) 100%)',
+          border: isSprintingAuto ? '2.5px solid #f97316' : '2px solid rgba(255, 255, 255, 0.75)',
           boxShadow: isSprintingAuto
-            ? '0 0 25px rgba(249, 115, 22, 0.5), inset 0 0 15px rgba(249, 115, 22, 0.2)'
-            : '0 4px 20px rgba(0, 0, 0, 0.25), inset 0 0 15px rgba(255, 255, 255, 0.08)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
+            ? '0 0 25px rgba(249, 115, 22, 0.75), inset 0 0 15px rgba(249, 115, 22, 0.3)'
+            : '0 4px 25px rgba(0, 0, 0, 0.6), 0 0 15px rgba(2, 132, 199, 0.35), inset 0 0 15px rgba(255, 255, 255, 0.12)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           pointerEvents: 'auto',
           touchAction: 'none',
-          zIndex: 30,
+          zIndex: 85,
           transition: 'border 0.2s, box-shadow 0.2s'
         }}
       >
         {/* Cardinal Direction Indicators */}
-        <div style={{ position: 'absolute', top: 6, width: 8, height: 2, background: 'rgba(255, 255, 255, 0.4)', borderRadius: 1 }} />
-        <div style={{ position: 'absolute', bottom: 6, width: 8, height: 2, background: 'rgba(255, 255, 255, 0.4)', borderRadius: 1 }} />
-        <div style={{ position: 'absolute', left: 6, width: 2, height: 8, background: 'rgba(255, 255, 255, 0.4)', borderRadius: 1 }} />
-        <div style={{ position: 'absolute', right: 6, width: 2, height: 8, background: 'rgba(255, 255, 255, 0.4)', borderRadius: 1 }} />
+        <div style={{ position: 'absolute', top: 6, width: 8, height: 2, background: 'rgba(255, 255, 255, 0.8)', borderRadius: 1 }} />
+        <div style={{ position: 'absolute', bottom: 6, width: 8, height: 2, background: 'rgba(255, 255, 255, 0.8)', borderRadius: 1 }} />
+        <div style={{ position: 'absolute', left: 6, width: 2, height: 8, background: 'rgba(255, 255, 255, 0.8)', borderRadius: 1 }} />
+        <div style={{ position: 'absolute', right: 6, width: 2, height: 8, background: 'rgba(255, 255, 255, 0.8)', borderRadius: 1 }} />
 
         {/* Sprint Range Arc Indicator */}
         <span
@@ -382,7 +382,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
             fontSize: '0.62rem',
             fontFamily: 'var(--font-display)',
             fontWeight: 800,
-            color: isSprintingAuto ? '#f97316' : 'rgba(255, 255, 255, 0.6)',
+            color: isSprintingAuto ? '#f97316' : '#38bdf8',
             letterSpacing: '0.05em'
           }}
         >
@@ -393,14 +393,14 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
         <div
           ref={joystickKnobRef}
           style={{
-            width: 50,
-            height: 50,
+            width: 52,
+            height: 52,
             borderRadius: '50%',
             background: isSprintingAuto
               ? 'linear-gradient(135deg, #f97316, #ea580c)'
-              : 'linear-gradient(135deg, rgba(2, 132, 199, 0.9), rgba(56, 189, 248, 0.9))',
-            border: '2px solid rgba(255, 255, 255, 0.8)',
-            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3), inset 0 0 6px rgba(255, 255, 255, 0.6)',
+              : 'linear-gradient(135deg, #0284c7, #38bdf8)',
+            border: '2.5px solid #ffffff',
+            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.5), 0 0 14px rgba(56, 189, 248, 0.8)',
             pointerEvents: 'none',
             display: 'flex',
             alignItems: 'center',
@@ -408,10 +408,9 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
             transition: 'transform 0.05s ease-out'
           }}
         >
-          <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#ffffff', opacity: 0.9 }} />
+          <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#ffffff', boxShadow: '0 0 6px #ffffff' }} />
         </div>
       </div>
-
 
       {/* RIGHT-SIDE TACTICAL ACTION BUTTONS CLUSTER */}
       <div
@@ -425,7 +424,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
           alignItems: 'flex-end',
           gap: 10,
           pointerEvents: 'auto',
-          zIndex: 40
+          zIndex: 85
         }}
       >
         {/* UPPER ROW: SPRINT LOCK, RELOAD & AIM (ADS) BUTTONS */}
@@ -441,18 +440,18 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: isSprintLocked ? 'linear-gradient(135deg, #f97316, #fb923c)' : 'rgba(15, 23, 42, 0.45)',
-              border: isSprintLocked ? '2px solid #ffffff' : '1.5px solid rgba(249, 115, 22, 0.5)',
-              color: isSprintLocked ? '#ffffff' : '#fb923c',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              boxShadow: isSprintLocked ? '0 0 15px rgba(249, 115, 22, 0.6)' : '0 4px 12px rgba(0, 0, 0, 0.25)',
+              background: isSprintLocked ? 'linear-gradient(135deg, #f97316, #fb923c)' : 'linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96))',
+              border: isSprintLocked ? '2.5px solid #ffffff' : '2px solid #f97316',
+              color: '#ffffff',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              boxShadow: isSprintLocked ? '0 0 20px rgba(249, 115, 22, 0.8), 0 4px 12px rgba(0, 0, 0, 0.5)' : '0 4px 14px rgba(0, 0, 0, 0.5), 0 0 8px rgba(249, 115, 22, 0.35)',
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
             aria-label="Toggle Sprint Lock"
           >
-            <Zap size={18} fill={isSprintLocked ? '#ffffff' : 'none'} />
+            <Zap size={18} fill={isSprintLocked ? '#ffffff' : '#f97316'} color={isSprintLocked ? '#ffffff' : '#f97316'} />
           </button>
 
           {/* Quick Weapon Switch Button */}
@@ -477,18 +476,18 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.5), rgba(56, 189, 248, 0.4))',
-              border: '2px solid #38bdf8',
+              background: 'linear-gradient(135deg, #0284c7, #0ea5e9)',
+              border: '2px solid #ffffff',
               color: '#ffffff',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              boxShadow: '0 4px 15px rgba(2, 132, 199, 0.4)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              boxShadow: '0 0 16px rgba(14, 165, 233, 0.8), 0 4px 12px rgba(0, 0, 0, 0.5)',
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
             aria-label="Cycle Weapon"
           >
-            <ArrowRightLeft size={16} strokeWidth={2.4} />
+            <ArrowRightLeft size={16} strokeWidth={2.6} />
             <span style={{ fontSize: '0.46rem', fontWeight: 900, fontFamily: 'var(--font-display)', marginTop: 1, letterSpacing: '0.04em' }}>GUN</span>
           </button>
 
@@ -503,17 +502,17 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: 'rgba(15, 23, 42, 0.45)',
-              border: '1.5px solid rgba(255, 255, 255, 0.35)',
+              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96))',
+              border: '2px solid rgba(255, 255, 255, 0.85)',
               color: '#ffffff',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              boxShadow: '0 0 12px rgba(255, 255, 255, 0.25), 0 4px 12px rgba(0, 0, 0, 0.5)',
               cursor: 'pointer'
             }}
             aria-label="Reload Weapon"
           >
-            <RotateCw size={19} />
+            <RotateCw size={19} strokeWidth={2.4} />
           </button>
 
           {/* Aim / ADS Toggle Button */}
@@ -528,18 +527,18 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: isAiming ? 'linear-gradient(135deg, #0284c7, #0ea5e9)' : 'rgba(15, 23, 42, 0.45)',
-              border: isAiming ? '2px solid #ffffff' : '1.5px solid rgba(56, 189, 248, 0.6)',
-              color: isAiming ? '#ffffff' : '#38bdf8',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              boxShadow: isAiming ? '0 0 20px rgba(14, 165, 233, 0.8)' : '0 4px 14px rgba(0, 0, 0, 0.25)',
+              background: isAiming ? 'linear-gradient(135deg, #0284c7, #38bdf8)' : 'linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96))',
+              border: isAiming ? '2.5px solid #ffffff' : '2px solid #38bdf8',
+              color: '#ffffff',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              boxShadow: isAiming ? '0 0 25px rgba(56, 189, 248, 1), 0 4px 15px rgba(0, 0, 0, 0.5)' : '0 0 14px rgba(56, 189, 248, 0.5), 0 4px 14px rgba(0, 0, 0, 0.5)',
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
             aria-label="Toggle Aim Down Sights / Zoom"
           >
-            <Eye size={22} />
+            <Eye size={22} strokeWidth={2.4} />
             {isAiming && (
               <span
                 style={{
@@ -547,13 +546,13 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
                   top: -4,
                   right: -4,
                   background: '#0284c7',
-                  border: '1px solid #ffffff',
+                  border: '1.5px solid #ffffff',
                   borderRadius: 8,
                   fontSize: '0.52rem',
                   fontWeight: 900,
                   padding: '1px 4px',
                   color: '#ffffff',
-                  boxShadow: '0 0 6px rgba(14, 165, 233, 0.9)'
+                  boxShadow: '0 0 8px rgba(14, 165, 233, 1)'
                 }}
               >
                 {engine ? `${engine.getZoomLevel()}X` : 'ADS'}
@@ -578,17 +577,17 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: 'rgba(15, 23, 42, 0.45)',
-              border: '2px solid rgba(255, 255, 255, 0.4)',
+              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96))',
+              border: '2px solid rgba(255, 255, 255, 0.85)',
               color: '#ffffff',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.25)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              boxShadow: '0 0 14px rgba(255, 255, 255, 0.25), 0 4px 14px rgba(0, 0, 0, 0.5)',
               cursor: 'pointer'
             }}
             aria-label="Jump"
           >
-            <ArrowUp size={24} strokeWidth={2.5} />
+            <ArrowUp size={24} strokeWidth={2.6} />
           </button>
 
           {/* Primary FIRE Trigger Button */}
@@ -609,22 +608,22 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
               gap: 2,
               background: isFiring
                 ? 'linear-gradient(135deg, #e11d48, #f43f5e)'
-                : 'radial-gradient(circle, rgba(225, 29, 72, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%)',
-              border: isFiring ? '3px solid #ffffff' : '2.5px solid rgba(244, 63, 94, 0.85)',
+                : 'radial-gradient(circle, rgba(244, 63, 94, 0.9) 0%, rgba(225, 29, 72, 0.98) 100%)',
+              border: isFiring ? '3px solid #ffffff' : '2.5px solid #ffffff',
               color: '#ffffff',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
               boxShadow: isFiring
-                ? '0 0 35px rgba(225, 29, 72, 0.85), inset 0 0 12px rgba(255, 255, 255, 0.7)'
-                : '0 6px 20px rgba(225, 29, 72, 0.35), inset 0 0 10px rgba(244, 63, 94, 0.2)',
+                ? '0 0 40px rgba(225, 29, 72, 1), inset 0 0 14px rgba(255, 255, 255, 0.8)'
+                : '0 0 25px rgba(244, 63, 94, 0.85), 0 4px 16px rgba(0, 0, 0, 0.6)',
               cursor: 'pointer',
               transform: isFiring ? 'scale(0.95)' : 'scale(1)',
               transition: 'transform 0.08s ease, background 0.1s, box-shadow 0.1s'
             }}
             aria-label="Fire Weapon"
           >
-            <Crosshair size={30} strokeWidth={2.4} />
-            <span style={{ fontSize: '0.6rem', fontFamily: 'var(--font-display)', fontWeight: 900, letterSpacing: '0.08em' }}>
+            <Crosshair size={30} strokeWidth={2.6} />
+            <span style={{ fontSize: '0.62rem', fontFamily: 'var(--font-display)', fontWeight: 900, letterSpacing: '0.08em', textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>
               FIRE
             </span>
           </button>

@@ -638,25 +638,22 @@ canvas {
     flex-shrink: 0 !important;
   }
 
-  /* Compact mission info card on mobile */
+  /* On mobile landscape, mission card is hidden because deploy button has integrated summary */
   .menu-mission-card {
-    padding: 4px 8px !important;
-    font-size: 0.7rem !important;
-    min-width: auto !important;
-    gap: 6px !important;
+    display: none !important;
   }
 
   .menu-deploy-btn {
-    padding: 7px 16px !important;
-    font-size: 0.86rem !important;
-    min-height: 36px !important;
+    padding: 6px 14px !important;
+    min-height: 38px !important;
     white-space: nowrap !important;
-    gap: 6px !important;
+    gap: 8px !important;
   }
 
   .menu-deploy-btn svg {
     width: 16px !important;
     height: 16px !important;
+    flex-shrink: 0 !important;
   }
 
   /* Owner watermark footer stays docked cleanly without overlapping */
@@ -672,19 +669,6 @@ canvas {
     padding: 2px 10px !important;
     font-size: 0.62rem !important;
     border-radius: 12px !important;
-  }
-}
-
-/* Extra Compact Landscape (Narrow Screens <= 820px width in landscape) */
-@media (max-height: 520px) and (max-width: 820px) {
-  .menu-mission-card {
-    display: none !important;
-  }
-
-  .menu-dock-btn,
-  .menu-bottom-dock .btn-cyber {
-    padding: 5px 6px !important;
-    font-size: 0.68rem !important;
   }
 }
 

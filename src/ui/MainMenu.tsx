@@ -475,8 +475,6 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             }}
             className={`btn-cyber menu-dock-btn ${selectedMission ? 'menu-dock-active' : ''}`}
             style={{
-              padding: '10px 18px',
-              fontSize: '0.85rem',
               background: selectedMission ? 'rgba(2, 132, 199, 0.18)' : 'rgba(255, 255, 255, 0.94)',
               border: selectedMission ? '1.5px solid #0284c7' : '1.5px solid rgba(2, 132, 199, 0.35)',
               color: '#0284c7',
@@ -494,8 +492,6 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             onClick={onOpenArmory}
             className="btn-cyber menu-dock-btn"
             style={{
-              padding: '10px 18px',
-              fontSize: '0.85rem',
               background: 'rgba(255, 255, 255, 0.92)',
               boxShadow: '0 6px 20px rgba(15, 23, 42, 0.15)',
               backdropFilter: 'blur(12px)',
@@ -510,8 +506,6 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             onClick={onOpenUpgrades}
             className="btn-cyber btn-cyber-gold menu-dock-btn"
             style={{
-              padding: '10px 18px',
-              fontSize: '0.85rem',
               boxShadow: '0 6px 20px rgba(217, 119, 6, 0.2)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)'
@@ -525,8 +519,6 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             onClick={onOpenTutorial}
             className="btn-cyber menu-dock-btn"
             style={{
-              padding: '10px 18px',
-              fontSize: '0.85rem',
               background: 'rgba(255, 255, 255, 0.92)',
               boxShadow: '0 6px 20px rgba(15, 23, 42, 0.15)',
               backdropFilter: 'blur(12px)',
@@ -542,15 +534,15 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
         {/* TACTICAL MISSION DEPLOYMENT PANEL */}
         <div className="menu-bottom-deploy">
-          {/* Mission & Arena Info Card */}
+          {/* Mission & Arena Info Card (Desktop Only) */}
           <div
             onClick={() => setShowMissionSelect(true)}
             className="glass-panel menu-mission-card"
             style={{
-              padding: '8px 14px',
+              padding: '6px 12px',
               display: 'flex',
               alignItems: 'center',
-              gap: 12,
+              gap: 10,
               cursor: 'pointer',
               border: selectedMission ? `1.5px solid ${selectedMission.accentColor}` : '1.5px solid rgba(2, 132, 199, 0.45)',
               background: 'rgba(255, 255, 255, 0.92)',
@@ -570,18 +562,18 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                         background: `${selectedMission.accentColor}18`,
                         color: selectedMission.accentColor,
                         fontFamily: 'var(--font-display)',
-                        fontSize: '0.65rem',
+                        fontSize: '0.62rem',
                         fontWeight: 900
                       }}
                     >
                       OP 0{selectedMission.number}
                     </span>
-                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
                       {selectedMission.title}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                    <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-display)', color: selectedMission.accentColor, fontWeight: 800 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 1 }}>
+                    <span style={{ fontSize: '0.66rem', fontFamily: 'var(--font-display)', color: selectedMission.accentColor, fontWeight: 800 }}>
                       MAP: {selectedMission.arenaName}
                     </span>
                   </div>
@@ -590,12 +582,12 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     {currentModeInfo.icon}
-                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
                       {currentModeInfo.name}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                    <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-display)', color: '#0284c7', fontWeight: 800 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 1 }}>
+                    <span style={{ fontSize: '0.66rem', fontFamily: 'var(--font-display)', color: '#0284c7', fontWeight: 800 }}>
                       MAP: {currentArenaInfo.name}
                     </span>
                   </div>
@@ -605,8 +597,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
             <div
               style={{
-                width: 28,
-                height: 28,
+                width: 26,
+                height: 26,
                 borderRadius: 6,
                 background: selectedMission ? `${selectedMission.accentColor}18` : 'rgba(2, 132, 199, 0.12)',
                 display: 'flex',
@@ -616,23 +608,33 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                 flexShrink: 0
               }}
             >
-              <Layers size={16} />
+              <Layers size={15} />
             </div>
           </div>
 
-          {/* MAIN DEPLOY BUTTON */}
+          {/* MAIN DEPLOY BUTTON WITH INTEGRATED MISSION/MODE SUMMARY */}
           <button
             onClick={() => onStartGame(selectedMission ? 'mission' : selectedMode, selectedMission ? selectedMission.arena : selectedArena, selectedMission || undefined)}
             className="btn-cyber btn-cyber-primary pulse-glow menu-deploy-btn"
             style={{
-              padding: '12px 28px',
-              fontSize: 'clamp(0.95rem, 2vw, 1.15rem)',
-              letterSpacing: '0.06em',
-              boxShadow: '0 6px 25px rgba(2, 132, 199, 0.45)'
+              padding: '8px 18px',
+              minHeight: 40,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              boxShadow: '0 6px 25px rgba(2, 132, 199, 0.45)',
+              flexShrink: 0
             }}
           >
-            <Play size={20} fill="#ffffff" />
-            {selectedMission ? 'DEPLOY OPERATION' : 'DEPLOY TO COMBAT'}
+            <Play size={18} fill="#ffffff" />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', fontWeight: 900, lineHeight: 1.15, whiteSpace: 'nowrap' }}>
+                {selectedMission ? 'DEPLOY OPERATION' : 'DEPLOY TO COMBAT'}
+              </span>
+              <span style={{ fontFamily: 'var(--font-sub)', fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255, 255, 255, 0.88)', whiteSpace: 'nowrap' }}>
+                {selectedMission ? `OP 0${selectedMission.number}: ${selectedMission.title}` : `${currentModeInfo.name} • ${currentArenaInfo.name.split(' ')[0]}`}
+              </span>
+            </div>
           </button>
         </div>
       </div>

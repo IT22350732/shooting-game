@@ -135,7 +135,7 @@ export const HUD: React.FC<HUDProps> = ({
   const isLowHp = hpPercent <= 25;
 
   return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 50 }}>
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 40 }}>
       {/* Low Health Red Vignette Pulse */}
       {isLowHp && (
         <div
@@ -322,7 +322,7 @@ export const HUD: React.FC<HUDProps> = ({
             position: 'absolute',
             inset: 0,
             pointerEvents: 'none',
-            zIndex: 15
+            zIndex: 10
           }}
         >
           {/* Sniper or Precision Focus (Stage 2) High Magnification Scope */}
@@ -331,7 +331,9 @@ export const HUD: React.FC<HUDProps> = ({
               style={{
                 position: 'absolute',
                 inset: 0,
-                background: 'radial-gradient(circle at center, transparent 28%, rgba(15, 23, 42, 0.95) 62%)',
+                background: isMobileView
+                  ? 'radial-gradient(circle at center, transparent 38%, rgba(15, 23, 42, 0.65) 68%, rgba(15, 23, 42, 0.82) 100%)'
+                  : 'radial-gradient(circle at center, transparent 28%, rgba(15, 23, 42, 0.92) 65%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -432,19 +434,20 @@ export const HUD: React.FC<HUDProps> = ({
           <div
             style={{
               position: 'absolute',
-              bottom: 85,
+              top: 'calc(env(safe-area-inset-top, 0px) + 72px)',
               left: '50%',
               transform: 'translateX(-50%)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               gap: 4,
-              background: 'rgba(15, 23, 42, 0.75)',
-              padding: '6px 14px',
+              background: 'rgba(15, 23, 42, 0.82)',
+              padding: '5px 14px',
               borderRadius: 8,
-              border: '1px solid rgba(56, 189, 248, 0.3)',
+              border: '1px solid rgba(56, 189, 248, 0.4)',
               backdropFilter: 'blur(6px)',
-              pointerEvents: 'none'
+              pointerEvents: 'none',
+              zIndex: 25
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

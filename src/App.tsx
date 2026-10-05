@@ -183,16 +183,9 @@ export const App: React.FC = () => {
       <div className="scanlines" />
       <div className="vignette" />
 
-      {/* IN-GAME HUD */}
       {/* IN-GAME HUD & MOBILE CONTROLS */}
       {gameState === 'PLAYING' && (
         <>
-          {isMobileDevice && (
-            <MobileControls
-              engine={engineInstance}
-              onPause={() => engineRef.current?.pauseGame()}
-            />
-          )}
           <HUD
             stats={stats}
             hitMarker={hitMarker}
@@ -206,6 +199,12 @@ export const App: React.FC = () => {
             onOpenTutorial={() => setShowTutorial(true)}
             isMobile={isMobileDevice}
           />
+          {isMobileDevice && (
+            <MobileControls
+              engine={engineInstance}
+              onPause={() => engineRef.current?.pauseGame()}
+            />
+          )}
         </>
       )}
 
