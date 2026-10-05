@@ -13,7 +13,9 @@ export class Player {
   public velocity: THREE.Vector3 = new THREE.Vector3();
   public isGrounded: boolean = true;
   private readonly playerRadius = 0.6;
-  private readonly eyeHeight = 1.75;
+  public stance: 'stand' | 'crouch' | 'prone' = 'stand';
+  public targetEyeHeight: number = 1.75;
+  public eyeHeight: number = 1.75;
   private walkTime: number = 0;
 
   // Camera angles
@@ -84,6 +86,28 @@ export class Player {
     this.pitch = 0;
     this.yaw = 0;
     this.trauma = 0;
+    this.stance = 'stand';
+    this.targetEyeHeight = 1.75;
+    this.eyeHeight = 1.75;
+  }
+
+  public setStance(newStance: 'stand' | 'crouch' | 'prone') {
+    this.stance = newStance;
+    if (newStance === 'crouch') {
+      this.targetEyeHeight = 1.15;
+    } else if (newStance === 'prone') {
+      this.targetEyeHeight = 0.55;
+    } else {
+      this.targetEyeHeight = 1.75;
+    }
+  }
+
+  public toggleCrouch() {
+    this.setStance(this.stance === 'crouch' ? 'stand' : 'crouch');
+  }
+
+  public toggleProne() {
+    this.setStance(this.stance === 'prone' ? 'stand' : 'prone');
   }
 
   public takeDamage(amount: number, sourcePosition?: THREE.Vector3): boolean {
@@ -249,9 +273,17 @@ export class Player {
     const isMoving = moveDir.lengthSq() > 0.01;
     if (isMoving) moveDir.normalize();
 
-    // Speed calculation
-    const isSprinting = keys.sprint || !!analogMove?.sprint;
-    const baseSpeed = isSprinting ? 14.0 : 8.5;
+    // Smoothly transition eye height between stand, crouch, and prone
+    this.eyeHeight = THREE.MathUtils.damp(this.eyeHeight, this.targetEyeHeight, 14, delta);
+
+    // Speed calculation based on stance
+    const isSprinting = (keys.sprint || !!analogMove?.sprint) && this.stance === 'stand';
+    let baseSpeed = isSprinting ? 14.0 : 8.5;
+    if (this.stance === 'crouch') {
+      baseSpeed *= 0.6;
+    } else if (this.stance === 'prone') {
+      baseSpeed *= 0.32;
+    }
     const accel = this.isGrounded ? 45.0 : 18.0;
     const friction = this.isGrounded ? 14.0 : 2.5;
 
@@ -268,15 +300,18 @@ export class Player {
         this.velocity.z *= factor;
       }
 
-      this.walkTime += delta * (keys.sprint ? 14 : 9);
+      this.walkTime += delta * (isSprinting ? 14 : 9);
     } else {
       // Apply friction
       this.velocity.x = THREE.MathUtils.damp(this.velocity.x, 0, friction, delta);
       this.velocity.z = THREE.MathUtils.damp(this.velocity.z, 0, friction, delta);
     }
 
-    // Jump & Gravity
+    // Jump & Gravity (jumping while crouched or prone stands the player up)
     if (keys.jump && this.isGrounded) {
+      if (this.stance !== 'stand') {
+        this.setStance('stand');
+      }
       this.velocity.y = 8.5;
       this.isGrounded = false;
     }

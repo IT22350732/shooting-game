@@ -805,7 +805,7 @@ export class GameEngine {
     }
   }
 
-  public rotateCameraTouch(deltaX: number, deltaY: number) {
+  public rotateCameraTouch(deltaX: number, deltaY: number, customSens?: { cameraSens?: number; adsSens?: number }) {
     const isAiming = this.isAimingActive();
     let adsDamp = 1.0;
     if (this.zoomLevel >= 2) {
@@ -813,12 +813,141 @@ export class GameEngine {
     } else if (isAiming || this.zoomLevel === 1) {
       adsDamp = 0.52;
     }
-    const sensFactor = 0.0034 * (this.touchSensitivity / 50) * adsDamp;
+
+    let multiplier = 1.0;
+    if (customSens) {
+      if (isAiming && customSens.adsSens !== undefined) {
+        multiplier = customSens.adsSens / 100;
+      } else if (customSens.cameraSens !== undefined) {
+        multiplier = customSens.cameraSens / 100;
+      }
+    }
+
+    const sensFactor = 0.0034 * (this.touchSensitivity / 50) * adsDamp * multiplier;
     this.player.yaw -= deltaX * sensFactor;
     this.player.pitch -= deltaY * sensFactor;
 
     const maxPitch = (Math.PI / 2) - 0.05;
     this.player.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.player.pitch));
+  }
+
+  public setStance(stance: 'stand' | 'crouch' | 'prone') {
+    this.player.setStance(stance);
+  }
+
+  public toggleCrouch() {
+    this.player.toggleCrouch();
+  }
+
+  public toggleProne() {
+    this.player.toggleProne();
+  }
+
+  public getStance(): 'stand' | 'crouch' | 'prone' {
+    return this.player.stance;
+  }
+
+  public performMelee() {
+    if (this.state !== 'PLAYING') return;
+    soundManager.playGunshot('shotgun');
+    this.player.addTrauma(0.15);
+
+    const { origin, direction } = this.player.getShootRay();
+    const hitPoint = origin.clone().addScaledVector(direction, 2.0);
+    this.particles.spawnSparks(hitPoint, direction, 0x38bdf8, 16);
+
+    let hitAny = false;
+    for (const enemy of this.enemies) {
+      if (enemy.isDead) continue;
+      const dist = enemy.position.distanceTo(origin);
+      if (dist <= 3.2) {
+        const toEnemy = enemy.position.clone().sub(origin).normalize();
+        const dot = direction.dot(toEnemy);
+        if (dot > 0.4) {
+          const res = enemy.takeDamage(95, true);
+          this.triggerHitFeedback(enemy.position.clone().setY(origin.y), res.finalDamage, true);
+          if (res.killed) {
+            this.handleEnemyKill(enemy, true);
+          }
+          hitAny = true;
+          break;
+        }
+      }
+    }
+
+    if (!hitAny && this.boss && !this.boss.isDead) {
+      const dist = this.boss.position.distanceTo(origin);
+      if (dist <= 4.0) {
+        const res = this.boss.takeDamage(80, false);
+        this.triggerHitFeedback(this.boss.position, res.finalDamage, false);
+      }
+    }
+  }
+
+  public throwGrenade() {
+    if (this.state !== 'PLAYING') return;
+    this.player.addTrauma(0.18);
+
+    const { origin, direction } = this.player.getShootRay();
+    const throwDist = 14;
+    const targetPos = origin.clone().addScaledVector(direction, throwDist);
+    targetPos.y = Math.max(0.5, targetPos.y);
+
+    setTimeout(() => {
+      soundManager.playExplosion();
+      this.particles.spawnExplosion(targetPos, 85);
+      this.player.addTrauma(0.4);
+
+      this.enemies.forEach(enemy => {
+        if (!enemy.isDead) {
+          const dist = enemy.position.distanceTo(targetPos);
+          if (dist <= 8.0) {
+            const factor = 1 - dist / 8.0;
+            const dmg = Math.round(180 * factor);
+            const res = enemy.takeDamage(dmg, false);
+            this.triggerHitFeedback(enemy.position, res.finalDamage, false);
+            if (res.killed) {
+              this.handleEnemyKill(enemy, false);
+            }
+          }
+        }
+      });
+
+      if (this.boss && !this.boss.isDead) {
+        const dist = this.boss.position.distanceTo(targetPos);
+        if (dist <= 9.0) {
+          const factor = 1 - dist / 9.0;
+          const dmg = Math.round(200 * factor);
+          const res = this.boss.takeDamage(dmg, false);
+          this.triggerHitFeedback(this.boss.position, res.finalDamage, false);
+        }
+      }
+    }, 350);
+  }
+
+  public interact(): string | null {
+    if (this.state !== 'PLAYING') return null;
+
+    for (let i = this.powerups.length - 1; i >= 0; i--) {
+      const p = this.powerups[i];
+      const dist = this.player.position.distanceTo(p.position);
+      if (dist <= 4.5) {
+        soundManager.playPowerup();
+        this.player.activatePowerup(p.type);
+        this.particles.spawnSparks(p.position, new THREE.Vector3(0, 1, 0), 0x38bdf8, 25);
+        this.scene.remove(p.mesh);
+        p.dispose();
+        this.powerups.splice(i, 1);
+        return `Collected ${p.type.replace('_', ' ').toUpperCase()}`;
+      }
+    }
+
+    if (this.currentWeapon && this.currentWeapon.currentAmmo < this.currentWeapon.maxAmmo) {
+      this.reload();
+      return 'Reloading';
+    }
+
+    return null;
   }
 
   public cycleWeapon(direction: 1 | -1 = 1) {

@@ -804,3 +804,54 @@ canvas {
   }
 }
 
+/* ==========================================================================
+   MOBILE-ONLY TOUCH CONTROL SYSTEM STYLING
+   ========================================================================== */
+.mobile-ctrl-btn,
+.mobile-joystick {
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  touch-action: none !important;
+  box-sizing: border-box;
+}
+
+.mobile-ctrl-btn:active {
+  transform: translate(-50%, -50%) scale(0.92) !important;
+  filter: brightness(1.22);
+}
+
+.mobile-joystick:active {
+  filter: brightness(1.1);
+}
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 14px rgba(2, 132, 199, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 26px rgba(56, 189, 248, 0.85);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
