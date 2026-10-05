@@ -438,7 +438,7 @@ export class WeaponInstance {
     soundManager.playReload();
   }
 
-  public update(delta: number, _walkTime?: number, _isMoving?: boolean) {
+  public update(delta: number, _walkTime?: number, _isMoving?: boolean, analogX: number = 0) {
     // Muzzle flash decay
     if (this.muzzleFlashTimer > 0) {
       this.muzzleFlashTimer -= delta;
@@ -482,8 +482,9 @@ export class WeaponInstance {
       this.meshGroup.rotation.x = THREE.MathUtils.lerp(this.meshGroup.rotation.x, -0.4, delta * 10);
       this.meshGroup.rotation.z = THREE.MathUtils.lerp(this.meshGroup.rotation.z, 0.25, delta * 10);
     } else {
+      const swayRoll = -analogX * (this.isAiming ? 0.025 : 0.06);
       this.meshGroup.rotation.x = THREE.MathUtils.lerp(this.meshGroup.rotation.x, this.currentRecoilRot, delta * 20);
-      this.meshGroup.rotation.z = THREE.MathUtils.lerp(this.meshGroup.rotation.z, 0, delta * 15);
+      this.meshGroup.rotation.z = THREE.MathUtils.lerp(this.meshGroup.rotation.z, swayRoll, delta * 15);
     }
 
     this.meshGroup.position.lerp(targetPos, delta * 22);

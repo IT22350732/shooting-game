@@ -290,13 +290,13 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
                 <KeyCard
                   keys={['LEFT JOYSTICK']}
-                  label="Analog Movement"
-                  detail="Drag joystick to walk in any direction; push to edge for sprint"
+                  label="Movement & Gun Aim"
+                  detail="Drag joystick to walk and steer gun aim; push to outer rim to sprint"
                 />
                 <KeyCard
                   keys={['RIGHT TOUCH DRAG']}
                   label="Aim & Look Camera"
-                  detail="Swipe right half of screen to look and direct crosshair"
+                  detail="Swipe right half of screen to look and direct crosshair freely"
                 />
                 <KeyCard
                   keys={['CROSSHAIR BUTTON']}
