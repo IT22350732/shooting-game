@@ -1,4 +1,4 @@
-import { GameMode, EnemyType } from '../../types/game';
+import { GameMode, EnemyType, MissionConfig } from '../../types/game';
 import { soundManager } from '../../audio/SoundManager';
 import { saveManager } from './SaveManager';
 
@@ -12,6 +12,7 @@ export interface WaveConfig {
 
 export class WaveManager {
   public mode: GameMode;
+  public missionConfig: MissionConfig | null = null;
   public currentWave: number = 1;
   public enemiesRemaining: number = 0;
   public totalEnemiesInWave: number = 0;
@@ -23,19 +24,21 @@ export class WaveManager {
   private spawnCooldown: number = 0;
   public timeAttackRemaining: number = 120; // 2 minutes starting
 
-  constructor(mode: GameMode = 'survival') {
+  constructor(mode: GameMode = 'survival', mission: MissionConfig | null = null) {
     this.mode = mode;
-    this.reset(mode);
+    this.missionConfig = mission;
+    this.reset(mode, mission);
   }
 
-  public reset(mode: GameMode = 'survival') {
+  public reset(mode: GameMode = 'survival', mission: MissionConfig | null = null) {
     this.mode = mode;
+    this.missionConfig = mission;
     this.currentWave = 1;
     this.isIntermission = false;
     this.intermissionTimer = 0;
     this.isBossAlive = false;
     this.spawnCooldown = 1.0;
-    this.timeAttackRemaining = 120;
+    this.timeAttackRemaining = mission?.timeLimit || 120;
     this.startWave(1);
   }
 
@@ -59,7 +62,8 @@ export class WaveManager {
       return;
     }
 
-    const isBossWave = (this.currentWave % 5 === 0);
+    const isBossWave = (this.currentWave % 5 === 0) ||
+      (this.mode === 'mission' && !!this.missionConfig?.hasBoss && this.currentWave >= (this.missionConfig.targetWaves || 3));
     this.isBossAlive = isBossWave;
 
     const savedDifficulty = saveManager.getData().settings.difficulty || 'medium';
@@ -90,9 +94,9 @@ export class WaveManager {
       this.isBossAlive = false;
     }
 
-    if (this.mode === 'time_attack') {
+    if (this.mode === 'time_attack' || (this.mode === 'mission' && this.missionConfig?.timeLimit)) {
       // Bonus time reward per kill
-      this.timeAttackRemaining = Math.min(180, this.timeAttackRemaining + (isBoss ? 25 : 3.5));
+      this.timeAttackRemaining = Math.min(180, this.timeAttackRemaining + (isBoss ? 25 : 4.0));
     }
 
     // Check if wave is completed
@@ -140,7 +144,7 @@ export class WaveManager {
       return false;
     }
 
-    if (this.mode === 'time_attack') {
+    if (this.mode === 'time_attack' || (this.mode === 'mission' && this.missionConfig?.timeLimit)) {
       this.timeAttackRemaining -= delta;
       if (this.timeAttackRemaining <= 0) {
         return true; // Time over

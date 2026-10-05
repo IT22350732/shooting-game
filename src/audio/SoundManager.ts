@@ -460,6 +460,27 @@ export class SoundManager {
     });
   }
 
+  public playMissionComplete() {
+    this.initContext();
+    if (!this.ctx || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+    const notes = [293.66, 369.99, 440.0, 587.33, 739.99, 880.0]; // D Major fanfare
+    notes.forEach((freq, idx) => {
+      if (!this.ctx || !this.sfxGain) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const noteTime = now + idx * 0.12;
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, noteTime);
+      gain.gain.setValueAtTime(0.28, noteTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.5);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(noteTime);
+      osc.stop(noteTime + 0.55);
+    });
+  }
+
   public playBossAlarm() {
     this.initContext();
     if (!this.ctx || !this.sfxGain) return;

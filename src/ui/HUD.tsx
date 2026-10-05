@@ -13,7 +13,17 @@ import {
   RotateCw,
   Target
 } from 'lucide-react';
-import { WeaponId, PowerupActiveState, HitMarkerInfo, FloatingDamageNumber, GameSettings, GameMode, TargetLockInfo } from '../types/game';
+import {
+  WeaponId,
+  PowerupActiveState,
+  HitMarkerInfo,
+  FloatingDamageNumber,
+  GameSettings,
+  GameMode,
+  TargetLockInfo,
+  MissionObjectiveInfo,
+  MissionConfig
+} from '../types/game';
 import { BASE_WEAPONS } from '../game/entities/Weapon';
 import { useFullscreen } from '../utils/fullscreen';
 
@@ -42,6 +52,8 @@ interface HUDProps {
     zoomMagnification?: number;
     targetLock?: TargetLockInfo | null;
     mode?: GameMode;
+    missionObjective?: MissionObjectiveInfo | null;
+    activeMission?: MissionConfig | null;
   };
   hitMarker: HitMarkerInfo | null;
   damageNumbers: FloatingDamageNumber[];
@@ -705,6 +717,60 @@ export const HUD: React.FC<HUDProps> = ({
             <span style={{ fontSize: '0.72rem', color: '#22c55e', fontWeight: 800, fontFamily: 'var(--font-display)' }}>
               ENDLESS PRACTICE
             </span>
+          </div>
+        ) : stats.mode === 'mission' && stats.missionObjective ? (
+          // Active Tactical Mission Objective Display
+          <div
+            className="glass-panel"
+            style={{
+              padding: '8px 18px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+              border: '1.5px solid rgba(2, 132, 199, 0.45)',
+              background: 'rgba(255, 255, 255, 0.96)',
+              boxShadow: '0 8px 24px rgba(2, 132, 199, 0.2)',
+              minWidth: 'min(90vw, 420px)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span
+                  style={{
+                    padding: '2px 8px',
+                    borderRadius: 6,
+                    background: 'rgba(2, 132, 199, 0.15)',
+                    border: '1px solid #0284c7',
+                    color: '#0284c7',
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '0.68rem',
+                    fontWeight: 900,
+                    letterSpacing: '0.06em'
+                  }}
+                >
+                  OPERATION
+                </span>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem', fontWeight: 900, color: '#0f172a' }}>
+                  {stats.missionObjective.title}
+                </span>
+              </div>
+
+              {stats.timeRemaining !== undefined && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: stats.timeRemaining < 20 ? '#e11d48' : '#d97706', fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '0.9rem' }}>
+                  <Clock size={16} />
+                  <span>{stats.timeRemaining}s</span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, fontSize: '0.78rem' }}>
+              <span style={{ color: '#64748b', fontFamily: 'var(--font-sub)', fontWeight: 600 }}>
+                {stats.missionObjective.objectiveText}
+              </span>
+              <span style={{ color: '#0284c7', fontFamily: 'var(--font-display)', fontWeight: 800, whiteSpace: 'nowrap' }}>
+                {stats.missionObjective.progressText}
+              </span>
+            </div>
           </div>
         ) : (
           // Normal Wave Display with Difficulty Badge

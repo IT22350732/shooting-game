@@ -8,6 +8,8 @@ export interface SaveData {
   highestWave: number;
   unlockedWeapons: WeaponId[];
   unlockedArenas: ArenaId[];
+  completedMissions: string[];
+  unlockedMissions: string[];
   upgrades: UpgradeLevels;
   settings: GameSettings;
   stats: GameStatsRecord;
@@ -19,6 +21,8 @@ const DEFAULT_SAVE: SaveData = {
   highestWave: 1,
   unlockedWeapons: ['assault_rifle', 'shotgun', 'smg', 'sniper', 'plasma_rifle'],
   unlockedArenas: ['industrial', 'desert', 'neon_city', 'space_station'],
+  completedMissions: [],
+  unlockedMissions: ['mission_1_suburb_recon'],
   upgrades: {
     damage: 0,
     fireRate: 0,
@@ -169,6 +173,34 @@ export class SaveManager {
     }
 
     this.save();
+  }
+
+  public isMissionCompleted(id: string): boolean {
+    return (this.data.completedMissions || []).includes(id);
+  }
+
+  public isMissionUnlocked(id: string): boolean {
+    if (id === 'mission_1_suburb_recon') return true;
+    return (this.data.unlockedMissions || ['mission_1_suburb_recon']).includes(id);
+  }
+
+  public completeMission(id: string, nextMissionId?: string, rewardCoins: number = 0) {
+    if (!this.data.completedMissions) this.data.completedMissions = [];
+    if (!this.data.unlockedMissions) this.data.unlockedMissions = ['mission_1_suburb_recon'];
+
+    if (!this.data.completedMissions.includes(id)) {
+      this.data.completedMissions.push(id);
+    }
+
+    if (nextMissionId && !this.data.unlockedMissions.includes(nextMissionId)) {
+      this.data.unlockedMissions.push(nextMissionId);
+    }
+
+    if (rewardCoins > 0) {
+      this.addCoins(rewardCoins);
+    } else {
+      this.save();
+    }
   }
 }
 

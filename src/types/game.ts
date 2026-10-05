@@ -1,4 +1,44 @@
-export type GameMode = 'easy' | 'medium' | 'hard' | 'free_mode' | 'survival' | 'time_attack' | 'boss_arena';
+export type GameMode = 'easy' | 'medium' | 'hard' | 'free_mode' | 'survival' | 'time_attack' | 'boss_arena' | 'mission';
+
+export type MissionId = 
+  | 'mission_1_suburb_recon'
+  | 'mission_2_neon_lockdown'
+  | 'mission_3_desert_mirage'
+  | 'mission_4_titan_protocol'
+  | 'mission_5_chrono_surge';
+
+export interface MissionConfig {
+  id: MissionId;
+  number: number;
+  title: string;
+  codename: string;
+  tagline: string;
+  arena: ArenaId;
+  arenaName: string;
+  briefing: string;
+  primaryObjective: string;
+  targetKills: number;
+  targetBarrels?: number;
+  targetHeadshots?: number;
+  targetWaves?: number;
+  timeLimit?: number; // seconds
+  hasBoss?: boolean;
+  rewardCoins: number;
+  rewardScore: number;
+  difficulty: 'RECON' | 'TACTICAL' | 'VETERAN' | 'EXTREME' | 'APEX';
+  badge: string;
+  badgeColor: string;
+  accentColor: string;
+}
+
+export interface MissionObjectiveInfo {
+  missionId: MissionId;
+  title: string;
+  objectiveText: string;
+  progressText: string;
+  isCompleted: boolean;
+  timeRemaining?: number;
+}
 
 export type GameState = 'MENU' | 'PLAYING' | 'PAUSED' | 'GAME_OVER' | 'VICTORY';
 

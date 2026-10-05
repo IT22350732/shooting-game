@@ -18,14 +18,18 @@ import {
   Shield,
   Target,
   Maximize,
-  Minimize
+  Minimize,
+  Lock,
+  CheckCircle2,
+  Clock
 } from 'lucide-react';
-import { GameMode, ArenaId } from '../types/game';
+import { GameMode, ArenaId, MissionConfig } from '../types/game';
+import { MISSIONS } from '../game/missions/MissionData';
 import { saveManager } from '../game/managers/SaveManager';
 import { useFullscreen } from '../utils/fullscreen';
 
 interface MainMenuProps {
-  onStartGame: (mode: GameMode, arena: ArenaId) => void;
+  onStartGame: (mode: GameMode, arena: ArenaId, mission?: MissionConfig) => void;
   onPreviewArena?: (arena: ArenaId) => void;
   onOpenArmory: () => void;
   onOpenUpgrades: () => void;
@@ -46,11 +50,13 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   const savedDifficulty = (saveManager.getData().settings.difficulty || 'medium') as GameMode;
   const [selectedMode, setSelectedMode] = useState<GameMode>(savedDifficulty);
   const [selectedArena, setSelectedArena] = useState<ArenaId>('industrial');
+  const [selectedMission, setSelectedMission] = useState<MissionConfig | null>(null);
   const [showMissionSelect, setShowMissionSelect] = useState(false);
-  const [activeTab, setActiveTab] = useState<'mode' | 'arena'>('mode');
+  const [activeTab, setActiveTab] = useState<'missions' | 'mode' | 'arena'>('missions');
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
 
   const handleModeChange = (mode: GameMode) => {
+    setSelectedMission(null);
     setSelectedMode(mode);
     if (mode === 'easy' || mode === 'medium' || mode === 'hard') {
       const cur = saveManager.getData().settings;
@@ -450,8 +456,30 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
       {/* BOTTOM CONTAINER: TACTICAL DOCK & DEPLOY HUB */}
       <div className="menu-bottom-container">
-        {/* QUICK ACTION DOCK (ARMORY & UPGRADES) */}
+        {/* QUICK ACTION DOCK (MISSIONS, ARMORY & UPGRADES) */}
         <div className="menu-bottom-dock">
+          <button
+            onClick={() => {
+              setActiveTab('missions');
+              setShowMissionSelect(true);
+            }}
+            className="btn-cyber"
+            style={{
+              padding: '10px 18px',
+              fontSize: '0.85rem',
+              background: selectedMission ? 'rgba(2, 132, 199, 0.18)' : 'rgba(255, 255, 255, 0.94)',
+              border: selectedMission ? '1.5px solid #0284c7' : '1.5px solid rgba(2, 132, 199, 0.35)',
+              color: '#0284c7',
+              boxShadow: '0 6px 20px rgba(2, 132, 199, 0.2)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              fontWeight: 800
+            }}
+          >
+            <Award size={18} color="#0284c7" />
+            <span>MISSIONS (5)</span>
+          </button>
+
           <button
             onClick={onOpenArmory}
             className="btn-cyber"
@@ -496,7 +524,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               alignItems: 'center',
               gap: 12,
               cursor: 'pointer',
-              border: '1.5px solid rgba(2, 132, 199, 0.45)',
+              border: selectedMission ? `1.5px solid ${selectedMission.accentColor}` : '1.5px solid rgba(2, 132, 199, 0.45)',
               background: 'rgba(255, 255, 255, 0.92)',
               boxShadow: '0 4px 18px rgba(15, 23, 42, 0.15)',
               backdropFilter: 'blur(12px)',
@@ -504,17 +532,47 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                {currentModeInfo.icon}
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
-                  {currentModeInfo.name}
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-display)', color: '#0284c7', fontWeight: 800 }}>
-                  MAP: {currentArenaInfo.name}
-                </span>
-              </div>
+              {selectedMission ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span
+                      style={{
+                        padding: '1px 6px',
+                        borderRadius: 4,
+                        background: `${selectedMission.accentColor}18`,
+                        color: selectedMission.accentColor,
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '0.65rem',
+                        fontWeight: 900
+                      }}
+                    >
+                      OP 0{selectedMission.number}
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
+                      {selectedMission.title}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                    <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-display)', color: selectedMission.accentColor, fontWeight: 800 }}>
+                      MAP: {selectedMission.arenaName}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {currentModeInfo.icon}
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
+                      {currentModeInfo.name}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                    <span style={{ fontSize: '0.68rem', fontFamily: 'var(--font-display)', color: '#0284c7', fontWeight: 800 }}>
+                      MAP: {currentArenaInfo.name}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div
@@ -522,11 +580,11 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                 width: 28,
                 height: 28,
                 borderRadius: 6,
-                background: 'rgba(2, 132, 199, 0.12)',
+                background: selectedMission ? `${selectedMission.accentColor}18` : 'rgba(2, 132, 199, 0.12)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#0284c7',
+                color: selectedMission ? selectedMission.accentColor : '#0284c7',
                 flexShrink: 0
               }}
             >
@@ -536,7 +594,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
           {/* MAIN DEPLOY BUTTON */}
           <button
-            onClick={() => onStartGame(selectedMode, selectedArena)}
+            onClick={() => onStartGame(selectedMission ? 'mission' : selectedMode, selectedMission ? selectedMission.arena : selectedArena, selectedMission || undefined)}
             className="btn-cyber btn-cyber-primary pulse-glow menu-deploy-btn"
             style={{
               padding: '12px 28px',
@@ -546,7 +604,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             }}
           >
             <Play size={20} fill="#ffffff" />
-            DEPLOY TO COMBAT
+            {selectedMission ? 'DEPLOY OPERATION' : 'DEPLOY TO COMBAT'}
           </button>
         </div>
       </div>
@@ -655,54 +713,262 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               </button>
             </div>
 
-            {/* Tab Switches: Mode vs Arena */}
+            {/* Tab Switches: Missions vs Survival Mode vs Arena */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <button
+                onClick={() => setActiveTab('missions')}
+                style={{
+                  flex: 1.2,
+                  padding: '10px 10px',
+                  borderRadius: 10,
+                  border: activeTab === 'missions' ? '2px solid #0284c7' : '1px solid rgba(15, 23, 42, 0.1)',
+                  background: activeTab === 'missions' ? 'rgba(2, 132, 199, 0.12)' : 'rgba(255, 255, 255, 0.8)',
+                  color: activeTab === 'missions' ? '#0284c7' : '#64748b',
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  cursor: 'pointer'
+                }}
+              >
+                <Award size={17} />
+                MISSIONS (5)
+              </button>
+
               <button
                 onClick={() => setActiveTab('mode')}
                 style={{
                   flex: 1,
-                  padding: '10px 14px',
+                  padding: '10px 10px',
                   borderRadius: 10,
                   border: activeTab === 'mode' ? '2px solid #0284c7' : '1px solid rgba(15, 23, 42, 0.1)',
                   background: activeTab === 'mode' ? 'rgba(2, 132, 199, 0.12)' : 'rgba(255, 255, 255, 0.8)',
                   color: activeTab === 'mode' ? '#0284c7' : '#64748b',
                   fontFamily: 'var(--font-display)',
                   fontWeight: 800,
-                  fontSize: '0.88rem',
+                  fontSize: '0.85rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 8,
+                  gap: 6,
                   cursor: 'pointer'
                 }}
               >
-                <Award size={18} />
-                COMBAT OBJECTIVE
+                <Flame size={17} />
+                SURVIVAL
               </button>
 
               <button
                 onClick={() => setActiveTab('arena')}
                 style={{
                   flex: 1,
-                  padding: '10px 14px',
+                  padding: '10px 10px',
                   borderRadius: 10,
                   border: activeTab === 'arena' ? '2px solid #0284c7' : '1px solid rgba(15, 23, 42, 0.1)',
                   background: activeTab === 'arena' ? 'rgba(2, 132, 199, 0.12)' : 'rgba(255, 255, 255, 0.8)',
                   color: activeTab === 'arena' ? '#0284c7' : '#64748b',
                   fontFamily: 'var(--font-display)',
                   fontWeight: 800,
-                  fontSize: '0.88rem',
+                  fontSize: '0.85rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 8,
+                  gap: 6,
                   cursor: 'pointer'
                 }}
               >
-                <Compass size={18} />
-                DEPLOYMENT ARENA
+                <Compass size={17} />
+                ARENAS
               </button>
             </div>
+
+            {/* TAB CONTENT: MISSIONS */}
+            {activeTab === 'missions' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {MISSIONS.map((mission) => {
+                  const isCompleted = saveManager.isMissionCompleted(mission.id);
+                  const isUnlocked = saveManager.isMissionUnlocked(mission.id);
+                  const isSelected = selectedMission?.id === mission.id;
+
+                  return (
+                    <div
+                      key={mission.id}
+                      onClick={() => {
+                        if (isUnlocked) {
+                          setSelectedMission(mission);
+                          setSelectedArena(mission.arena);
+                          if (onPreviewArena) onPreviewArena(mission.arena);
+                        }
+                      }}
+                      className="glass-panel"
+                      style={{
+                        padding: '14px 16px',
+                        cursor: isUnlocked ? 'pointer' : 'not-allowed',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 10,
+                        border: isSelected
+                          ? `2px solid ${mission.accentColor}`
+                          : isUnlocked
+                          ? '1px solid rgba(15, 23, 42, 0.12)'
+                          : '1px solid rgba(15, 23, 42, 0.05)',
+                        background: isSelected
+                          ? 'rgba(255, 255, 255, 1)'
+                          : isUnlocked
+                          ? 'rgba(248, 250, 252, 0.95)'
+                          : 'rgba(241, 245, 249, 0.6)',
+                        opacity: isUnlocked ? 1 : 0.6,
+                        boxShadow: isSelected ? `0 6px 20px ${mission.accentColor}33` : 'none',
+                        transition: 'all 0.15s ease',
+                        position: 'relative'
+                      }}
+                    >
+                      {/* Top Badges & Status */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: 6,
+                              background: `${mission.accentColor}18`,
+                              color: mission.accentColor,
+                              fontFamily: 'var(--font-display)',
+                              fontWeight: 900,
+                              fontSize: '0.72rem',
+                              letterSpacing: '0.06em'
+                            }}
+                          >
+                            OPERATION 0{mission.number}
+                          </span>
+
+                          <span
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: 6,
+                              background: 'rgba(15, 23, 42, 0.06)',
+                              color: '#475569',
+                              fontFamily: 'var(--font-display)',
+                              fontWeight: 800,
+                              fontSize: '0.68rem',
+                              letterSpacing: '0.04em'
+                            }}
+                          >
+                            {mission.difficulty}
+                          </span>
+                        </div>
+
+                        {/* Completion / Lock Indicator */}
+                        {isCompleted ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#16a34a', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.75rem' }}>
+                            <CheckCircle2 size={16} color="#16a34a" />
+                            <span>COMPLETED</span>
+                          </div>
+                        ) : !isUnlocked ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#64748b', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.75rem' }}>
+                            <Lock size={15} color="#64748b" />
+                            <span>LOCKED</span>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: mission.accentColor, fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.75rem' }}>
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: mission.accentColor, boxShadow: `0 0 8px ${mission.accentColor}` }} />
+                            <span>{isSelected ? 'SELECTED' : 'READY'}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Title & Briefing */}
+                      <div>
+                        <h3
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: '1.02rem',
+                            fontWeight: 900,
+                            color: isSelected ? mission.accentColor : '#0f172a',
+                            margin: '0 0 4px 0',
+                            letterSpacing: '0.02em'
+                          }}
+                        >
+                          {mission.title}
+                        </h3>
+                        <p style={{ fontFamily: 'var(--font-sub)', fontSize: '0.8rem', color: '#475569', lineHeight: 1.35, margin: 0 }}>
+                          {mission.briefing}
+                        </p>
+                      </div>
+
+                      {/* Primary Objective Banner */}
+                      <div
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: 8,
+                          background: isSelected ? `${mission.accentColor}12` : 'rgba(255, 255, 255, 0.85)',
+                          border: `1px solid ${isSelected ? mission.accentColor : 'rgba(15, 23, 42, 0.08)'}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 10,
+                          fontSize: '0.78rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Crosshair size={15} color={mission.accentColor} />
+                          <span style={{ fontWeight: 800, fontFamily: 'var(--font-display)', color: '#0f172a' }}>
+                            OBJECTIVE:
+                          </span>
+                          <span style={{ color: '#334155', fontFamily: 'var(--font-sub)', fontWeight: 600 }}>
+                            {mission.primaryObjective}
+                          </span>
+                        </div>
+
+                        <span style={{ color: '#0284c7', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+                          MAP: {mission.arenaName}
+                        </span>
+                      </div>
+
+                      {/* Rewards & Deploy Button */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginTop: 2 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: '0.75rem', fontFamily: 'var(--font-display)', fontWeight: 800 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#d97706' }}>
+                            <Coins size={14} color="#d97706" />
+                            <span>+{mission.rewardCoins}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#0284c7' }}>
+                            <Award size={14} color="#0284c7" />
+                            <span>+{mission.rewardScore} XP</span>
+                          </div>
+                          <div style={{ color: mission.badgeColor, fontWeight: 900 }}>
+                            {mission.badge}
+                          </div>
+                        </div>
+
+                        {isUnlocked && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedMission(mission);
+                              setSelectedArena(mission.arena);
+                              setShowMissionSelect(false);
+                              onStartGame('mission', mission.arena, mission);
+                            }}
+                            className="btn-cyber btn-cyber-primary"
+                            style={{
+                              padding: '6px 14px',
+                              fontSize: '0.78rem',
+                              background: isSelected ? undefined : 'linear-gradient(135deg, #0284c7, #0ea5e9)'
+                            }}
+                          >
+                            <Play size={14} fill="#ffffff" />
+                            DEPLOY NOW
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* TAB CONTENT: MODES */}
             {activeTab === 'mode' && (

@@ -10,7 +10,10 @@ import {
   HitMarkerInfo,
   PowerupActiveState,
   GameSettings,
-  TargetLockInfo
+  TargetLockInfo,
+  MissionConfig,
+  MissionId,
+  MissionObjectiveInfo
 } from '../../types/game';
 import { Player } from '../entities/Player';
 import { WeaponInstance, BASE_WEAPONS } from '../entities/Weapon';
@@ -24,6 +27,7 @@ import { ParticleSystem } from '../world/ParticleSystem';
 import { WaveManager } from '../managers/WaveManager';
 import { saveManager } from '../managers/SaveManager';
 import { soundManager } from '../../audio/SoundManager';
+import { MISSIONS, getMissionById } from '../missions/MissionData';
 
 export interface HUDStats {
   health: number;
@@ -49,6 +53,8 @@ export interface HUDStats {
   zoomMagnification: number;
   targetLock: TargetLockInfo | null;
   mode?: GameMode;
+  missionObjective?: MissionObjectiveInfo | null;
+  activeMission?: MissionConfig | null;
 }
 
 export interface GameEngineCallbacks {
@@ -119,6 +125,13 @@ export class GameEngine {
   private isRunning: boolean = false;
   private animFrameId: number | null = null;
   private killsSinceHealthPack: number = 0;
+
+  // Mission Tracking
+  public currentMission: MissionConfig | null = null;
+  public missionKills: number = 0;
+  public missionHeadshots: number = 0;
+  public missionBarrelsDestroyed: number = 0;
+  public missionCompletedTriggered: boolean = false;
 
   // Raycaster
   private raycaster = new THREE.Raycaster();
@@ -206,10 +219,14 @@ export class GameEngine {
   }
 
   public startNewGame(mode: GameMode, arenaId: ArenaId) {
+    if (mode !== 'mission') {
+      this.currentMission = null;
+    }
     this.mode = mode;
     this.currentArenaId = arenaId;
     this.state = 'PLAYING';
     this.setZoomLevel(0);
+    this.missionCompletedTriggered = false;
 
     const saved = saveManager.getData();
     this.mouseSensitivity = saved.settings.mouseSensitivity;
@@ -226,7 +243,7 @@ export class GameEngine {
     this.particles.initAtmosphere(arenaId);
 
     // Wave Manager
-    this.waveManager.reset(mode);
+    this.waveManager.reset(mode, this.currentMission);
 
     // Start music
     soundManager.startMusic();
@@ -244,6 +261,15 @@ export class GameEngine {
     if (!this.isTouchDevice) {
       this.requestPointerLock();
     }
+  }
+
+  public startMission(mission: MissionConfig) {
+    this.currentMission = mission;
+    this.missionKills = 0;
+    this.missionHeadshots = 0;
+    this.missionBarrelsDestroyed = 0;
+    this.missionCompletedTriggered = false;
+    this.startNewGame('mission', mission.arena);
   }
 
   private initFreeModeTargets() {
@@ -1007,6 +1033,11 @@ export class GameEngine {
     soundManager.playExplosion();
     this.particles.spawnExplosion(barrel.position, 80);
 
+    if (this.currentMission) {
+      this.missionBarrelsDestroyed++;
+      this.checkMissionObjectives();
+    }
+
     // Damage all nearby enemies
     this.enemies.forEach(enemy => {
       if (!enemy.isDead) {
@@ -1083,6 +1114,14 @@ export class GameEngine {
 
     // Notify wave manager
     this.waveManager.onEnemyKilled(false);
+
+    if (this.currentMission) {
+      this.missionKills++;
+      if (isHeadshot) {
+        this.missionHeadshots++;
+      }
+      this.checkMissionObjectives();
+    }
   }
 
   private handleBossDefeat() {
@@ -1091,11 +1130,90 @@ export class GameEngine {
     saveManager.addCoins(100);
     this.waveManager.onEnemyKilled(true);
 
-    if (this.mode === 'boss_arena') {
+    if (this.currentMission) {
+      this.checkMissionObjectives();
+    } else if (this.mode === 'boss_arena') {
       this.state = 'VICTORY';
       this.exitPointerLock();
       this.callbacks.onGameStateChange('VICTORY');
     }
+  }
+
+  public getMissionObjectiveInfo(): MissionObjectiveInfo | null {
+    if (!this.currentMission) return null;
+
+    const m = this.currentMission;
+    let progress = '';
+
+    if (m.targetBarrels && m.targetBarrels > 0) {
+      progress = `Hostiles: ${Math.min(m.targetKills, this.missionKills)}/${m.targetKills} • Supply Barrels: ${Math.min(m.targetBarrels, this.missionBarrelsDestroyed)}/${m.targetBarrels}`;
+    } else if (m.targetHeadshots && m.targetHeadshots > 0) {
+      progress = `Hostiles: ${Math.min(m.targetKills, this.missionKills)}/${m.targetKills} • Headshots: ${Math.min(m.targetHeadshots, this.missionHeadshots)}/${m.targetHeadshots}`;
+    } else if (m.hasBoss) {
+      const bossStatus = this.boss ? (this.boss.isDead ? 'ELIMINATED' : `${Math.max(0, Math.round(this.boss.health))}/${this.boss.maxHealth} HP`) : 'SPAWNING...';
+      progress = `Hostiles: ${Math.min(m.targetKills, this.missionKills)}/${m.targetKills} • Goliath Boss: ${bossStatus}`;
+    } else if (m.targetWaves) {
+      progress = `Wave: ${Math.min(m.targetWaves, this.waveManager.currentWave)}/${m.targetWaves} • Hostiles: ${Math.min(m.targetKills, this.missionKills)}/${m.targetKills}`;
+    } else {
+      progress = `Hostiles Eliminated: ${Math.min(m.targetKills, this.missionKills)}/${m.targetKills}`;
+    }
+
+    return {
+      missionId: m.id,
+      title: m.title,
+      objectiveText: m.primaryObjective,
+      progressText: progress,
+      isCompleted: this.missionCompletedTriggered,
+      timeRemaining: m.timeLimit ? Math.max(0, Math.round(this.waveManager.timeAttackRemaining)) : undefined
+    };
+  }
+
+  private checkMissionObjectives() {
+    if (!this.currentMission || this.missionCompletedTriggered) return;
+    const m = this.currentMission;
+
+    const killsMet = this.missionKills >= m.targetKills;
+    const barrelsMet = !m.targetBarrels || this.missionBarrelsDestroyed >= m.targetBarrels;
+    const headshotsMet = !m.targetHeadshots || this.missionHeadshots >= m.targetHeadshots;
+    const wavesMet = !m.targetWaves || this.waveManager.currentWave >= m.targetWaves;
+    const bossMet = !m.hasBoss || (this.boss !== null && this.boss.isDead);
+    const timeMet = !m.timeLimit || this.waveManager.timeAttackRemaining > 0;
+
+    if (killsMet && barrelsMet && headshotsMet && wavesMet && bossMet && timeMet) {
+      this.handleMissionVictory();
+    }
+  }
+
+  private handleMissionVictory() {
+    if (this.missionCompletedTriggered) return;
+    this.missionCompletedTriggered = true;
+
+    if (!this.currentMission) return;
+    const mission = this.currentMission;
+
+    const currentIdx = MISSIONS.findIndex(m => m.id === mission.id);
+    const nextMission = currentIdx >= 0 && currentIdx < MISSIONS.length - 1 ? MISSIONS[currentIdx + 1] : null;
+
+    saveManager.completeMission(mission.id, nextMission ? nextMission.id : undefined, mission.rewardCoins);
+    soundManager.playMissionComplete();
+
+    this.player.stats.coins += mission.rewardCoins;
+    this.player.stats.score += mission.rewardScore;
+
+    saveManager.recordGameEnd(
+      this.player.stats.score,
+      this.waveManager.currentWave,
+      this.player.stats.kills,
+      this.player.stats.headshots,
+      this.player.stats.highestCombo,
+      this.boss ? (this.boss.isDead ? 1 : 0) : 0
+    );
+
+    this.state = 'VICTORY';
+    this.exitPointerLock();
+    soundManager.stopMusic();
+
+    this.callbacks.onGameStateChange('VICTORY');
   }
 
   public spawnHealthPack(pos: THREE.Vector3) {
@@ -1440,14 +1558,16 @@ export class GameEngine {
       wave: this.waveManager.currentWave,
       kills: this.player.stats.kills,
       enemiesRemaining: this.mode === 'free_mode' ? this.practiceTargets.length : this.waveManager.enemiesRemaining,
-      timeRemaining: this.mode === 'time_attack' ? Math.max(0, Math.round(this.waveManager.timeAttackRemaining)) : undefined,
+      timeRemaining: (this.mode === 'time_attack' || (this.mode === 'mission' && this.currentMission?.timeLimit)) ? Math.max(0, Math.round(this.waveManager.timeAttackRemaining)) : undefined,
       activeWeaponId: this.currentWeaponId,
       isAiming: this.isZoomingActive(),
       isZooming: this.isZoomingActive(),
       zoomLevel: this.zoomLevel,
       zoomMagnification: this.getZoomMagnification(),
       targetLock: this.targetLock,
-      mode: this.mode
+      mode: this.mode,
+      missionObjective: this.getMissionObjectiveInfo(),
+      activeMission: this.currentMission
     });
 
     const activeList: PowerupActiveState[] = [];

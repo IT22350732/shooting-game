@@ -1,6 +1,7 @@
 import React from 'react';
-import { RotateCcw, Zap, Home, Award, Flame, Skull, Crosshair, Coins } from 'lucide-react';
+import { RotateCcw, Zap, Home, Award, Flame, Skull, Crosshair, Coins, Play, CheckCircle } from 'lucide-react';
 import { saveManager } from '../game/managers/SaveManager';
+import { MissionConfig } from '../types/game';
 
 interface GameOverModalProps {
   score: number;
@@ -10,6 +11,9 @@ interface GameOverModalProps {
   highestCombo: number;
   coinsEarned: number;
   isVictory?: boolean;
+  activeMission?: MissionConfig | null;
+  onNextMission?: () => void;
+  hasNextMission?: boolean;
   onRestart: () => void;
   onOpenUpgrades: () => void;
   onMainMenu: () => void;
@@ -23,6 +27,9 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   highestCombo,
   coinsEarned,
   isVictory = false,
+  activeMission,
+  onNextMission,
+  hasNextMission = false,
   onRestart,
   onOpenUpgrades,
   onMainMenu
@@ -63,7 +70,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         }}
       >
         {/* Title */}
-        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
           <span
             style={{
               fontFamily: 'var(--font-display)',
@@ -73,7 +80,9 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               color: isVictory ? '#059669' : '#e11d48'
             }}
           >
-            {isVictory ? 'TACTICAL OBJECTIVE ACCOMPLISHED' : 'BIOLOGICAL VITALS DEPLETED'}
+            {activeMission
+              ? (isVictory ? `MISSION ACCOMPLISHED: ${activeMission.codename}` : `MISSION FAILED: ${activeMission.codename}`)
+              : (isVictory ? 'TACTICAL OBJECTIVE ACCOMPLISHED' : 'BIOLOGICAL VITALS DEPLETED')}
           </span>
           <h1
             style={{
@@ -81,11 +90,36 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               fontSize: 'clamp(1.8rem, 5vw, 2.8rem)',
               fontWeight: 900,
               color: isVictory ? '#059669' : '#e11d48',
-              letterSpacing: '0.04em'
+              letterSpacing: '0.04em',
+              margin: 0
             }}
           >
-            {isVictory ? 'APEX VICTORY' : 'GAME OVER'}
+            {activeMission ? (isVictory ? activeMission.title : 'OPERATION FAILED') : (isVictory ? 'APEX VICTORY' : 'GAME OVER')}
           </h1>
+
+          {activeMission && isVictory && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                background: 'rgba(34, 197, 94, 0.12)',
+                border: '1.5px solid #22c55e',
+                padding: '6px 16px',
+                borderRadius: 20,
+                color: '#15803d',
+                fontFamily: 'var(--font-display)',
+                fontSize: '0.85rem',
+                fontWeight: 900
+              }}
+            >
+              <CheckCircle size={16} color="#15803d" />
+              <span>AWARDED BADGE:</span>
+              <strong style={{ color: activeMission.badgeColor }}>{activeMission.badge}</strong>
+              <span style={{ color: '#d97706', marginLeft: 6 }}>+{activeMission.rewardCoins} COINS</span>
+            </div>
+          )}
+
           {isHighScore && (
             <div
               style={{
@@ -120,13 +154,24 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, width: '100%', marginTop: 4 }}>
+          {isVictory && hasNextMission && onNextMission && (
+            <button
+              onClick={onNextMission}
+              className="btn-cyber btn-cyber-primary pulse-glow"
+              style={{ flex: '2 1 180px', padding: '12px 20px', fontSize: '0.95rem' }}
+            >
+              <Play size={18} fill="#ffffff" />
+              DEPLOY NEXT MISSION
+            </button>
+          )}
+
           <button
             onClick={onRestart}
-            className="btn-cyber btn-cyber-primary"
+            className={`btn-cyber ${isVictory && hasNextMission ? '' : 'btn-cyber-primary'}`}
             style={{ flex: '1 1 140px', padding: '12px 18px', fontSize: '0.92rem' }}
           >
             <RotateCcw size={18} />
-            PLAY AGAIN
+            {isVictory ? 'REPLAY' : 'TRY AGAIN'}
           </button>
 
           <button
@@ -142,6 +187,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             onClick={onMainMenu}
             className="btn-cyber"
             style={{ flex: '1 1 80px', padding: '12px 18px', background: 'rgba(255,255,255,0.9)', borderColor: 'rgba(15, 23, 42, 0.15)', color: '#0f172a' }}
+            aria-label="Main Menu"
           >
             <Home size={18} />
           </button>

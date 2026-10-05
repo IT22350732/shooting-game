@@ -8,8 +8,10 @@ import {
   PowerupActiveState,
   HitMarkerInfo,
   FloatingDamageNumber,
-  GameSettings
+  GameSettings,
+  MissionConfig
 } from './types/game';
+import { MISSIONS } from './game/missions/MissionData';
 import { saveManager } from './game/managers/SaveManager';
 import { HUD } from './ui/HUD';
 import { MainMenu } from './ui/MainMenu';
@@ -144,9 +146,13 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  const handleStartGame = (mode: GameMode, arena: ArenaId) => {
+  const handleStartGame = (mode: GameMode, arena: ArenaId, mission?: MissionConfig) => {
     if (engineRef.current) {
-      engineRef.current.startNewGame(mode, arena);
+      if (mode === 'mission' && mission) {
+        engineRef.current.startMission(mission);
+      } else {
+        engineRef.current.startNewGame(mode, arena);
+      }
     }
   };
 
@@ -157,6 +163,16 @@ export const App: React.FC = () => {
   };
 
   const isAimingSniper = stats.activeWeaponId === 'sniper' && stats.isAiming;
+
+  const activeMission = stats.activeMission || engineRef.current?.currentMission || null;
+  const currentMissionIdx = activeMission ? MISSIONS.findIndex(m => m.id === activeMission.id) : -1;
+  const nextMission = currentMissionIdx >= 0 && currentMissionIdx < MISSIONS.length - 1 ? MISSIONS[currentMissionIdx + 1] : null;
+
+  const handleNextMission = () => {
+    if (nextMission && engineRef.current) {
+      engineRef.current.startMission(nextMission);
+    }
+  };
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '100dvh', overflow: 'hidden' }}>
@@ -211,7 +227,11 @@ export const App: React.FC = () => {
           onResume={() => engineRef.current?.resumeGame()}
           onRestart={() => {
             if (engineRef.current) {
-              engineRef.current.startNewGame(engineRef.current.mode, engineRef.current.currentArenaId);
+              if (activeMission) {
+                engineRef.current.startMission(activeMission);
+              } else {
+                engineRef.current.startNewGame(engineRef.current.mode, engineRef.current.currentArenaId);
+              }
             }
           }}
           onOpenSettings={() => setShowSettings(true)}
@@ -232,9 +252,16 @@ export const App: React.FC = () => {
           highestCombo={endStats.highestCombo}
           coinsEarned={endStats.coinsEarned}
           isVictory={gameState === 'VICTORY'}
+          activeMission={activeMission}
+          hasNextMission={Boolean(nextMission)}
+          onNextMission={handleNextMission}
           onRestart={() => {
             if (engineRef.current) {
-              engineRef.current.startNewGame(engineRef.current.mode, engineRef.current.currentArenaId);
+              if (activeMission) {
+                engineRef.current.startMission(activeMission);
+              } else {
+                engineRef.current.startNewGame(engineRef.current.mode, engineRef.current.currentArenaId);
+              }
             }
           }}
           onOpenUpgrades={() => setShowUpgrades(true)}
