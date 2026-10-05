@@ -27,7 +27,7 @@ interface HumanTheme {
   hasExplosiveVest: boolean;
 }
 
-const HUMAN_THEMES: Record<EnemyType, HumanTheme> = {
+export const HUMAN_THEMES: Record<EnemyType, HumanTheme> = {
   basic: {
     name: 'Hostile Insurgent',
     highlightHex: 0xef4444, // Vibrant Crimson Red

@@ -9,11 +9,12 @@ import {
   FloatingDamageNumber,
   HitMarkerInfo,
   PowerupActiveState,
-  GameSettings
+  GameSettings,
+  TargetLockInfo
 } from '../../types/game';
 import { Player } from '../entities/Player';
 import { WeaponInstance, BASE_WEAPONS } from '../entities/Weapon';
-import { Enemy } from '../entities/Enemy';
+import { Enemy, HUMAN_THEMES } from '../entities/Enemy';
 import { Boss } from '../entities/Boss';
 import { Projectile } from '../entities/Projectile';
 import { Powerup } from '../entities/Powerup';
@@ -43,6 +44,10 @@ export interface HUDStats {
   timeRemaining?: number;
   activeWeaponId: WeaponId;
   isAiming: boolean;
+  isZooming: boolean;
+  zoomLevel: number;
+  zoomMagnification: number;
+  targetLock: TargetLockInfo | null;
   mode?: GameMode;
 }
 
@@ -97,6 +102,14 @@ export class GameEngine {
   private isPointerLocked: boolean = false;
   private isLeftMouseDown: boolean = false;
   private isRightMouseDown: boolean = false;
+  private isShiftDown: boolean = false;
+  private shiftPressedTime: number = 0;
+  private zoomLevel: number = 0; // 0 = normal, 1 = tactical ADS, 2 = precision target zoom
+  private baseFov: number = 75;
+  private currentZoomFovKick: number = 0;
+  private targetLock: TargetLockInfo | null = null;
+  private targetLockWorldPos: THREE.Vector3 | null = null;
+  private lastLockTargetId: string | null = null;
   private mouseSensitivity: number = 50;
   private touchSensitivity: number = 50;
   public isTouchDevice: boolean = false;
@@ -114,9 +127,16 @@ export class GameEngine {
     this.container = container;
     this.callbacks = callbacks;
 
+    // Managers & Systems
+    const savedData = saveManager.getData();
+    this.baseFov = savedData.settings.fov || 75;
+    this.mouseSensitivity = savedData.settings.mouseSensitivity;
+    this.touchSensitivity = savedData.settings.touchSensitivity ?? 50;
+    this.isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.matchMedia('(pointer: coarse)').matches;
+
     // Three.js Scene & Camera
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 300);
+    this.camera = new THREE.PerspectiveCamera(this.baseFov, window.innerWidth / window.innerHeight, 0.1, 300);
     this.clock = new THREE.Clock();
 
     // WebGL Renderer
@@ -128,12 +148,6 @@ export class GameEngine {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.container.appendChild(this.renderer.domElement);
-
-    // Managers & Systems
-    const savedData = saveManager.getData();
-    this.mouseSensitivity = savedData.settings.mouseSensitivity;
-    this.touchSensitivity = savedData.settings.touchSensitivity ?? 50;
-    this.isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.matchMedia('(pointer: coarse)').matches;
 
     this.player = new Player(this.camera, savedData.upgrades);
     this.arena = new ArenaManager(this.scene);
@@ -195,6 +209,7 @@ export class GameEngine {
     this.mode = mode;
     this.currentArenaId = arenaId;
     this.state = 'PLAYING';
+    this.setZoomLevel(0);
 
     const saved = saveManager.getData();
     this.mouseSensitivity = saved.settings.mouseSensitivity;
@@ -326,7 +341,26 @@ export class GameEngine {
         case 'KeyD': this.keys.right = true; break;
         case 'Space': this.keys.jump = true; break;
         case 'ShiftLeft':
-        case 'ShiftRight': this.keys.sprint = true; break;
+        case 'ShiftRight': {
+          if (!this.isShiftDown) {
+            this.isShiftDown = true;
+            this.shiftPressedTime = performance.now();
+            if (this.zoomLevel === 0) {
+              this.setZoomLevel(1);
+            } else if (this.zoomLevel === 1) {
+              this.setZoomLevel(2);
+            } else {
+              this.setZoomLevel(1);
+            }
+          }
+          break;
+        }
+        case 'KeyC':
+        case 'ControlLeft':
+        case 'ControlRight': {
+          this.keys.sprint = true;
+          break;
+        }
         case 'KeyR': this.currentWeapon.startReload(); break;
         case 'Digit1': this.switchWeapon('assault_rifle'); break;
         case 'Digit2': this.switchWeapon('shotgun'); break;
@@ -347,7 +381,24 @@ export class GameEngine {
         case 'KeyD': this.keys.right = false; break;
         case 'Space': this.keys.jump = false; break;
         case 'ShiftLeft':
-        case 'ShiftRight': this.keys.sprint = false; break;
+        case 'ShiftRight': {
+          if (this.isShiftDown) {
+            this.isShiftDown = false;
+            const heldDuration = performance.now() - this.shiftPressedTime;
+            // If held for longer than 260ms, release zoom on key up (hold to zoom)
+            // If quick tap (< 260ms), leave zoom active (tap to toggle/cycle zoom)!
+            if (heldDuration > 260) {
+              this.setZoomLevel(0);
+            }
+          }
+          break;
+        }
+        case 'KeyC':
+        case 'ControlLeft':
+        case 'ControlRight': {
+          this.keys.sprint = false;
+          break;
+        }
       }
     });
 
@@ -363,7 +414,9 @@ export class GameEngine {
         this.isLeftMouseDown = true;
       } else if (e.button === 2) {
         this.isRightMouseDown = true;
-        this.currentWeapon.isAiming = true;
+        if (this.zoomLevel === 0) {
+          this.setZoomLevel(1);
+        }
       }
     });
 
@@ -372,7 +425,9 @@ export class GameEngine {
         this.isLeftMouseDown = false;
       } else if (e.button === 2) {
         this.isRightMouseDown = false;
-        this.currentWeapon.isAiming = false;
+        if (!this.isShiftDown) {
+          this.setZoomLevel(0);
+        }
       }
     });
 
@@ -382,12 +437,26 @@ export class GameEngine {
     // Mouse movement
     window.addEventListener('mousemove', (e) => {
       if (this.state !== 'PLAYING' || !this.isPointerLocked) return;
-      this.player.rotateCamera(e.movementX, e.movementY, this.mouseSensitivity, this.currentWeapon?.isAiming);
+      this.player.rotateCamera(
+        e.movementX,
+        e.movementY,
+        this.mouseSensitivity,
+        this.currentWeapon?.isAiming,
+        this.zoomLevel
+      );
     });
 
-    // Mouse wheel weapon switching (Desktop)
+    // Mouse wheel: zoom level control when aiming, or weapon cycle when not aiming
     window.addEventListener('wheel', (e) => {
       if (this.state !== 'PLAYING' || !this.isPointerLocked) return;
+      if (this.isZoomingActive()) {
+        if (e.deltaY < 0) {
+          this.setZoomLevel(2); // Zoom in closer
+        } else if (e.deltaY > 0) {
+          this.setZoomLevel(this.zoomLevel > 1 ? 1 : 0); // Zoom out
+        }
+        return;
+      }
       if (e.deltaY > 0) {
         this.cycleWeapon(1);
       } else if (e.deltaY < 0) {
@@ -467,18 +536,216 @@ export class GameEngine {
 
   public setAiming(aiming: boolean) {
     this.isTouchAiming = aiming;
-    if (this.currentWeapon) {
-      this.currentWeapon.isAiming = this.isRightMouseDown || this.isTouchAiming;
+    if (aiming) {
+      if (this.zoomLevel === 0) this.setZoomLevel(1);
+    } else {
+      this.setZoomLevel(0);
     }
   }
 
   public toggleAiming(): boolean {
-    this.setAiming(!this.isTouchAiming);
-    return this.isTouchAiming;
+    return this.cycleZoomLevel() > 0;
+  }
+
+  public isZoomingActive(): boolean {
+    return this.zoomLevel > 0 || this.isRightMouseDown || this.isTouchAiming;
   }
 
   public isAimingActive(): boolean {
-    return this.isRightMouseDown || this.isTouchAiming;
+    return this.isZoomingActive();
+  }
+
+  public getZoomLevel(): number {
+    return this.zoomLevel;
+  }
+
+  public setZoomLevel(level: number) {
+    const prev = this.zoomLevel;
+    this.zoomLevel = Math.max(0, Math.min(2, level));
+    if (this.currentWeapon) {
+      this.currentWeapon.isAiming = this.isZoomingActive();
+    }
+    if (this.zoomLevel > 0 && prev === 0) {
+      soundManager.playZoomIn(this.zoomLevel >= 2);
+    } else if (this.zoomLevel >= 2 && prev < 2) {
+      soundManager.playZoomIn(true);
+    } else if (this.zoomLevel === 0 && prev > 0) {
+      soundManager.playZoomOut();
+      this.targetLock = null;
+      this.targetLockWorldPos = null;
+      this.lastLockTargetId = null;
+    }
+  }
+
+  public cycleZoomLevel(): number {
+    if (this.zoomLevel === 0) {
+      this.setZoomLevel(1);
+    } else if (this.zoomLevel === 1) {
+      this.setZoomLevel(2);
+    } else {
+      this.setZoomLevel(0);
+    }
+    return this.zoomLevel;
+  }
+
+  public calculateTargetFov(): number {
+    this.baseFov = saveManager.getData().settings.fov || 75;
+    if (!this.isZoomingActive()) {
+      return this.baseFov;
+    }
+    const weaponId = this.currentWeaponId;
+    if (this.zoomLevel >= 2) {
+      // Precision Scope Focus
+      if (weaponId === 'sniper') return 16;
+      if (weaponId === 'plasma_rifle') return 24;
+      if (weaponId === 'shotgun') return 36;
+      return 26;
+    } else {
+      // Tactical ADS Zoom
+      if (weaponId === 'sniper') return 30;
+      if (weaponId === 'plasma_rifle') return 40;
+      if (weaponId === 'shotgun') return 50;
+      return 42;
+    }
+  }
+
+  public getZoomMagnification(): number {
+    const base = saveManager.getData().settings.fov || 75;
+    const fov = this.calculateTargetFov();
+    return Number((base / fov).toFixed(1));
+  }
+
+  public updateTargetAcquisition(): TargetLockInfo | null {
+    if (!this.isZoomingActive()) {
+      this.targetLockWorldPos = null;
+      return null;
+    }
+
+    const camPos = this.camera.position;
+    const camDir = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion).normalize();
+
+    interface TargetCandidate {
+      name: string;
+      dist: number;
+      health: number;
+      maxHealth: number;
+      screenX: number;
+      screenY: number;
+      isCritical: boolean;
+      worldPos: THREE.Vector3;
+      dot: number;
+    }
+
+    // Collect all candidate entities
+    const candidateList: {
+      name: string;
+      center: THREE.Vector3;
+      head: THREE.Vector3 | null;
+      health: number;
+      maxHealth: number;
+    }[] = [];
+
+    // 1. Enemies
+    for (const enemy of this.enemies) {
+      if (enemy.isDead) continue;
+      const center = enemy.position.clone().add(new THREE.Vector3(0, 1.0, 0));
+      const head = enemy.headMesh
+        ? enemy.headMesh.getWorldPosition(new THREE.Vector3())
+        : enemy.position.clone().add(new THREE.Vector3(0, 1.7, 0));
+      const theme = HUMAN_THEMES[enemy.type];
+      candidateList.push({
+        name: theme ? theme.name.toUpperCase() : 'HOSTILE INFANTRY',
+        center,
+        head,
+        health: enemy.health,
+        maxHealth: enemy.maxHealth
+      });
+    }
+
+    // 2. Boss
+    if (this.boss && !this.boss.isDead) {
+      candidateList.push({
+        name: 'GOLIATH MECH TITAN',
+        center: this.boss.position.clone().add(new THREE.Vector3(0, 2.5, 0)),
+        head: this.boss.position.clone().add(new THREE.Vector3(0, 4.6, 0)),
+        health: this.boss.health,
+        maxHealth: this.boss.maxHealth
+      });
+    }
+
+    // 3. Practice Targets
+    for (const pt of this.practiceTargets) {
+      if (pt.isDead) continue;
+      candidateList.push({
+        name: 'TARGET DRONE',
+        center: pt.position.clone().add(new THREE.Vector3(0, 1.5, 0)),
+        head: pt.position.clone().add(new THREE.Vector3(0, 2.1, 0)),
+        health: pt.health,
+        maxHealth: pt.maxHealth
+      });
+    }
+
+    let bestCandidate: TargetCandidate | null = null;
+    const threshold = this.zoomLevel >= 2 ? 0.97 : 0.92;
+
+    for (const item of candidateList) {
+      const toCenter = item.center.clone().sub(camPos);
+      const dist = toCenter.length();
+      if (dist < 1.0 || dist > 200) continue;
+
+      const dirToTarget = toCenter.clone().normalize();
+      const dot = camDir.dot(dirToTarget);
+
+      if (dot > threshold) {
+        if (!bestCandidate || dot > bestCandidate.dot) {
+          let isCritical = false;
+          let aimTargetPos = item.center;
+          if (item.head) {
+            const toHead = item.head.clone().sub(camPos).normalize();
+            const headDot = camDir.dot(toHead);
+            if (headDot > 0.988) {
+              isCritical = true;
+              aimTargetPos = item.head;
+            }
+          }
+
+          const proj = aimTargetPos.clone().project(this.camera);
+          if (proj.z < 1.0 && proj.z > -1.0) {
+            const screenX = (proj.x * 0.5 + 0.5) * window.innerWidth;
+            const screenY = (-(proj.y * 0.5) + 0.5) * window.innerHeight;
+
+            bestCandidate = {
+              name: item.name,
+              dist: Number(dist.toFixed(1)),
+              health: Math.max(0, item.health),
+              maxHealth: item.maxHealth,
+              screenX,
+              screenY,
+              isCritical,
+              worldPos: aimTargetPos,
+              dot
+            };
+          }
+        }
+      }
+    }
+
+    if (bestCandidate !== null) {
+      const chosen: TargetCandidate = bestCandidate;
+      this.targetLockWorldPos = chosen.worldPos;
+      return {
+        name: chosen.name,
+        distance: chosen.dist,
+        health: chosen.health,
+        maxHealth: chosen.maxHealth,
+        screenX: chosen.screenX,
+        screenY: chosen.screenY,
+        isCritical: chosen.isCritical
+      };
+    } else {
+      this.targetLockWorldPos = null;
+      return null;
+    }
   }
 
   public setJump(jumping: boolean) {
@@ -493,7 +760,12 @@ export class GameEngine {
 
   public rotateCameraTouch(deltaX: number, deltaY: number) {
     const isAiming = this.isAimingActive();
-    const adsDamp = isAiming ? 0.55 : 1.0;
+    let adsDamp = 1.0;
+    if (this.zoomLevel >= 2) {
+      adsDamp = 0.32;
+    } else if (isAiming || this.zoomLevel === 1) {
+      adsDamp = 0.52;
+    }
     const sensFactor = 0.0034 * (this.touchSensitivity / 50) * adsDamp;
     this.player.yaw -= deltaX * sensFactor;
     this.player.pitch -= deltaY * sensFactor;
@@ -521,6 +793,7 @@ export class GameEngine {
 
   public showMenu() {
     this.state = 'MENU';
+    this.setZoomLevel(0);
     if (this.currentWeapon) {
       this.currentWeapon.meshGroup.visible = false;
     }
@@ -566,6 +839,10 @@ export class GameEngine {
       // Trigger camera recoil punch
       this.player.addTrauma(this.currentWeapon.config.recoilKick * 0.85);
 
+      if (this.isZoomingActive()) {
+        this.currentZoomFovKick = this.currentWeapon.config.recoilKick * 2.2;
+      }
+
       const shootData = this.player.getShootRay();
 
       if (this.currentWeapon.config.id === 'plasma_rifle') {
@@ -585,7 +862,7 @@ export class GameEngine {
         const pellets = this.currentWeapon.config.pellets;
         for (let p = 0; p < pellets; p++) {
           const spreadDir = shootData.direction.clone();
-          if (this.currentWeapon.config.spread > 0 && !this.currentWeapon.isAiming) {
+          if (this.currentWeapon.config.spread > 0 && !this.isZoomingActive()) {
             spreadDir.x += (Math.random() - 0.5) * this.currentWeapon.config.spread;
             spreadDir.y += (Math.random() - 0.5) * this.currentWeapon.config.spread;
             spreadDir.z += (Math.random() - 0.5) * this.currentWeapon.config.spread;
@@ -599,7 +876,15 @@ export class GameEngine {
   }
 
   private performHitscanShot(origin: THREE.Vector3, direction: THREE.Vector3, hasDamageBoost: boolean) {
-    this.raycaster.set(origin, direction);
+    let finalDirection = direction;
+    if (this.isZoomingActive() && this.targetLockWorldPos) {
+      const dirToTarget = this.targetLockWorldPos.clone().sub(origin).normalize();
+      if (direction.dot(dirToTarget) > 0.98) {
+        finalDirection = dirToTarget;
+      }
+    }
+
+    this.raycaster.set(origin, finalDirection);
     this.raycaster.far = this.currentWeapon.config.range;
 
     // Collect all shootable objects
@@ -849,19 +1134,48 @@ export class GameEngine {
   }
 
   private updateGame(delta: number, now: number) {
+    // 0. Dynamic Camera Zoom FOV interpolation
+    const targetFov = this.calculateTargetFov();
+    this.currentZoomFovKick = THREE.MathUtils.lerp(this.currentZoomFovKick, 0, delta * 15);
+    const finalTargetFov = Math.max(12, Math.min(100, targetFov + this.currentZoomFovKick));
+    if (Math.abs(this.camera.fov - finalTargetFov) > 0.05) {
+      this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, finalTargetFov, delta * 18);
+      this.camera.updateProjectionMatrix();
+    }
+
+    // 0.1 Target Acquisition & Tactical Assist
+    this.targetLock = this.updateTargetAcquisition();
+    if (this.targetLock && this.targetLockWorldPos) {
+      this.player.applyTargetAssist(this.targetLockWorldPos, 0.035);
+      if (this.targetLock.name !== this.lastLockTargetId) {
+        this.lastLockTargetId = this.targetLock.name;
+        soundManager.playTargetLock(this.targetLock.isCritical);
+      }
+    } else {
+      this.lastLockTargetId = null;
+    }
+
     // 1. Slow Motion Powerup check
     const hasSlowMotion = this.player.hasPowerup('slow_motion');
     const enemyDelta = hasSlowMotion ? delta * 0.35 : delta;
 
-    // 2. Player Update
+    // 2. Player Update (tactical steady pace when zoomed)
     const saved = saveManager.getData();
+    const effectiveKeys = {
+      ...this.keys,
+      sprint: this.isZoomingActive() ? false : this.keys.sprint
+    };
+    const effectiveAnalogMove = {
+      ...this.analogMove,
+      sprint: this.isZoomingActive() ? false : this.analogMove.sprint
+    };
     const { isMoving, walkTime } = this.player.update(
       delta,
-      this.keys,
+      effectiveKeys,
       this.arena.obstacles,
       this.arena.arenaSize,
       saved.settings.screenShake,
-      this.analogMove
+      effectiveAnalogMove
     );
 
     // 3. Weapon Update
@@ -1128,7 +1442,11 @@ export class GameEngine {
       enemiesRemaining: this.mode === 'free_mode' ? this.practiceTargets.length : this.waveManager.enemiesRemaining,
       timeRemaining: this.mode === 'time_attack' ? Math.max(0, Math.round(this.waveManager.timeAttackRemaining)) : undefined,
       activeWeaponId: this.currentWeaponId,
-      isAiming: this.currentWeapon.isAiming,
+      isAiming: this.isZoomingActive(),
+      isZooming: this.isZoomingActive(),
+      zoomLevel: this.zoomLevel,
+      zoomMagnification: this.getZoomMagnification(),
+      targetLock: this.targetLock,
       mode: this.mode
     });
 

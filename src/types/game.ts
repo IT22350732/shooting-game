@@ -114,3 +114,14 @@ export interface HitMarkerInfo {
   isCrit: boolean;
   timestamp: number;
 }
+
+export interface TargetLockInfo {
+  name: string;
+  distance: number;
+  health: number;
+  maxHealth: number;
+  screenX: number;
+  screenY: number;
+  isCritical: boolean;
+}
+

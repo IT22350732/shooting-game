@@ -83,10 +83,12 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
               <KeybindCard keyLabel="W / A / S / D" action="Omni-Directional Movement" />
               <KeybindCard keyLabel="MOUSE AIM" action="Target Acquisition & Pitch/Yaw" />
-              <KeybindCard keyLabel="LEFT CLICK" action="Fire Weapon Munitions" />
-              <KeybindCard keyLabel="RIGHT CLICK" action="Aim Down Sights (ADS) / Sniper Zoom" />
+              <KeybindCard keyLabel="LEFT CLICK" action="Fire Weapon (Shoot while Zoomed)" />
+              <KeybindCard keyLabel="SHIFT / RIGHT CLICK" action="Zoom & Lock Target (Press Shift to Zoom)" />
+              <KeybindCard keyLabel="C / CTRL" action="Tactical Sprint" />
+              <KeybindCard keyLabel="SPACE" action="Vertical Jump / Combat Hop" />
               <KeybindCard keyLabel="R" action="Reload Magazine" />
-              <KeybindCard keyLabel="SHIFT / SPACE" action="Sprint / Vertical Jump" />
+              <KeybindCard keyLabel="SCROLL WHEEL" action="Cycle Zoom Magnification / Switch Weapon" />
               <KeybindCard keyLabel="1 / 2 / 3 / 4 / 5" action="Instant Weapon Switching" />
               <KeybindCard keyLabel="ESC" action="Tactical Pause & Menu" />
             </div>

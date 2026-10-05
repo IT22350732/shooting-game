@@ -65,6 +65,10 @@ export const App: React.FC = () => {
     timeRemaining: undefined,
     activeWeaponId: 'assault_rifle',
     isAiming: false,
+    isZooming: false,
+    zoomLevel: 0,
+    zoomMagnification: 1.0,
+    targetLock: null,
     mode: 'medium'
   });
 

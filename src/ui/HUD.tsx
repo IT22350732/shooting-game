@@ -13,7 +13,7 @@ import {
   RotateCw,
   Target
 } from 'lucide-react';
-import { WeaponId, PowerupActiveState, HitMarkerInfo, FloatingDamageNumber, GameSettings, GameMode } from '../types/game';
+import { WeaponId, PowerupActiveState, HitMarkerInfo, FloatingDamageNumber, GameSettings, GameMode, TargetLockInfo } from '../types/game';
 import { BASE_WEAPONS } from '../game/entities/Weapon';
 import { useFullscreen } from '../utils/fullscreen';
 
@@ -36,6 +36,11 @@ interface HUDProps {
     enemiesRemaining: number;
     timeRemaining?: number;
     activeWeaponId: WeaponId;
+    isAiming?: boolean;
+    isZooming?: boolean;
+    zoomLevel?: number;
+    zoomMagnification?: number;
+    targetLock?: TargetLockInfo | null;
     mode?: GameMode;
   };
   hitMarker: HitMarkerInfo | null;
@@ -129,44 +134,339 @@ export const HUD: React.FC<HUDProps> = ({
         />
       )}
 
-      {/* Sniper ADS Scope Overlay */}
-      {isAimingSniper && (
+      {/* SMART TARGET ACQUISITION & LOCK-ON HUD */}
+      {stats.isZooming && stats.targetLock && (
+        <div
+          style={{
+            position: 'absolute',
+            left: stats.targetLock.screenX,
+            top: stats.targetLock.screenY,
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+            zIndex: 25,
+            transition: 'left 0.04s ease-out, top 0.04s ease-out'
+          }}
+        >
+          {/* Target Tracking Bracket Box */}
+          <div
+            style={{
+              position: 'relative',
+              width: 68,
+              height: 68,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {/* 4 Corner Bracket Accents */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: 14,
+                height: 14,
+                borderTop: `2px solid ${stats.targetLock.isCritical ? '#facc15' : '#00f0ff'}`,
+                borderLeft: `2px solid ${stats.targetLock.isCritical ? '#facc15' : '#00f0ff'}`,
+                boxShadow: stats.targetLock.isCritical ? '0 0 10px #facc15' : '0 0 10px #00f0ff'
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                width: 14,
+                height: 14,
+                borderTop: `2px solid ${stats.targetLock.isCritical ? '#facc15' : '#00f0ff'}`,
+                borderRight: `2px solid ${stats.targetLock.isCritical ? '#facc15' : '#00f0ff'}`,
+                boxShadow: stats.targetLock.isCritical ? '0 0 10px #facc15' : '0 0 10px #00f0ff'
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                width: 14,
+                height: 14,
+                borderBottom: `2px solid ${stats.targetLock.isCritical ? '#facc15' : '#00f0ff'}`,
+                borderLeft: `2px solid ${stats.targetLock.isCritical ? '#facc15' : '#00f0ff'}`,
+                boxShadow: stats.targetLock.isCritical ? '0 0 10px #facc15' : '0 0 10px #00f0ff'
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                width: 14,
+                height: 14,
+                borderBottom: `2px solid ${stats.targetLock.isCritical ? '#facc15' : '#00f0ff'}`,
+                borderRight: `2px solid ${stats.targetLock.isCritical ? '#facc15' : '#00f0ff'}`,
+                boxShadow: stats.targetLock.isCritical ? '0 0 10px #facc15' : '0 0 10px #00f0ff'
+              }}
+            />
+
+            {/* Target Reticle Pip */}
+            <div
+              style={{
+                width: 8,
+                height: 8,
+                transform: 'rotate(45deg)',
+                border: `1.5px solid ${stats.targetLock.isCritical ? '#facc15' : '#00f0ff'}`,
+                backgroundColor: stats.targetLock.isCritical ? 'rgba(250, 204, 21, 0.5)' : 'rgba(0, 240, 255, 0.4)',
+                boxShadow: stats.targetLock.isCritical ? '0 0 8px #facc15' : '0 0 8px #00f0ff'
+              }}
+            />
+          </div>
+
+          {/* Target Metadata Badge */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              marginTop: 6,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 2,
+              background: 'rgba(15, 23, 42, 0.88)',
+              padding: '4px 8px',
+              borderRadius: 6,
+              border: `1px solid ${stats.targetLock.isCritical ? 'rgba(250, 204, 21, 0.7)' : 'rgba(0, 240, 255, 0.5)'}`,
+              backdropFilter: 'blur(6px)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.65rem',
+                  fontWeight: 800,
+                  color: stats.targetLock.isCritical ? '#facc15' : '#38bdf8',
+                  letterSpacing: '0.08em'
+                }}
+              >
+                {stats.targetLock.name}
+              </span>
+              <span
+                style={{
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  color: '#94a3b8',
+                  fontFamily: 'monospace'
+                }}
+              >
+                {stats.targetLock.distance}m
+              </span>
+            </div>
+
+            {/* Target Health Mini-Bar */}
+            <div
+              style={{
+                width: 76,
+                height: 4,
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                borderRadius: 2,
+                overflow: 'hidden'
+              }}
+            >
+              <div
+                style={{
+                  width: `${Math.min(100, Math.max(0, (stats.targetLock.health / stats.targetLock.maxHealth) * 100))}%`,
+                  height: '100%',
+                  backgroundColor: stats.targetLock.isCritical ? '#facc15' : '#22c55e',
+                  transition: 'width 0.15s ease'
+                }}
+              />
+            </div>
+
+            <span
+              style={{
+                fontSize: '0.55rem',
+                fontWeight: 800,
+                color: stats.targetLock.isCritical ? '#facc15' : '#38bdf8',
+                letterSpacing: '0.06em'
+              }}
+            >
+              {stats.targetLock.isCritical ? '⚡ CRITICAL SENSOR LOCKED' : '🎯 TARGET ACQUIRED'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* TACTICAL ZOOM SCOPE OVERLAY */}
+      {stats.isZooming && (
         <div
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'radial-gradient(circle at center, transparent 32%, rgba(15, 23, 42, 0.94) 65%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            pointerEvents: 'none',
             zIndex: 15
           }}
         >
-          {/* Tactical Crosshair Ring */}
-          <div
-            style={{
-              width: 320,
-              height: 320,
-              border: '2px solid rgba(14, 165, 233, 0.7)',
-              borderRadius: '50%',
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 25px rgba(14, 165, 233, 0.3)'
-            }}
-          >
-            <div style={{ position: 'absolute', width: '100%', height: 1.5, background: 'rgba(14, 165, 233, 0.8)' }} />
-            <div style={{ position: 'absolute', height: '100%', width: 1.5, background: 'rgba(14, 165, 233, 0.8)' }} />
+          {/* Sniper or Precision Focus (Stage 2) High Magnification Scope */}
+          {(isAimingSniper || (stats.zoomLevel || 1) >= 2) ? (
             <div
               style={{
-                width: 6,
-                height: 6,
-                backgroundColor: '#f43f5e',
-                borderRadius: '50%',
-                boxShadow: '0 0 10px #f43f5e'
+                position: 'absolute',
+                inset: 0,
+                background: 'radial-gradient(circle at center, transparent 28%, rgba(15, 23, 42, 0.95) 62%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
-            />
+            >
+              {/* Tactical Crosshair Ring */}
+              <div
+                style={{
+                  width: 340,
+                  height: 340,
+                  border: '2px solid rgba(14, 165, 233, 0.75)',
+                  borderRadius: '50%',
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 0 30px rgba(14, 165, 233, 0.35)'
+                }}
+              >
+                {/* Horizontal Crosshair Line with Mil-Dots */}
+                <div style={{ position: 'absolute', width: '100%', height: 1.5, background: 'rgba(14, 165, 233, 0.85)' }} />
+                {/* Vertical Crosshair Line with Rangefinder Ticks */}
+                <div style={{ position: 'absolute', height: '100%', width: 1.5, background: 'rgba(14, 165, 233, 0.85)' }} />
+
+                {/* Mil-dot Range Increments */}
+                {[-100, -50, 50, 100].map(offset => (
+                  <React.Fragment key={offset}>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: `calc(50% + ${offset}px)`,
+                        top: 'calc(50% - 4px)',
+                        width: 1.5,
+                        height: 8,
+                        background: 'rgba(14, 165, 233, 0.9)'
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: `calc(50% + ${offset}px)`,
+                        left: 'calc(50% - 4px)',
+                        height: 1.5,
+                        width: 8,
+                        background: 'rgba(14, 165, 233, 0.9)'
+                      }}
+                    />
+                  </React.Fragment>
+                ))}
+
+                {/* Center Illuminated Precision Reticle */}
+                <div
+                  style={{
+                    width: 6,
+                    height: 6,
+                    backgroundColor: stats.targetLock ? (stats.targetLock.isCritical ? '#facc15' : '#00f0ff') : '#f43f5e',
+                    borderRadius: '50%',
+                    boxShadow: `0 0 10px ${stats.targetLock ? (stats.targetLock.isCritical ? '#facc15' : '#00f0ff') : '#f43f5e'}`
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            /* Tactical ADS (Stage 1) Optical Framing Overlay */
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'radial-gradient(circle at center, transparent 45%, rgba(15, 23, 42, 0.45) 75%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {/* ADS Optic Reticle Frame */}
+              <div
+                style={{
+                  width: 260,
+                  height: 260,
+                  border: '1.5px dashed rgba(56, 189, 248, 0.35)',
+                  borderRadius: '50%',
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {/* Horizontal Guide Notches */}
+                <div style={{ position: 'absolute', left: -14, width: 28, height: 2, background: 'rgba(56, 189, 248, 0.8)' }} />
+                <div style={{ position: 'absolute', right: -14, width: 28, height: 2, background: 'rgba(56, 189, 248, 0.8)' }} />
+                <div style={{ position: 'absolute', top: -14, height: 28, width: 2, background: 'rgba(56, 189, 248, 0.8)' }} />
+                <div style={{ position: 'absolute', bottom: -14, height: 28, width: 2, background: 'rgba(56, 189, 248, 0.8)' }} />
+              </div>
+            </div>
+          )}
+
+          {/* Tactical Zoom HUD Header & Magnification Status */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 85,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 4,
+              background: 'rgba(15, 23, 42, 0.75)',
+              padding: '6px 14px',
+              borderRadius: 8,
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              backdropFilter: 'blur(6px)',
+              pointerEvents: 'none'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.8rem',
+                  fontWeight: 900,
+                  color: '#38bdf8',
+                  letterSpacing: '0.08em'
+                }}
+              >
+                ZOOM {stats.zoomMagnification || ((stats.zoomLevel || 1) >= 2 ? 4.5 : 1.8)}X
+              </span>
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  color: '#94a3b8',
+                  textTransform: 'uppercase'
+                }}
+              >
+                {(stats.zoomLevel || 1) >= 2 ? 'PRECISION SCOPE FOCUS' : 'TACTICAL ADS ACQUISITION'}
+              </span>
+            </div>
+
+            {/* Quick Keybind Guidance */}
+            <span
+              style={{
+                fontSize: '0.62rem',
+                color: '#64748b',
+                fontWeight: 600,
+                letterSpacing: '0.05em'
+              }}
+            >
+              {isMobile ? 'TAP ADS TO CYCLE ZOOM' : 'SHIFT: CYCLE ZOOM / HOLD  •  C: SPRINT  •  CLICK: FIRE'}
+            </span>
           </div>
         </div>
       )}

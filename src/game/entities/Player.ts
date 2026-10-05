@@ -160,13 +160,39 @@ export class Player {
     this.trauma = Math.min(1.0, this.trauma + amount);
   }
 
-  public rotateCamera(movementX: number, movementY: number, sensitivity: number, isAiming: boolean = false) {
-    const adsDamp = isAiming ? 0.55 : 1.0;
+  public rotateCamera(
+    movementX: number,
+    movementY: number,
+    sensitivity: number,
+    isAiming: boolean = false,
+    zoomLevel: number = 0
+  ) {
+    let adsDamp = 1.0;
+    if (zoomLevel >= 2) {
+      adsDamp = 0.32; // Precision Target Zoom
+    } else if (isAiming || zoomLevel === 1) {
+      adsDamp = 0.52; // Tactical ADS Zoom
+    }
     const sensFactor = 0.002 * (sensitivity / 50) * adsDamp;
     this.yaw -= movementX * sensFactor;
     this.pitch -= movementY * sensFactor;
 
     // Clamp pitch to avoid neck snapping (-89 to +89 degrees)
+    const maxPitch = (Math.PI / 2) - 0.05;
+    this.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.pitch));
+  }
+
+  public applyTargetAssist(targetPos: THREE.Vector3, strength: number = 0.035) {
+    const toTarget = targetPos.clone().sub(this.camera.position).normalize();
+    const targetYaw = Math.atan2(-toTarget.x, -toTarget.z);
+    const targetPitch = Math.asin(Math.max(-0.99, Math.min(0.99, toTarget.y)));
+
+    let diffYaw = targetYaw - this.yaw;
+    while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
+    while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
+
+    this.yaw += diffYaw * strength;
+    this.pitch += (targetPitch - this.pitch) * strength;
     const maxPitch = (Math.PI / 2) - 0.05;
     this.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.pitch));
   }

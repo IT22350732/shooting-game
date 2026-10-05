@@ -244,6 +244,80 @@ export class SoundManager {
     osc.stop(now + 0.13);
   }
 
+  // --- ZOOM & TARGET ACQUISITION SFX ---
+  public playZoomIn(isDeep: boolean = false) {
+    this.initContext();
+    if (!this.ctx || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    const startFreq = isDeep ? 500 : 320;
+    const endFreq = isDeep ? 900 : 640;
+    osc.frequency.setValueAtTime(startFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.12);
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.15);
+
+    this.playNoiseBurst(0.07, 1800, 800, 0.08);
+  }
+
+  public playZoomOut() {
+    this.initContext();
+    if (!this.ctx || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(620, now);
+    osc.frequency.exponentialRampToValueAtTime(280, now + 0.1);
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.13);
+
+    this.playNoiseBurst(0.05, 1400, 600, 0.05);
+  }
+
+  public playTargetLock(isCritical: boolean = false) {
+    this.initContext();
+    if (!this.ctx || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+
+    const f1 = isCritical ? 1760 : 1200;
+    const f2 = isCritical ? 2349 : 1600;
+
+    const osc1 = this.ctx.createOscillator();
+    const gain1 = this.ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(f1, now);
+    gain1.gain.setValueAtTime(0.24, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+    osc1.connect(gain1);
+    gain1.connect(this.sfxGain);
+    osc1.start(now);
+    osc1.stop(now + 0.07);
+
+    const osc2 = this.ctx.createOscillator();
+    const gain2 = this.ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(f2, now + 0.07);
+    gain2.gain.setValueAtTime(0.28, now + 0.07);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+    osc2.connect(gain2);
+    gain2.connect(this.sfxGain);
+    osc2.start(now + 0.07);
+    osc2.stop(now + 0.15);
+  }
+
   // --- ENEMY SOUNDS ---
   public playEnemyHit() {
     this.initContext();

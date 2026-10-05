@@ -522,6 +522,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
               width: 54,
               height: 54,
               borderRadius: '50%',
+              position: 'relative',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -534,9 +535,28 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
-            aria-label="Toggle Aim Down Sights"
+            aria-label="Toggle Aim Down Sights / Zoom"
           >
             <Eye size={24} />
+            {isAiming && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -4,
+                  right: -4,
+                  background: '#0284c7',
+                  border: '1px solid #ffffff',
+                  borderRadius: 8,
+                  fontSize: '0.55rem',
+                  fontWeight: 900,
+                  padding: '1px 4px',
+                  color: '#ffffff',
+                  boxShadow: '0 0 6px rgba(14, 165, 233, 0.9)'
+                }}
+              >
+                {engine ? `${engine.getZoomLevel()}X` : 'ADS'}
+              </span>
+            )}
           </button>
         </div>
 
