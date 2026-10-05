@@ -283,28 +283,34 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             <Sliders size={18} />
           </button>
 
-          {/* Tutorial / Help Button */}
+          {/* Gameplay Instructions & Controls Info Button */}
           <button
             onClick={onOpenTutorial}
             className="glass-panel"
             style={{
-              width: 42,
               height: 42,
+              padding: '0 12px',
               borderRadius: 10,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              border: '1.5px solid rgba(15, 23, 42, 0.15)',
-              background: 'rgba(255, 255, 255, 0.9)',
-              color: '#0f172a',
+              gap: 6,
+              border: '1.5px solid rgba(2, 132, 199, 0.4)',
+              background: 'rgba(255, 255, 255, 0.94)',
+              color: '#0284c7',
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(15, 23, 42, 0.1)',
+              boxShadow: '0 4px 14px rgba(2, 132, 199, 0.15)',
               backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)'
+              WebkitBackdropFilter: 'blur(12px)',
+              fontFamily: 'var(--font-display)',
+              fontSize: '0.8rem',
+              fontWeight: 800,
+              letterSpacing: '0.04em'
             }}
-            aria-label="Manual & Guide"
+            aria-label="Game Instructions & Controls"
+            title="Game Instructions & Controls"
           >
-            <HelpCircle size={18} />
+            <HelpCircle size={18} color="#0284c7" />
+            <span>INFO</span>
           </button>
 
           {/* Fullscreen Toggle Button */}
@@ -509,6 +515,24 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           >
             <Zap size={18} />
             <span>UPGRADES</span>
+          </button>
+
+          <button
+            onClick={onOpenTutorial}
+            className="btn-cyber"
+            style={{
+              padding: '10px 18px',
+              fontSize: '0.85rem',
+              background: 'rgba(255, 255, 255, 0.92)',
+              boxShadow: '0 6px 20px rgba(15, 23, 42, 0.15)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              color: '#0284c7',
+              fontWeight: 800
+            }}
+          >
+            <HelpCircle size={18} color="#0284c7" />
+            <span>INFO</span>
           </button>
         </div>
 

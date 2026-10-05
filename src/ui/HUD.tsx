@@ -11,7 +11,8 @@ import {
   Maximize,
   Minimize,
   RotateCw,
-  Target
+  Target,
+  HelpCircle
 } from 'lucide-react';
 import {
   WeaponId,
@@ -63,6 +64,7 @@ interface HUDProps {
   isAimingSniper: boolean;
   onSwitchWeapon: (id: WeaponId) => void;
   onPause?: () => void;
+  onOpenTutorial?: () => void;
   isMobile?: boolean;
 }
 
@@ -76,6 +78,7 @@ export const HUD: React.FC<HUDProps> = ({
   isAimingSniper,
   onSwitchWeapon,
   onPause,
+  onOpenTutorial,
   isMobile
 }) => {
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
@@ -591,6 +594,33 @@ export const HUD: React.FC<HUDProps> = ({
             title="Pause Simulation"
           >
             <Pause size={20} />
+          </button>
+        )}
+
+        {onOpenTutorial && (
+          <button
+            onClick={() => {
+              if (onPause) onPause();
+              onOpenTutorial();
+            }}
+            className="glass-panel"
+            style={{
+              width: 44,
+              height: 44,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 10,
+              border: '1.5px solid rgba(2, 132, 199, 0.45)',
+              background: 'rgba(255, 255, 255, 0.94)',
+              color: '#0284c7',
+              cursor: 'pointer',
+              boxShadow: '0 4px 15px rgba(2, 132, 199, 0.2)'
+            }}
+            aria-label="Gameplay Info & Instructions"
+            title="Gameplay Info & Instructions"
+          >
+            <HelpCircle size={20} />
           </button>
         )}
 

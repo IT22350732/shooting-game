@@ -1,11 +1,12 @@
 import React from 'react';
-import { Play, RotateCcw, Sliders, Home, Maximize, Minimize } from 'lucide-react';
+import { Play, RotateCcw, Sliders, Home, Maximize, Minimize, HelpCircle } from 'lucide-react';
 import { useFullscreen } from '../utils/fullscreen';
 
 interface PauseModalProps {
   onResume: () => void;
   onRestart: () => void;
   onOpenSettings: () => void;
+  onOpenTutorial?: () => void;
   onMainMenu: () => void;
 }
 
@@ -13,6 +14,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({
   onResume,
   onRestart,
   onOpenSettings,
+  onOpenTutorial,
   onMainMenu
 }) => {
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
@@ -75,6 +77,25 @@ export const PauseModal: React.FC<PauseModalProps> = ({
             <RotateCcw size={18} />
             RESTART MISSION
           </button>
+
+          {onOpenTutorial && (
+            <button
+              onClick={onOpenTutorial}
+              className="btn-cyber"
+              style={{
+                width: '100%',
+                padding: '12px 18px',
+                fontSize: '0.95rem',
+                background: 'rgba(2, 132, 199, 0.1)',
+                borderColor: 'rgba(2, 132, 199, 0.4)',
+                color: '#0284c7',
+                fontWeight: 800
+              }}
+            >
+              <HelpCircle size={18} color="#0284c7" />
+              GAMEPLAY INFO & CONTROLS
+            </button>
+          )}
 
           <button
             onClick={() => toggleFullscreen()}

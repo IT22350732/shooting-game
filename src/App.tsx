@@ -203,6 +203,7 @@ export const App: React.FC = () => {
             isAimingSniper={isAimingSniper}
             onSwitchWeapon={handleSwitchWeapon}
             onPause={() => engineRef.current?.pauseGame()}
+            onOpenTutorial={() => setShowTutorial(true)}
             isMobile={isMobileDevice}
           />
         </>
@@ -235,6 +236,7 @@ export const App: React.FC = () => {
             }
           }}
           onOpenSettings={() => setShowSettings(true)}
+          onOpenTutorial={() => setShowTutorial(true)}
           onMainMenu={() => {
             setGameState('MENU');
             engineRef.current?.showMenu();
