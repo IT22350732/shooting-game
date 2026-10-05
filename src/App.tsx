@@ -88,7 +88,7 @@ export const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
-  const [showAuth, setShowAuth] = useState(false);
+  const [showAuth, setShowAuth] = useState(true);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   useEffect(() => {
@@ -251,6 +251,7 @@ export const App: React.FC = () => {
           onOpenTutorial={() => setShowTutorial(true)}
           onMainMenu={() => {
             setGameState('MENU');
+            setShowAuth(true);
             engineRef.current?.showMenu();
           }}
         />
@@ -282,6 +283,7 @@ export const App: React.FC = () => {
           onOpenLeaderboard={() => setShowLeaderboard(true)}
           onMainMenu={() => {
             setGameState('MENU');
+            setShowAuth(true);
             engineRef.current?.showMenu();
           }}
         />
@@ -330,6 +332,7 @@ export const App: React.FC = () => {
       {/* AUTHENTICATION & OPERATIVE SWITCHER MODAL */}
       {showAuth && (
         <AuthModal
+          initialTab="login"
           onClose={() => setShowAuth(false)}
           onUserChanged={() => {
             refreshCoins();

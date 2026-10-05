@@ -22,10 +22,11 @@ import { soundManager } from '../audio/SoundManager';
 interface AuthModalProps {
   onClose: () => void;
   onUserChanged: (user: UserProfile) => void;
+  initialTab?: 'switch' | 'login' | 'register';
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged }) => {
-  const [activeTab, setActiveTab] = useState<'switch' | 'login' | 'register'>('switch');
+export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, initialTab = 'login' }) => {
+  const [activeTab, setActiveTab] = useState<'switch' | 'login' | 'register'>(initialTab);
   const [usersList, setUsersList] = useState<UserProfile[]>(() => userManager.getAllUsers());
   const currentUser = userManager.getCurrentUser();
 
@@ -552,6 +553,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged }) 
               <LogIn size={16} />
               AUTHENTICATE & LOG IN
             </button>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+              <button
+                type="button"
+                onClick={() => handleTabChange('register')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#0284c7',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                + NEW OPERATIVE REGISTRATION
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#64748b',
+                  fontFamily: 'var(--font-sub)',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                PLAY AS GUEST / SKIP
+              </button>
+            </div>
           </form>
         )}
 
@@ -686,6 +722,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged }) 
               <Sparkles size={16} />
               ENLIST & CREATE OPERATIVE
             </button>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+              <button
+                type="button"
+                onClick={() => handleTabChange('login')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#0284c7',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                ← ALREADY REGISTERED? LOG IN
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#64748b',
+                  fontFamily: 'var(--font-sub)',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                PLAY AS GUEST / SKIP
+              </button>
+            </div>
           </form>
         )}
       </div>
