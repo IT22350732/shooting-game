@@ -71,7 +71,8 @@ export class RemotePlayer {
     this.targetPitch = state.pitch;
 
     this.mesh = new THREE.Group();
-    this.mesh.position.copy(this.position);
+    const initialMeshY = Math.max(0, this.position.y - 1.75);
+    this.mesh.position.set(this.position.x, initialMeshY, this.position.z);
 
     // Build Tactical Procedural Human Model
     const colors = this.getTeamThemeColors(state.team);
@@ -466,7 +467,8 @@ export class RemotePlayer {
 
     // Position interpolation (Lerp towards target)
     this.position.lerp(this.targetPosition, Math.min(1.0, delta * 16));
-    this.mesh.position.copy(this.position);
+    const currentMeshY = Math.max(0, this.position.y - 1.75);
+    this.mesh.position.set(this.position.x, currentMeshY, this.position.z);
 
     // Yaw unwrapping & spherical interpolation
     let diffYaw = this.targetYaw - this.yaw;

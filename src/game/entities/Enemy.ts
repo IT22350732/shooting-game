@@ -192,6 +192,7 @@ export class Enemy {
     this.id = id;
     this.type = type;
     this.position.copy(spawnPos);
+    this.position.y = 0; // Firmly lock to ground level
     this.mesh = new THREE.Group();
     this.mesh.position.copy(this.position);
 
@@ -1018,6 +1019,7 @@ export class Enemy {
       }
 
       this.position.x = nextPos.x;
+      this.position.y = 0; // Firmly lock to ground level
       this.position.z = nextPos.z;
       this.mesh.position.copy(this.position);
     }

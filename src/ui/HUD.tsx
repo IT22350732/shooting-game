@@ -606,18 +606,18 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       ))}
 
-      {/* TOP-LEFT: TACTICAL CONTROLS (PAUSE, INFO & FULLSCREEN) */}
+      {/* TOP-LEFT: TACTICAL CONTROLS (PAUSE, FULLSCREEN & FPS) */}
       <div
         className="hud-top-actions"
         style={{
           position: 'absolute',
-          top: isMobileView ? 'calc(env(safe-area-inset-top, 0px) + 10px)' : 'calc(env(safe-area-inset-top, 0px) + 16px)',
+          top: isMobileView ? 'calc(env(safe-area-inset-top, 0px) + 8px)' : 'calc(env(safe-area-inset-top, 0px) + 16px)',
           left: isMobileView ? 'calc(env(safe-area-inset-left, 0px) + 12px)' : 'calc(env(safe-area-inset-left, 0px) + 16px)',
           zIndex: 90,
           pointerEvents: 'auto',
           display: 'flex',
           alignItems: 'center',
-          gap: isMobileView ? 5 : 8
+          gap: isMobileView ? 4 : 8
         }}
       >
         {onPause && (
@@ -630,28 +630,28 @@ export const HUD: React.FC<HUDProps> = ({
             }}
             className="glass-panel"
             style={{
-              width: isMobileView ? 32 : 44,
-              height: isMobileView ? 32 : 44,
+              width: isMobileView ? 30 : 44,
+              height: isMobileView ? 30 : 44,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: isMobileView ? 8 : 10,
-              border: '1.5px solid rgba(2, 132, 199, 0.45)',
-              background: 'rgba(255, 255, 255, 0.94)',
-              color: '#0284c7',
+              border: isMobileView ? '1.5px solid rgba(56, 189, 248, 0.45)' : '1.5px solid rgba(2, 132, 199, 0.45)',
+              background: isMobileView ? 'rgba(15, 23, 42, 0.88)' : 'rgba(255, 255, 255, 0.94)',
+              color: isMobileView ? '#38bdf8' : '#0284c7',
               cursor: 'pointer',
-              boxShadow: '0 4px 15px rgba(2, 132, 199, 0.2)',
+              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.4)',
               pointerEvents: 'auto',
               touchAction: 'manipulation'
             }}
             aria-label="Pause Combat Simulation"
             title="Pause Simulation"
           >
-            <Pause size={isMobileView ? 15 : 20} />
+            <Pause size={isMobileView ? 14 : 20} />
           </button>
         )}
 
-        {onOpenTutorial && (
+        {!isMobileView && onOpenTutorial && (
           <button
             onClick={() => {
               if (onPause) onPause();
@@ -665,12 +665,12 @@ export const HUD: React.FC<HUDProps> = ({
             }}
             className="glass-panel"
             style={{
-              width: isMobileView ? 32 : 44,
-              height: isMobileView ? 32 : 44,
+              width: 44,
+              height: 44,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: isMobileView ? 8 : 10,
+              borderRadius: 10,
               border: '1.5px solid rgba(2, 132, 199, 0.45)',
               background: 'rgba(255, 255, 255, 0.94)',
               color: '#0284c7',
@@ -682,7 +682,7 @@ export const HUD: React.FC<HUDProps> = ({
             aria-label="Gameplay Info & Instructions"
             title="Gameplay Info & Instructions"
           >
-            <HelpCircle size={isMobileView ? 15 : 20} />
+            <HelpCircle size={20} />
           </button>
         )}
 
@@ -695,24 +695,24 @@ export const HUD: React.FC<HUDProps> = ({
           }}
           className="glass-panel"
           style={{
-            width: isMobileView ? 32 : 44,
-            height: isMobileView ? 32 : 44,
+            width: isMobileView ? 30 : 44,
+            height: isMobileView ? 30 : 44,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             borderRadius: isMobileView ? 8 : 10,
-            border: isFullscreen ? '1.5px solid #0284c7' : '1.5px solid rgba(15, 23, 42, 0.15)',
-            background: isFullscreen ? 'rgba(2, 132, 199, 0.15)' : 'rgba(255, 255, 255, 0.94)',
-            color: isFullscreen ? '#0284c7' : '#0f172a',
+            border: isFullscreen ? '1.5px solid #0284c7' : isMobileView ? '1.5px solid rgba(56, 189, 248, 0.45)' : '1.5px solid rgba(15, 23, 42, 0.15)',
+            background: isFullscreen ? 'rgba(2, 132, 199, 0.15)' : isMobileView ? 'rgba(15, 23, 42, 0.88)' : 'rgba(255, 255, 255, 0.94)',
+            color: isFullscreen ? '#0284c7' : isMobileView ? '#38bdf8' : '#0f172a',
             cursor: 'pointer',
-            boxShadow: isFullscreen ? '0 0 14px rgba(2, 132, 199, 0.35)' : '0 4px 15px rgba(15, 23, 42, 0.1)',
+            boxShadow: isFullscreen ? '0 0 14px rgba(2, 132, 199, 0.35)' : '0 4px 15px rgba(0, 0, 0, 0.4)',
             pointerEvents: 'auto',
             touchAction: 'manipulation'
           }}
           aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
           title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
         >
-          {isFullscreen ? <Minimize size={isMobileView ? 15 : 20} /> : <Maximize size={isMobileView ? 15 : 20} />}
+          {isFullscreen ? <Minimize size={isMobileView ? 14 : 20} /> : <Maximize size={isMobileView ? 14 : 20} />}
         </button>
 
         {/* Real-time FPS & Graphics Quality Badge */}
@@ -721,24 +721,24 @@ export const HUD: React.FC<HUDProps> = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: isMobileView ? 3 : 7,
-            height: isMobileView ? 32 : 44,
+            gap: isMobileView ? 2.5 : 7,
+            height: isMobileView ? 30 : 44,
             padding: isMobileView ? '0 6px' : '0 12px',
             borderRadius: isMobileView ? 8 : 10,
-            border: '1.5px solid rgba(2, 132, 199, 0.35)',
-            background: 'rgba(255, 255, 255, 0.94)',
-            color: '#0f172a',
+            border: isMobileView ? '1.5px solid rgba(56, 189, 248, 0.4)' : '1.5px solid rgba(2, 132, 199, 0.35)',
+            background: isMobileView ? 'rgba(15, 23, 42, 0.88)' : 'rgba(255, 255, 255, 0.94)',
+            color: isMobileView ? '#f8fafc' : '#0f172a',
             fontFamily: 'var(--font-display)',
-            fontSize: isMobileView ? '0.68rem' : '0.78rem',
+            fontSize: isMobileView ? '0.66rem' : '0.78rem',
             fontWeight: 800,
-            boxShadow: '0 4px 15px rgba(2, 132, 199, 0.12)',
+            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.4)',
             userSelect: 'none'
           }}
           title="Live Frame Rate & Graphics Preset"
         >
-          <Activity size={isMobileView ? 12 : 15} color="#0284c7" />
-          <span style={{ color: (stats.fps || 60) >= 55 ? '#16a34a' : (stats.fps || 60) >= 28 ? '#0284c7' : '#dc2626' }}>
-            {stats.fps || 60} <span style={{ fontSize: isMobileView ? '0.55rem' : '0.62rem', color: '#64748b', fontWeight: 700 }}>FPS</span>
+          <Activity size={isMobileView ? 11 : 15} color="#38bdf8" />
+          <span style={{ color: (stats.fps || 60) >= 55 ? '#22c55e' : (stats.fps || 60) >= 28 ? '#38bdf8' : '#ef4444' }}>
+            {stats.fps || 60} <span style={{ fontSize: isMobileView ? '0.52rem' : '0.62rem', color: '#94a3b8', fontWeight: 700 }}>FPS</span>
           </span>
           {!isMobileView && (
             <>
@@ -1153,12 +1153,12 @@ export const HUD: React.FC<HUDProps> = ({
               <Heart size={15} fill="#e11d48" />
               <span className="stat-label">HEALTH</span>
             </div>
-            <span className="stat-val" style={{ fontFamily: "'Rajdhani', var(--font-sub), sans-serif", fontSize: '1.15rem', fontWeight: 900, color: '#0f172a' }}>
-              {stats.health} <span style={{ color: '#64748b', fontSize: '0.78rem' }}>/ {stats.maxHealth}</span>
+            <span className="stat-val" style={{ fontFamily: "'Rajdhani', var(--font-sub), sans-serif", fontSize: '1.15rem', fontWeight: 900, color: isMobileView ? '#ffffff' : '#0f172a' }}>
+              {stats.health} <span style={{ color: isMobileView ? '#94a3b8' : '#64748b', fontSize: '0.78rem' }}>/ {stats.maxHealth}</span>
             </span>
           </div>
 
-          <div style={{ width: '100%', height: 8, background: 'rgba(15, 23, 42, 0.08)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ width: '100%', height: 8, background: isMobileView ? 'rgba(0, 0, 0, 0.45)' : 'rgba(15, 23, 42, 0.08)', borderRadius: 4, overflow: 'hidden' }}>
             <div
               style={{
                 width: `${hpPercent}%`,
@@ -1178,12 +1178,12 @@ export const HUD: React.FC<HUDProps> = ({
               <Shield size={15} fill="#0284c7" />
               <span className="stat-label">ARMOR</span>
             </div>
-            <span className="stat-val" style={{ fontFamily: "'Rajdhani', var(--font-sub), sans-serif", fontSize: '1.15rem', fontWeight: 900, color: '#0f172a' }}>
-              {stats.armor} <span style={{ color: '#64748b', fontSize: '0.78rem' }}>/ {stats.maxArmor}</span>
+            <span className="stat-val" style={{ fontFamily: "'Rajdhani', var(--font-sub), sans-serif", fontSize: '1.15rem', fontWeight: 900, color: isMobileView ? '#ffffff' : '#0f172a' }}>
+              {stats.armor} <span style={{ color: isMobileView ? '#94a3b8' : '#64748b', fontSize: '0.78rem' }}>/ {stats.maxArmor}</span>
             </span>
           </div>
 
-          <div style={{ width: '100%', height: 7, background: 'rgba(15, 23, 42, 0.08)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ width: '100%', height: 7, background: isMobileView ? 'rgba(0, 0, 0, 0.45)' : 'rgba(15, 23, 42, 0.08)', borderRadius: 4, overflow: 'hidden' }}>
             <div
               style={{
                 width: `${armorPercent}%`,

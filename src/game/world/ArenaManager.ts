@@ -1297,18 +1297,18 @@ export class ArenaManager {
   }
 
   /**
-   * Tactical Enemy & Player Spawn Points situated safely on open streets, avenues, and clear ground
+   * Tactical Enemy & Player Spawn Points situated safely on open streets, avenues, and clear ground (Y = 0)
    */
   private addSpawnPoints() {
     this.spawnPoints = [
-      { position: new THREE.Vector3(0, 1.8, 18), name: 'South Boulevard' },
-      { position: new THREE.Vector3(0, 1.8, -18), name: 'North Boulevard' },
-      { position: new THREE.Vector3(-18, 1.8, 0), name: 'West Avenue' },
-      { position: new THREE.Vector3(18, 1.8, 0), name: 'East Avenue' },
-      { position: new THREE.Vector3(-3, 1.8, 10), name: 'South-West Street' },
-      { position: new THREE.Vector3(3, 1.8, -10), name: 'North-East Street' },
-      { position: new THREE.Vector3(3, 1.8, 10), name: 'South-East Street' },
-      { position: new THREE.Vector3(-3, 1.8, -10), name: 'North-West Street' }
+      { position: new THREE.Vector3(0, 0, 18), name: 'South Boulevard' },
+      { position: new THREE.Vector3(0, 0, -18), name: 'North Boulevard' },
+      { position: new THREE.Vector3(-18, 0, 0), name: 'West Avenue' },
+      { position: new THREE.Vector3(18, 0, 0), name: 'East Avenue' },
+      { position: new THREE.Vector3(-3, 0, 10), name: 'South-West Street' },
+      { position: new THREE.Vector3(3, 0, -10), name: 'North-East Street' },
+      { position: new THREE.Vector3(3, 0, 10), name: 'South-East Street' },
+      { position: new THREE.Vector3(-3, 0, -10), name: 'North-West Street' }
     ];
   }
 
@@ -1324,10 +1324,10 @@ export class ArenaManager {
       const choice = pool[Math.floor(Math.random() * pool.length)].position.clone();
       choice.x += (Math.random() - 0.5) * 2;
       choice.z += (Math.random() - 0.5) * 2;
-      choice.y = 1.8;
+      choice.y = 0; // Ground floor elevation
 
       testBox.setFromCenterAndSize(
-        new THREE.Vector3(choice.x, choice.y - 0.9, choice.z),
+        new THREE.Vector3(choice.x, 0.9, choice.z),
         boxSize
       );
 
@@ -1345,6 +1345,6 @@ export class ArenaManager {
     }
 
     // Guaranteed safe default on open asphalt street
-    return new THREE.Vector3(0, 1.8, 12);
+    return new THREE.Vector3(0, 0, 12);
   }
 }

@@ -56,7 +56,7 @@ export interface MobileLayoutConfig {
 
 const DEFAULT_PRESET_TWO_THUMB: Record<ControlId, ControlPos> = {
   joystick: { x: 0.12, y: 0.78, size: 130 },
-  sprintLock: { x: 0.12, y: 0.54, size: 42 },
+  sprintLock: { x: 0.12, y: 0.55, size: 40 },
   fire: { x: 0.88, y: 0.78, size: 120 },
   leftFire: { x: 0.10, y: 0.22, size: 68 },
   ads: { x: 0.75, y: 0.78, size: 56 },
@@ -73,7 +73,7 @@ const DEFAULT_PRESET_TWO_THUMB: Record<ControlId, ControlPos> = {
 
 const DEFAULT_PRESET_THREE_CLAW: Record<ControlId, ControlPos> = {
   joystick: { x: 0.12, y: 0.78, size: 130 },
-  sprintLock: { x: 0.12, y: 0.54, size: 42 },
+  sprintLock: { x: 0.12, y: 0.55, size: 40 },
   fire: { x: 0.88, y: 0.78, size: 116 },
   leftFire: { x: 0.10, y: 0.18, size: 76 },
   ads: { x: 0.75, y: 0.78, size: 56 },
@@ -90,7 +90,7 @@ const DEFAULT_PRESET_THREE_CLAW: Record<ControlId, ControlPos> = {
 
 const DEFAULT_PRESET_FOUR_CLAW: Record<ControlId, ControlPos> = {
   joystick: { x: 0.12, y: 0.78, size: 130 },
-  sprintLock: { x: 0.12, y: 0.54, size: 42 },
+  sprintLock: { x: 0.12, y: 0.55, size: 40 },
   fire: { x: 0.88, y: 0.78, size: 110 },
   leftFire: { x: 0.10, y: 0.18, size: 78 },
   ads: { x: 0.88, y: 0.18, size: 68 },

@@ -35,6 +35,7 @@ export class PracticeTarget {
   constructor(id: string, spawnPos: THREE.Vector3, isMoving: boolean = false) {
     this.id = id;
     this.position.copy(spawnPos);
+    this.position.y = 0; // Lock base plate firmly to ground floor
     this.initialX = spawnPos.x;
     this.isMoving = isMoving;
     this.moveSpeed = 1.2 + Math.random() * 1.5;
