@@ -606,6 +606,13 @@ canvas {
   flex-shrink: 0 !important;
 }
 
+.menu-top-info-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
 .menu-bottom-deploy {
   display: flex;
   align-items: center;
@@ -764,10 +771,28 @@ canvas {
     gap: 5px !important;
   }
 
-  .menu-top-actions .glass-panel,
-  .menu-top-actions button {
+  .menu-top-actions .glass-panel {
     height: 32px !important;
     padding: 0 8px !important;
+  }
+
+  .menu-top-actions button {
+    width: 32px !important;
+    height: 32px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+  }
+
+  .menu-top-actions button svg {
+    width: 15px !important;
+    height: 15px !important;
+  }
+
+  .menu-top-info-btn {
+    display: inline-flex !important;
   }
 
 
@@ -836,17 +861,17 @@ canvas {
 
   .menu-dock-btn,
   .menu-bottom-dock .btn-cyber {
-    padding: 5px 8px !important;
-    font-size: 0.70rem !important;
-    min-height: 34px !important;
-    gap: 4px !important;
+    padding: 5px 6px !important;
+    font-size: 0.68rem !important;
+    min-height: 32px !important;
+    gap: 3px !important;
     white-space: nowrap !important;
     flex-shrink: 0 !important;
   }
 
   .menu-dock-btn svg {
-    width: 14px !important;
-    height: 14px !important;
+    width: 13px !important;
+    height: 13px !important;
     flex-shrink: 0 !important;
   }
 
@@ -926,6 +951,29 @@ canvas {
     gap: 6px !important;
   }
 
+  .menu-top-actions {
+    gap: 6px !important;
+  }
+
+  .menu-top-actions button {
+    width: 38px !important;
+    height: 38px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+  }
+
+  .menu-top-actions button svg {
+    width: 17px !important;
+    height: 17px !important;
+  }
+
+  .menu-top-info-btn {
+    display: inline-flex !important;
+  }
+
 
   .menu-corner-selectors {
     display: none !important;
@@ -974,8 +1022,9 @@ canvas {
   .menu-bottom-dock .btn-cyber {
     width: 100% !important;
     justify-content: center !important;
-    padding: 10px 8px !important;
-    font-size: 0.82rem !important;
+    padding: 8px 6px !important;
+    font-size: 0.78rem !important;
+    min-height: 36px !important;
   }
 
   .menu-bottom-deploy {

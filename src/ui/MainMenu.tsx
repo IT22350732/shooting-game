@@ -274,9 +274,44 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             </div>
           </div>
 
+          {/* Info & Tutorial Button */}
+          <button
+            onClick={onOpenTutorial}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              onOpenTutorial();
+            }}
+            className="glass-panel menu-top-info-btn"
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1.5px solid rgba(2, 132, 199, 0.45)',
+              background: 'rgba(255, 255, 255, 0.94)',
+              color: '#0284c7',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(2, 132, 199, 0.2)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              pointerEvents: 'auto',
+              touchAction: 'manipulation'
+            }}
+            aria-label="Gameplay Info & Instructions"
+            title="Gameplay Info & Instructions"
+          >
+            <HelpCircle size={18} />
+          </button>
+
           {/* Settings Button */}
           <button
             onClick={onOpenSettings}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              onOpenSettings();
+            }}
             className="glass-panel"
             style={{
               width: 42,
@@ -291,7 +326,9 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               cursor: 'pointer',
               boxShadow: '0 4px 12px rgba(15, 23, 42, 0.1)',
               backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)'
+              WebkitBackdropFilter: 'blur(12px)',
+              pointerEvents: 'auto',
+              touchAction: 'manipulation'
             }}
             aria-label="Settings"
             title="Settings & System Configuration"
@@ -537,6 +574,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
           <button
             onClick={onOpenTutorial}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              onOpenTutorial();
+            }}
             className="btn-cyber menu-dock-btn"
             style={{
               background: 'rgba(255, 255, 255, 0.92)',
