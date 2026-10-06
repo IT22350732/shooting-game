@@ -192,9 +192,7 @@ export class Player {
     zoomLevel: number = 0
   ) {
     let adsDamp = 1.0;
-    if (zoomLevel >= 2) {
-      adsDamp = 0.32; // Precision Target Zoom
-    } else if (isAiming || zoomLevel === 1) {
+    if (isAiming || zoomLevel >= 1) {
       adsDamp = 0.52; // Tactical ADS Zoom
     }
     const sensFactor = 0.002 * (sensitivity / 50) * adsDamp;

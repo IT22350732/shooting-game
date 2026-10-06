@@ -134,7 +134,7 @@ export class GameEngine {
   private isRightMouseDown: boolean = false;
   private isQDown: boolean = false;
   private qPressedTime: number = 0;
-  private zoomLevel: number = 0; // 0 = normal, 1 = tactical ADS, 2 = precision target zoom
+  private zoomLevel: number = 0; // 0 = normal, 1 = tactical ADS zoom
   private baseFov: number = 75;
   private currentZoomFovKick: number = 0;
   private targetLock: TargetLockInfo | null = null;
@@ -672,14 +672,12 @@ export class GameEngine {
       );
     });
 
-    // Mouse wheel: zoom level control when aiming, or weapon cycle when not aiming
+    // Mouse wheel: zoom out when aiming, or weapon cycle when not aiming
     window.addEventListener('wheel', (e) => {
       if (this.state !== 'PLAYING' || !this.isPointerLocked) return;
       if (this.isZoomingActive()) {
-        if (e.deltaY < 0) {
-          this.setZoomLevel(2); // Zoom in closer
-        } else if (e.deltaY > 0) {
-          this.setZoomLevel(this.zoomLevel > 1 ? 1 : 0); // Zoom out
+        if (e.deltaY > 0) {
+          this.setZoomLevel(0); // Scroll down to unzoom
         }
         return;
       }
@@ -886,14 +884,12 @@ export class GameEngine {
 
   public setZoomLevel(level: number) {
     const prev = this.zoomLevel;
-    this.zoomLevel = Math.max(0, Math.min(2, level));
+    this.zoomLevel = Math.max(0, Math.min(1, level));
     if (this.currentWeapon) {
       this.currentWeapon.isAiming = this.isZoomingActive();
     }
     if (this.zoomLevel > 0 && prev === 0) {
-      soundManager.playZoomIn(this.zoomLevel >= 2);
-    } else if (this.zoomLevel >= 2 && prev < 2) {
-      soundManager.playZoomIn(true);
+      soundManager.playZoomIn(false);
     } else if (this.zoomLevel === 0 && prev > 0) {
       soundManager.playZoomOut();
       this.targetLock = null;
@@ -905,8 +901,6 @@ export class GameEngine {
   public cycleZoomLevel(): number {
     if (this.zoomLevel === 0) {
       this.setZoomLevel(1);
-    } else if (this.zoomLevel === 1) {
-      this.setZoomLevel(2);
     } else {
       this.setZoomLevel(0);
     }
@@ -919,19 +913,11 @@ export class GameEngine {
       return this.baseFov;
     }
     const weaponId = this.currentWeaponId;
-    if (this.zoomLevel >= 2) {
-      // Precision Scope Focus
-      if (weaponId === 'sniper') return 16;
-      if (weaponId === 'plasma_rifle') return 24;
-      if (weaponId === 'shotgun') return 36;
-      return 26;
-    } else {
-      // Tactical ADS Zoom
-      if (weaponId === 'sniper') return 30;
-      if (weaponId === 'plasma_rifle') return 40;
-      if (weaponId === 'shotgun') return 50;
-      return 42;
-    }
+    // Tactical ADS Zoom (First and only zoom option)
+    if (weaponId === 'sniper') return 30;
+    if (weaponId === 'plasma_rifle') return 40;
+    if (weaponId === 'shotgun') return 50;
+    return 42;
   }
 
   public getZoomMagnification(): number {
@@ -1011,7 +997,7 @@ export class GameEngine {
     }
 
     let bestCandidate: TargetCandidate | null = null;
-    const threshold = this.zoomLevel >= 2 ? 0.97 : 0.92;
+    const threshold = 0.92;
 
     for (const item of candidateList) {
       const toCenter = item.center.clone().sub(camPos);
@@ -1086,9 +1072,7 @@ export class GameEngine {
   public rotateCameraTouch(deltaX: number, deltaY: number, customSens?: { cameraSens?: number; adsSens?: number }) {
     const isAiming = this.isAimingActive();
     let adsDamp = 1.0;
-    if (this.zoomLevel >= 2) {
-      adsDamp = 0.32;
-    } else if (isAiming || this.zoomLevel === 1) {
+    if (isAiming || this.zoomLevel >= 1) {
       adsDamp = 0.52;
     }
 

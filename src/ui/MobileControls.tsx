@@ -228,7 +228,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
 
       // Update zoom level
       const z = engine.getZoomLevel();
-      setZoomLevelText(z >= 2 ? '2X' : z === 1 ? '1X' : 'ADS');
+      setZoomLevelText(z >= 1 ? 'ZOOM' : 'ADS');
     }, 150);
 
     return () => clearInterval(interval);

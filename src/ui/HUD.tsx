@@ -368,8 +368,8 @@ export const HUD: React.FC<HUDProps> = ({
             zIndex: 10
           }}
         >
-          {/* Sniper or Precision Focus (Stage 2) High Magnification Scope */}
-          {(isAimingSniper || (stats.zoomLevel || 1) >= 2) ? (
+          {/* Sniper High Magnification Scope or Tactical ADS Reticle */}
+          {isAimingSniper ? (
             <div
               style={{
                 position: 'absolute',
@@ -503,7 +503,7 @@ export const HUD: React.FC<HUDProps> = ({
                   letterSpacing: '0.08em'
                 }}
               >
-                ZOOM {stats.zoomMagnification || ((stats.zoomLevel || 1) >= 2 ? 4.5 : 1.8)}X
+                ZOOM {stats.zoomMagnification || (isAimingSniper ? 2.5 : 1.8)}X
               </span>
               <span
                 style={{
@@ -513,7 +513,7 @@ export const HUD: React.FC<HUDProps> = ({
                   textTransform: 'uppercase'
                 }}
               >
-                {(stats.zoomLevel || 1) >= 2 ? 'PRECISION SCOPE FOCUS' : 'TACTICAL ADS ACQUISITION'}
+                {isAimingSniper ? 'PRECISION SNIPER OPTIC' : 'TACTICAL ADS ACQUISITION'}
               </span>
             </div>
 
@@ -526,7 +526,7 @@ export const HUD: React.FC<HUDProps> = ({
                 letterSpacing: '0.05em'
               }}
             >
-              {isMobile ? 'TAP ADS TO CYCLE ZOOM' : 'Q: CYCLE ZOOM / HOLD  •  SHIFT: SPRINT  •  CLICK: FIRE'}
+              {isMobile ? 'TAP ADS TO TOGGLE ZOOM' : 'RIGHT-CLICK / Q: TOGGLE ZOOM  •  SHIFT: SPRINT  •  CLICK: FIRE'}
             </span>
           </div>
         </div>
