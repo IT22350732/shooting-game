@@ -587,25 +587,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
         {/* --- TAB 2: LOGIN --- */}
         {activeTab === 'login' && (
           <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 12px',
-                borderRadius: 8,
-                background: 'rgba(2, 132, 199, 0.08)',
-                border: '1px solid rgba(2, 132, 199, 0.2)',
-                fontSize: '0.72rem',
-                color: '#0369a1',
-                fontFamily: 'var(--font-sub)',
-                fontWeight: 600
-              }}
-            >
-              <Cloud size={16} style={{ flexShrink: 0 }} />
-              <span>Cross-device enabled: Use your codename & PIN from your MacBook or other device to log in directly here.</span>
-            </div>
-
             <div>
               <label style={{ display: 'block', fontSize: '0.72rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#334155', marginBottom: 5 }}>
                 OPERATIVE CODENAME / USERNAME
