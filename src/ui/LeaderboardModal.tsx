@@ -327,7 +327,12 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose, onO
 
         {/* --- SCROLLABLE RANKINGS TABLE --- */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 310, overflowY: 'auto' }}>
-          {filteredLeaderboard.map((entry) => {
+          {filteredLeaderboard.length === 0 ? (
+            <div style={{ padding: '36px 16px', textAlign: 'center', color: '#64748b', fontSize: '0.85rem', fontFamily: 'var(--font-sub)', fontWeight: 600 }}>
+              No operative records found.
+            </div>
+          ) : (
+            filteredLeaderboard.map((entry) => {
             const isUser = entry.isCurrentUser;
             const badge = getRankBadge(entry.rank);
             const avatar = AVATAR_OPTIONS.find(a => a.id === entry.avatarId) || AVATAR_OPTIONS[0];
@@ -397,11 +402,6 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose, onO
                           YOU
                         </span>
                       )}
-                      {entry.isRival && (
-                        <span style={{ background: 'rgba(15, 23, 42, 0.08)', color: '#64748b', fontSize: '0.55rem', fontWeight: 800, padding: '1px 5px', borderRadius: 4 }}>
-                          RIVAL
-                        </span>
-                      )}
                     </div>
                     <span style={{ fontSize: '0.66rem', color: '#64748b', fontFamily: 'var(--font-sub)', fontWeight: 600 }}>
                       {entry.tier.replace('_', ' ')} • WAVE {entry.highestWave} • {entry.totalKills} KILLS
@@ -432,7 +432,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose, onO
                 </div>
               </div>
             );
-          })}
+          }))}
         </div>
 
         {/* Current User Fixed Status Footer */}

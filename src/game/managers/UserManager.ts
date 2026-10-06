@@ -5,121 +5,7 @@ import { cloudAuthService } from './CloudAuthService';
 const USERS_STORAGE_KEY = 'CYBERSTRIKE_USERS_V2';
 const ACTIVE_USER_ID_KEY = 'CYBERSTRIKE_ACTIVE_USER_ID_V2';
 
-// Built-in rival operatives to create a competitive, active leaderboard ladder
-const INITIAL_RIVALS: Omit<LeaderboardEntry, 'rank' | 'isCurrentUser'>[] = [
-  {
-    userId: 'rival_1',
-    username: 'Kaelen_Apex',
-    avatarId: 'soldier_apex',
-    avatarColor: '#0284c7',
-    tier: 'APEX_LEGEND',
-    highScore: 24850,
-    highestWave: 18,
-    totalKills: 184,
-    headshots: 62,
-    gamesPlayed: 54,
-    isRival: true,
-    dateAchieved: Date.now() - 86400000 * 2
-  },
-  {
-    userId: 'rival_2',
-    username: 'Viper-9',
-    avatarId: 'ghost_infiltrator',
-    avatarColor: '#10b981',
-    tier: 'APEX_LEGEND',
-    highScore: 19420,
-    highestWave: 15,
-    totalKills: 142,
-    headshots: 48,
-    gamesPlayed: 41,
-    isRival: true,
-    dateAchieved: Date.now() - 86400000 * 3
-  },
-  {
-    userId: 'rival_3',
-    username: 'ShadowSniper',
-    avatarId: 'valkyrie_sniper',
-    avatarColor: '#f59e0b',
-    tier: 'ELITE',
-    highScore: 14800,
-    highestWave: 12,
-    totalKills: 108,
-    headshots: 55,
-    gamesPlayed: 32,
-    isRival: true,
-    dateAchieved: Date.now() - 86400000 * 5
-  },
-  {
-    userId: 'rival_4',
-    username: 'CyberValkyrie',
-    avatarId: 'neon_recon',
-    avatarColor: '#8b5cf6',
-    tier: 'ELITE',
-    highScore: 11250,
-    highestWave: 10,
-    totalKills: 89,
-    headshots: 31,
-    gamesPlayed: 25,
-    isRival: true,
-    dateAchieved: Date.now() - 86400000 * 6
-  },
-  {
-    userId: 'rival_5',
-    username: 'TitanPulse',
-    avatarId: 'cyber_titan',
-    avatarColor: '#e11d48',
-    tier: 'VETERAN',
-    highScore: 8400,
-    highestWave: 8,
-    totalKills: 67,
-    headshots: 18,
-    gamesPlayed: 19,
-    isRival: true,
-    dateAchieved: Date.now() - 86400000 * 8
-  },
-  {
-    userId: 'rival_6',
-    username: 'NeoGhost',
-    avatarId: 'ghost_infiltrator',
-    avatarColor: '#10b981',
-    tier: 'VETERAN',
-    highScore: 5900,
-    highestWave: 6,
-    totalKills: 45,
-    headshots: 14,
-    gamesPlayed: 15,
-    isRival: true,
-    dateAchieved: Date.now() - 86400000 * 10
-  },
-  {
-    userId: 'rival_7',
-    username: 'ReconEcho',
-    avatarId: 'neon_recon',
-    avatarColor: '#8b5cf6',
-    tier: 'SPECIALIST',
-    highScore: 3250,
-    highestWave: 4,
-    totalKills: 28,
-    headshots: 9,
-    gamesPlayed: 11,
-    isRival: true,
-    dateAchieved: Date.now() - 86400000 * 12
-  },
-  {
-    userId: 'rival_8',
-    username: 'NovaRookie',
-    avatarId: 'soldier_apex',
-    avatarColor: '#0284c7',
-    tier: 'OPERATIVE',
-    highScore: 1450,
-    highestWave: 2,
-    totalKills: 14,
-    headshots: 4,
-    gamesPlayed: 6,
-    isRival: true,
-    dateAchieved: Date.now() - 86400000 * 15
-  }
-];
+
 
 // Simple, fast client-side string hasher
 function hashString(input: string): string {
@@ -136,7 +22,7 @@ export class UserManager {
   private users: Map<string, UserProfile> = new Map();
   private currentUserId: string = '';
 
-  private cloudRivals: Omit<LeaderboardEntry, 'rank' | 'isCurrentUser'>[] = [];
+  private cloudEntries: Omit<LeaderboardEntry, 'rank' | 'isCurrentUser'>[] = [];
 
   constructor() {
     this.loadFromStorage();
@@ -148,7 +34,7 @@ export class UserManager {
     try {
       const entries = await cloudAuthService.getCloudLeaderboard();
       if (entries && entries.length > 0) {
-        this.cloudRivals = entries;
+        this.cloudEntries = entries;
       }
     } catch {}
   }
@@ -593,7 +479,7 @@ export class UserManager {
     }
 
     // 2. Add real players from cloud sync
-    for (const cr of this.cloudRivals) {
+    for (const cr of this.cloudEntries) {
       if (!seenUsernames.has(cr.username.toLowerCase())) {
         entries.push({
           ...cr,
@@ -602,18 +488,6 @@ export class UserManager {
           isRival: false
         });
         seenUsernames.add(cr.username.toLowerCase());
-      }
-    }
-
-    // 3. Add rivals (skipping any if user or cloud took same username)
-    for (const r of INITIAL_RIVALS) {
-      if (!seenUsernames.has(r.username.toLowerCase())) {
-        entries.push({
-          ...r,
-          rank: 0,
-          isCurrentUser: false
-        });
-        seenUsernames.add(r.username.toLowerCase());
       }
     }
 
