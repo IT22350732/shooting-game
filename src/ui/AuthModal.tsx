@@ -569,7 +569,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
                 <User size={16} color="#64748b" style={{ position: 'absolute', left: 12 }} />
                 <input
                   type="text"
-                  placeholder="Enter codename (e.g. ApexSoldier)"
+                  placeholder="Enter your username (e.g. ApexSoldier)"
                   value={loginUsername}
                   onChange={(e) => setLoginUsername(e.target.value)}
                   style={{
@@ -595,7 +595,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
                 <KeyRound size={16} color="#64748b" style={{ position: 'absolute', left: 12 }} />
                 <input
                   type={showLoginPassword ? 'text' : 'password'}
-                  placeholder="Enter your secret PIN"
+                  placeholder="Enter your password"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   style={{
@@ -701,7 +701,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
                 <User size={16} color="#64748b" style={{ position: 'absolute', left: 12 }} />
                 <input
                   type="text"
-                  placeholder="e.g. CyberVanguard"
+                  placeholder="Enter your username (e.g. CyberVanguard)"
                   maxLength={16}
                   value={regUsername}
                   onChange={(e) => setRegUsername(e.target.value)}
@@ -728,7 +728,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
                 <KeyRound size={16} color="#64748b" style={{ position: 'absolute', left: 12 }} />
                 <input
                   type={showRegPassword ? 'text' : 'password'}
-                  placeholder="Set an operative PIN or password"
+                  placeholder="Enter your password"
                   value={regPassword}
                   onChange={(e) => setRegPassword(e.target.value)}
                   style={{
@@ -824,12 +824,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
               {isSubmitting ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  REGISTERING ON CLOUD NETWORK...
+                  SAVING & SYNCING USER...
                 </>
               ) : (
                 <>
                   <Sparkles size={16} />
-                  ENLIST & SYNC NEW OPERATIVE
+                  SAVE & SYNC NEW USER
                 </>
               )}
             </button>
