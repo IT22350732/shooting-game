@@ -16,7 +16,10 @@ import {
   RefreshCw,
   Zap,
   Globe,
-  User
+  User,
+  Mic,
+  MicOff,
+  Settings
 } from 'lucide-react';
 import {
   multiplayerService
@@ -32,6 +35,8 @@ import { ArenaId } from '../../types/game';
 import { userManager } from '../../game/managers/UserManager';
 import { AVATAR_OPTIONS } from '../../types/user';
 import { soundManager } from '../../audio/SoundManager';
+import { voiceChatService, VoiceChatServiceState } from '../../game/multiplayer/VoiceChatService';
+import { VoiceSettingsModal } from './VoiceSettingsModal';
 
 interface MultiplayerModalProps {
   isOpen: boolean;
@@ -64,9 +69,19 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [isJoining, setIsJoining] = useState(false);
 
+  // Voice Chat State
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
+  const [voiceState, setVoiceState] = useState<VoiceChatServiceState>(() => voiceChatService.getState());
+
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const currentUser = userManager.getCurrentUser();
   const currentAvatar = AVATAR_OPTIONS.find((a) => a.id === currentUser?.avatarId) || AVATAR_OPTIONS[0];
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const unsub = voiceChatService.subscribe((s) => setVoiceState(s));
+    return () => unsub();
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -714,6 +729,72 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                   </div>
                 </div>
 
+                {/* Tactical Voice Comms Strip */}
+                <div
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: 8,
+                    background: 'rgba(2, 132, 199, 0.08)',
+                    border: '1px solid rgba(2, 132, 199, 0.25)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: voiceState.status === 'connected' ? '#22c55e' : '#64748b',
+                        boxShadow: voiceState.status === 'connected' ? '0 0 8px #22c55e' : 'none'
+                      }}
+                    />
+                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Radio size={14} color="#38bdf8" />
+                      {room.mode === 'multiplayer_tdm'
+                        ? `TACTICAL VOICE: ${multiplayerService.localPlayer?.team === 'alpha' ? 'TEAM ALPHA' : 'TEAM BRAVO'}`
+                        : 'TACTICAL VOICE COMMS'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <button
+                      onClick={() => {
+                        soundManager.playClick();
+                        if (voiceState.status !== 'connected') {
+                          voiceChatService.initMicrophone();
+                        } else {
+                          voiceChatService.toggleMute();
+                        }
+                      }}
+                      className="btn-cyber"
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        color: voiceState.isMuted ? '#ef4444' : '#22c55e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6
+                      }}
+                    >
+                      {voiceState.isMuted ? <MicOff size={14} /> : <Mic size={14} />}
+                      <span>{voiceState.status !== 'connected' ? 'ENABLE VOICE' : voiceState.isMuted ? 'MIC MUTED' : 'MIC ACTIVE'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => { soundManager.playClick(); setShowVoiceSettings(true); }}
+                      className="btn-cyber"
+                      style={{ padding: '4px 8px', color: '#94a3b8' }}
+                      title="Voice Settings & Squad Mixer"
+                    >
+                      <Settings size={14} />
+                    </button>
+                  </div>
+                </div>
+
                 {/* Team Roster */}
                 {room.mode === 'multiplayer_tdm' ? (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -742,30 +823,40 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {players.filter((p) => p.team === 'alpha').map((p) => (
-                          <div
-                            key={p.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              padding: '6px 10px',
-                              background: p.id === multiplayerService.localPlayerId ? 'rgba(2, 132, 199, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                              borderRadius: 6,
-                              fontSize: '0.8rem',
-                              fontWeight: 800
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              {p.isHost && <Crown size={14} color="#facc15" />}
-                              <span>{p.name} {p.id === multiplayerService.localPlayerId && '(YOU)'}</span>
+                        {players.filter((p) => p.team === 'alpha').map((p) => {
+                          const isPeerSpeaking = (p.id === multiplayerService.localPlayerId && voiceState.isLocalSpeaking) ||
+                            Boolean(voiceState.peers.find((vp) => vp.playerId === p.id)?.isSpeaking || p.voiceState?.isSpeaking);
+                          return (
+                            <div
+                              key={p.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '6px 10px',
+                                background: p.id === multiplayerService.localPlayerId ? 'rgba(2, 132, 199, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                                border: isPeerSpeaking ? '1px solid #22c55e' : '1px solid transparent',
+                                borderRadius: 6,
+                                fontSize: '0.8rem',
+                                fontWeight: 800
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                {p.isHost && <Crown size={14} color="#facc15" />}
+                                <span>{p.name} {p.id === multiplayerService.localPlayerId && '(YOU)'}</span>
+                                {isPeerSpeaking && (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: '#22c55e', fontSize: '0.65rem' }}>
+                                    <Mic size={12} />
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <CheckCircle2 size={14} color={p.isReady ? '#22c55e' : '#64748b'} />
+                                <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{p.ping}ms</span>
+                              </div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <CheckCircle2 size={14} color={p.isReady ? '#22c55e' : '#64748b'} />
-                              <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{p.ping}ms</span>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -794,30 +885,40 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {players.filter((p) => p.team === 'bravo').map((p) => (
-                          <div
-                            key={p.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              padding: '6px 10px',
-                              background: p.id === multiplayerService.localPlayerId ? 'rgba(239, 68, 68, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                              borderRadius: 6,
-                              fontSize: '0.8rem',
-                              fontWeight: 800
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              {p.isHost && <Crown size={14} color="#facc15" />}
-                              <span>{p.name} {p.id === multiplayerService.localPlayerId && '(YOU)'}</span>
+                        {players.filter((p) => p.team === 'bravo').map((p) => {
+                          const isPeerSpeaking = (p.id === multiplayerService.localPlayerId && voiceState.isLocalSpeaking) ||
+                            Boolean(voiceState.peers.find((vp) => vp.playerId === p.id)?.isSpeaking || p.voiceState?.isSpeaking);
+                          return (
+                            <div
+                              key={p.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '6px 10px',
+                                background: p.id === multiplayerService.localPlayerId ? 'rgba(239, 68, 68, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                                border: isPeerSpeaking ? '1px solid #22c55e' : '1px solid transparent',
+                                borderRadius: 6,
+                                fontSize: '0.8rem',
+                                fontWeight: 800
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                {p.isHost && <Crown size={14} color="#facc15" />}
+                                <span>{p.name} {p.id === multiplayerService.localPlayerId && '(YOU)'}</span>
+                                {isPeerSpeaking && (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: '#22c55e', fontSize: '0.65rem' }}>
+                                    <Mic size={12} />
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <CheckCircle2 size={14} color={p.isReady ? '#22c55e' : '#64748b'} />
+                                <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{p.ping}ms</span>
+                              </div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <CheckCircle2 size={14} color={p.isReady ? '#22c55e' : '#64748b'} />
-                              <span style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{p.ping}ms</span>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -1017,6 +1118,12 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Voice Settings & Squad Audio Mixer Modal */}
+      <VoiceSettingsModal
+        isOpen={showVoiceSettings}
+        onClose={() => setShowVoiceSettings(false)}
+      />
     </div>
   );
 };

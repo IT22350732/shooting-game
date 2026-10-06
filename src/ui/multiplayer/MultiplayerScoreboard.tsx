@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NetworkPlayerState, RoomConfig } from '../../game/multiplayer/MultiplayerTypes';
-import { Trophy, Shield, Skull, Wifi, Award, User } from 'lucide-react';
+import { Trophy, Shield, Skull, Wifi, Award, User, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { AVATAR_OPTIONS } from '../../types/user';
+import { voiceChatService, VoiceChatServiceState } from '../../game/multiplayer/VoiceChatService';
 
 interface MultiplayerScoreboardProps {
   room: RoomConfig | null;
@@ -16,6 +17,13 @@ export const MultiplayerScoreboard: React.FC<MultiplayerScoreboardProps> = ({
   localPlayerId,
   onClose
 }) => {
+  const [voiceState, setVoiceState] = useState<VoiceChatServiceState>(() => voiceChatService.getState());
+
+  useEffect(() => {
+    const unsub = voiceChatService.subscribe((s) => setVoiceState(s));
+    return () => unsub();
+  }, []);
+
   if (!room) return null;
 
   const isTDM = room.mode === 'multiplayer_tdm';
@@ -28,11 +36,16 @@ export const MultiplayerScoreboard: React.FC<MultiplayerScoreboardProps> = ({
     const avatar = AVATAR_OPTIONS.find((a) => a.id === p.avatarId) || AVATAR_OPTIONS[0];
     const kd = p.deaths === 0 ? p.kills.toFixed(1) : (p.kills / p.deaths).toFixed(2);
 
+    const voicePeer = voiceState.peers.find((vp) => vp.playerId === p.id);
+    const isSpeaking = isMe ? voiceState.isLocalSpeaking : (voicePeer?.isSpeaking || p.voiceState?.isSpeaking || false);
+    const isMuted = isMe ? voiceState.isMuted : (p.voiceState?.isMuted || false);
+    const isLocallyMuted = voicePeer?.isLocallyMuted || false;
+
     return (
       <tr
         key={p.id}
         style={{
-          background: isMe ? 'rgba(2, 132, 199, 0.22)' : 'rgba(255, 255, 255, 0.03)',
+          background: isMe ? 'rgba(2, 132, 199, 0.22)' : isSpeaking ? 'rgba(34, 197, 94, 0.12)' : 'rgba(255, 255, 255, 0.03)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           fontWeight: isMe ? 900 : 700
         }}
@@ -52,14 +65,47 @@ export const MultiplayerScoreboard: React.FC<MultiplayerScoreboardProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#ffffff'
+              color: '#ffffff',
+              boxShadow: isSpeaking ? '0 0 10px #22c55e' : 'none'
             }}
           >
             <User size={14} strokeWidth={2.5} />
           </div>
-          <span style={{ color: isMe ? '#38bdf8' : '#f8fafc', letterSpacing: 0.5 }}>
+          <span style={{ color: isMe ? '#38bdf8' : isSpeaking ? '#4ade80' : '#f8fafc', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
             {p.name} {isMe && '(YOU)'}
+            {isMuted && <MicOff size={12} color="#ef4444" />}
+            {isSpeaking && (
+              <span style={{ fontSize: '0.62rem', background: '#22c55e', color: '#000', padding: '1px 5px', borderRadius: 4, fontWeight: 900 }}>
+                MIC
+              </span>
+            )}
           </span>
+
+          {/* Voice indicator / Mute Button */}
+          {!isMe && voicePeer && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                voiceChatService.toggleMutePeer(p.id);
+              }}
+              style={{
+                marginLeft: 'auto',
+                background: isLocallyMuted ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.08)',
+                border: 'none',
+                borderRadius: 4,
+                padding: '3px 6px',
+                color: isLocallyMuted ? '#ef4444' : isSpeaking ? '#22c55e' : '#94a3b8',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                fontSize: '0.68rem'
+              }}
+              title={isLocallyMuted ? 'Unmute Player' : 'Mute Player'}
+            >
+              {isLocallyMuted ? <VolumeX size={12} /> : isSpeaking ? <Mic size={12} /> : <Volume2 size={12} />}
+            </button>
+          )}
         </td>
         <td style={{ padding: '8px 12px', textAlign: 'center', color: '#f8fafc' }}>{p.score}</td>
         <td style={{ padding: '8px 12px', textAlign: 'center', color: '#22c55e' }}>{p.kills}</td>

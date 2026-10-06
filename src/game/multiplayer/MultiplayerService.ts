@@ -37,6 +37,7 @@ export interface MultiplayerServiceEvents {
   onMatchEnd?: (winnerTeam: TeamId | 'draw', mvpId: string, finalScores: Record<string, { kills: number; deaths: number; score: number }>) => void;
   onConnectionStatusChange?: (status: 'disconnected' | 'connecting' | 'connected' | 'error', message?: string) => void;
   onPingUpdate?: (ping: number) => void;
+  onVoiceStateUpdate?: (playerId: string, voiceState: { isSpeaking: boolean; isMuted: boolean; isDeafened: boolean }) => void;
 }
 
 const PEER_PREFIX = 'shoot-arena-v1-';
@@ -53,6 +54,7 @@ export class MultiplayerService {
   public players: Map<string, NetworkPlayerState> = new Map();
 
   private events: MultiplayerServiceEvents = {};
+  private listeners: Set<Partial<MultiplayerServiceEvents>> = new Set();
   private pingInterval: number | null = null;
   private matchTimerInterval: number | null = null;
   private isDestroyed: boolean = false;
@@ -62,8 +64,33 @@ export class MultiplayerService {
     this.localPlayerId = 'p_' + Math.random().toString(36).substring(2, 9);
   }
 
+  public getPeer(): Peer | null {
+    return this.peer;
+  }
+
   public setEvents(events: MultiplayerServiceEvents) {
     this.events = { ...this.events, ...events };
+  }
+
+  public addListener(listener: Partial<MultiplayerServiceEvents>): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private trigger<K extends keyof MultiplayerServiceEvents>(
+    key: K,
+    ...args: Parameters<NonNullable<MultiplayerServiceEvents[K]>>
+  ) {
+    const fn = this.events[key] as any;
+    if (typeof fn === 'function') {
+      try { fn(...args); } catch (e) { console.warn(`Error in event ${key}:`, e); }
+    }
+    this.listeners.forEach((listener) => {
+      const listenerFn = listener[key] as any;
+      if (typeof listenerFn === 'function') {
+        try { listenerFn(...args); } catch (e) { console.warn(`Error in listener ${key}:`, e); }
+      }
+    });
   }
 
   public createInitialLocalPlayer(team: TeamId = 'alpha'): NetworkPlayerState {
@@ -73,6 +100,7 @@ export class MultiplayerService {
 
     this.localPlayer = {
       id: this.localPlayerId,
+      peerId: this.isHost ? (this.room ? PEER_PREFIX + this.room.roomId : undefined) : PEER_PREFIX + this.localPlayerId,
       name,
       avatarId,
       team,
@@ -134,6 +162,7 @@ export class MultiplayerService {
     };
 
     this.createInitialLocalPlayer(mode === 'multiplayer_ffa' ? 'ffa' : 'alpha');
+    this.localPlayer!.peerId = peerId;
     this.players.clear();
     this.players.set(this.localPlayerId, this.localPlayer!);
 
@@ -142,13 +171,13 @@ export class MultiplayerService {
 
     try {
       await this.initPeer(peerId);
-      this.events.onConnectionStatusChange?.('connected', `Lobby Ready: ${code}`);
+      this.trigger('onConnectionStatusChange', 'connected', `Lobby Ready: ${code}`);
       this.notifyRoomUpdate();
       this.startPingLoop();
       return code;
     } catch (err) {
       console.warn('PeerJS server connection warning, using BroadcastChannel & local signaling', err);
-      this.events.onConnectionStatusChange?.('connected', `Lobby Ready (Local): ${code}`);
+      this.trigger('onConnectionStatusChange', 'connected', `Lobby Ready (Local): ${code}`);
       this.notifyRoomUpdate();
       this.startPingLoop();
       return code;
@@ -160,9 +189,11 @@ export class MultiplayerService {
     this.leaveRoom();
     this.isHost = false;
     const cleanCode = roomCode.trim().toUpperCase();
-    this.events.onConnectionStatusChange?.('connecting', `Locating lobby ${cleanCode}...`);
+    this.trigger('onConnectionStatusChange', 'connecting', `Locating lobby ${cleanCode}...`);
 
     this.createInitialLocalPlayer('bravo');
+    const clientPeerId = PEER_PREFIX + this.localPlayerId;
+    this.localPlayer!.peerId = clientPeerId;
     this.initBroadcastChannel(cleanCode);
 
     const targetPeerId = PEER_PREFIX + cleanCode;
@@ -341,14 +372,14 @@ export class MultiplayerService {
         if (this.localPlayer && this.players.has(this.localPlayerId)) {
           this.localPlayer = this.players.get(this.localPlayerId)!;
         }
-        this.events.onRoomUpdate?.(this.room, Array.from(this.players.values()));
+        this.trigger('onRoomUpdate', this.room, Array.from(this.players.values()));
         break;
       }
 
       case 'PLAYER_JOIN': {
         if (packet.player.id === this.localPlayerId) return;
         this.players.set(packet.player.id, packet.player);
-        this.events.onPlayerJoined?.(packet.player);
+        this.trigger('onPlayerJoined', packet.player);
 
         if (this.isHost && this.room) {
           // If in TDM, auto-balance team
@@ -368,7 +399,7 @@ export class MultiplayerService {
       case 'PLAYER_LEAVE': {
         if (packet.playerId === this.localPlayerId) return;
         this.players.delete(packet.playerId);
-        this.events.onPlayerLeft?.(packet.playerId);
+        this.trigger('onPlayerLeft', packet.playerId);
         if (this.isHost) {
           this.broadcastRoomState();
         }
@@ -405,7 +436,7 @@ export class MultiplayerService {
       }
 
       case 'MATCH_START_COUNTDOWN': {
-        this.events.onMatchCountdown?.(packet.countdown);
+        this.trigger('onMatchCountdown', packet.countdown);
         break;
       }
 
@@ -415,27 +446,28 @@ export class MultiplayerService {
           this.room.arena = packet.arena;
           this.room.mode = packet.mode;
         }
-        this.events.onMatchStart?.(packet.arena, packet.mode);
+        this.trigger('onMatchStart', packet.arena, packet.mode);
         break;
       }
 
       case 'PLAYER_SNAPSHOT': {
         if (packet.state.id === this.localPlayerId) return;
         this.players.set(packet.state.id, packet.state);
-        this.events.onRemotePlayerSnapshot?.(packet.state);
+        this.trigger('onRemotePlayerSnapshot', packet.state);
         break;
       }
 
       case 'PLAYER_SHOOT': {
         if (packet.shooterId === this.localPlayerId) return;
-        this.events.onRemotePlayerShoot?.(packet.shooterId, packet.origin, packet.direction, packet.weaponId);
+        this.trigger('onRemotePlayerShoot', packet.shooterId, packet.origin, packet.direction, packet.weaponId);
         break;
       }
 
       case 'PLAYER_HIT': {
         // Did we get hit?
         if (packet.targetId === this.localPlayerId && this.localPlayer) {
-          this.events.onRemotePlayerHit?.(
+          this.trigger(
+            'onRemotePlayerHit',
             packet.shooterId,
             packet.targetId,
             packet.damage,
@@ -472,7 +504,7 @@ export class MultiplayerService {
           timestamp: Date.now()
         };
 
-        this.events.onKillFeed?.(killEntry);
+        this.trigger('onKillFeed', killEntry);
 
         // Host updates scores and checks win conditions
         if (this.isHost && this.room) {
@@ -493,12 +525,29 @@ export class MultiplayerService {
           player.armor = player.maxArmor;
           player.position = packet.position;
         }
-        this.events.onRemotePlayerRespawn?.(packet.playerId, packet.position);
+        this.trigger('onRemotePlayerRespawn', packet.playerId, packet.position);
+        break;
+      }
+
+      case 'VOICE_STATE': {
+        const player = this.players.get(packet.playerId);
+        if (player) {
+          player.voiceState = {
+            isSpeaking: packet.isSpeaking,
+            isMuted: packet.isMuted,
+            isDeafened: packet.isDeafened
+          };
+        }
+        this.trigger('onVoiceStateUpdate', packet.playerId, {
+          isSpeaking: packet.isSpeaking,
+          isMuted: packet.isMuted,
+          isDeafened: packet.isDeafened
+        });
         break;
       }
 
       case 'CHAT': {
-        this.events.onChatMessage?.(packet.message);
+        this.trigger('onChatMessage', packet.message);
         break;
       }
 
@@ -520,7 +569,7 @@ export class MultiplayerService {
           if (this.localPlayer) {
             this.localPlayer.ping = this.currentPing;
           }
-          this.events.onPingUpdate?.(this.currentPing);
+          this.trigger('onPingUpdate', this.currentPing);
         }
         break;
       }
@@ -529,7 +578,7 @@ export class MultiplayerService {
         if (this.room) {
           this.room.status = 'ended';
         }
-        this.events.onMatchEnd?.(packet.winnerTeam, packet.mvpPlayerId, packet.finalScores);
+        this.trigger('onMatchEnd', packet.winnerTeam, packet.mvpPlayerId, packet.finalScores);
         break;
       }
     }
@@ -707,7 +756,7 @@ export class MultiplayerService {
     };
 
     this.sendPacket(endPacket);
-    this.events.onMatchEnd?.(winnerTeam, mvpId, finalScores);
+    this.trigger('onMatchEnd', winnerTeam, mvpId, finalScores);
   }
 
   private broadcastRoomState() {
@@ -721,7 +770,7 @@ export class MultiplayerService {
 
   private notifyRoomUpdate() {
     if (this.room) {
-      this.events.onRoomUpdate?.(this.room, Array.from(this.players.values()));
+      this.trigger('onRoomUpdate', this.room, Array.from(this.players.values()));
     }
   }
 
@@ -807,7 +856,19 @@ export class MultiplayerService {
       type: 'CHAT',
       message: msg
     });
-    this.events.onChatMessage?.(msg);
+    this.trigger('onChatMessage', msg);
+  }
+
+  public broadcastVoiceState(isSpeaking: boolean, isMuted: boolean, isDeafened: boolean) {
+    if (!this.localPlayer) return;
+    this.localPlayer.voiceState = { isSpeaking, isMuted, isDeafened };
+    this.sendPacket({
+      type: 'VOICE_STATE',
+      playerId: this.localPlayerId,
+      isSpeaking,
+      isMuted,
+      isDeafened
+    });
   }
 
   // --- PING LOOP ---
@@ -856,7 +917,7 @@ export class MultiplayerService {
     this.isHost = false;
     this.room = null;
     this.players.clear();
-    this.events.onConnectionStatusChange?.('disconnected');
+    this.trigger('onConnectionStatusChange', 'disconnected');
   }
 
   public destroy() {

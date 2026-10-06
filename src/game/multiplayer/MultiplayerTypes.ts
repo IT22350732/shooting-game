@@ -12,6 +12,7 @@ export interface NetworkVector3 {
 
 export interface NetworkPlayerState {
   id: string;
+  peerId?: string;
   name: string;
   avatarId: string;
   team: TeamId;
@@ -27,6 +28,11 @@ export interface NetworkPlayerState {
   maxArmor: number;
   activeWeapon: WeaponId;
   isAlive: boolean;
+  voiceState?: {
+    isSpeaking: boolean;
+    isMuted: boolean;
+    isDeafened: boolean;
+  };
   // Position & Movement
   position: NetworkVector3;
   yaw: number;
@@ -118,6 +124,13 @@ export type NetworkPacket =
   | { type: 'CHAT'; message: ChatMessage }
   | { type: 'PING'; timestamp: number; senderId: string }
   | { type: 'PONG'; originalTimestamp: number; senderId: string }
+  | {
+      type: 'VOICE_STATE';
+      playerId: string;
+      isSpeaking: boolean;
+      isMuted: boolean;
+      isDeafened: boolean;
+    }
   | {
       type: 'MATCH_END';
       winnerTeam: TeamId | 'draw';

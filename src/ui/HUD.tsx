@@ -32,6 +32,7 @@ import { BASE_WEAPONS } from '../game/entities/Weapon';
 import { useFullscreen } from '../utils/fullscreen';
 import { KillFeed } from './multiplayer/KillFeed';
 import { MultiplayerScoreboard } from './multiplayer/MultiplayerScoreboard';
+import { SquadVoiceHUD } from './multiplayer/SquadVoiceHUD';
 import { multiplayerService } from '../game/multiplayer/MultiplayerService';
 import { KillFeedEntry } from '../game/multiplayer/MultiplayerTypes';
 
@@ -1310,6 +1311,11 @@ export const HUD: React.FC<HUDProps> = ({
           </div>
         </div>
       </div>
+
+      {/* MULTIPLAYER LIVE SQUAD VOICE CHAT HUD */}
+      {stats.isMultiplayer && (
+        <SquadVoiceHUD isMobile={isMobileView} />
+      )}
 
       {/* MULTIPLAYER KILL FEED */}
       <KillFeed entries={killFeed} />

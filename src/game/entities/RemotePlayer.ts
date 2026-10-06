@@ -36,6 +36,7 @@ export class RemotePlayer {
   public armor: number = 50;
   public maxArmor: number = 50;
   public isAlive: boolean = true;
+  public isSpeaking: boolean = false;
   public activeWeapon: WeaponId = 'assault_rifle';
   public stance: 'stand' | 'crouch' | 'prone' = 'stand';
   public isShieldActive: boolean = false;
@@ -349,7 +350,18 @@ export class RemotePlayer {
       this.switchWeapon(state.activeWeapon);
     }
 
+    if (state.voiceState && state.voiceState.isSpeaking !== this.isSpeaking) {
+      this.isSpeaking = state.voiceState.isSpeaking;
+    }
+
     this.updateOverheadUI();
+  }
+
+  public setSpeaking(speaking: boolean) {
+    if (this.isSpeaking !== speaking) {
+      this.isSpeaking = speaking;
+      this.updateOverheadUI();
+    }
   }
 
   public switchWeapon(weaponId: WeaponId) {
@@ -514,16 +526,17 @@ export class RemotePlayer {
     ctx.roundRect(10, 5, w - 20, h - 10, 10);
     ctx.fill();
 
-    // Border
-    ctx.strokeStyle = colors.nameColor;
-    ctx.lineWidth = 2;
+    // Border (glowing green when speaking in live voice chat)
+    ctx.strokeStyle = this.isSpeaking ? '#22c55e' : colors.nameColor;
+    ctx.lineWidth = this.isSpeaking ? 3.5 : 2;
     ctx.stroke();
 
     // Player Name
     ctx.font = 'bold 22px Rajdhani, sans-serif';
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = this.isSpeaking ? '#4ade80' : '#ffffff';
     ctx.textAlign = 'center';
-    ctx.fillText(`${this.name}`, w / 2, 32);
+    const nameText = this.isSpeaking ? `[MIC] ${this.name}` : `${this.name}`;
+    ctx.fillText(nameText, w / 2, 32);
 
     // Team Badge / Role Tag
     ctx.font = 'bold 12px Rajdhani, sans-serif';

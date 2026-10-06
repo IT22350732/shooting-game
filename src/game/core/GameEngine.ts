@@ -31,6 +31,7 @@ import { saveManager } from '../managers/SaveManager';
 import { soundManager } from '../../audio/SoundManager';
 import { MISSIONS, getMissionById } from '../missions/MissionData';
 import { multiplayerService } from '../multiplayer/MultiplayerService';
+import { voiceChatService } from '../multiplayer/VoiceChatService';
 import { RemotePlayer } from '../entities/RemotePlayer';
 import { NetworkPlayerState } from '../multiplayer/MultiplayerTypes';
 
@@ -288,6 +289,7 @@ export class GameEngine {
     this.camera.rotation.order = 'YXZ';
 
     this.syncMultiplayerPeers();
+    voiceChatService.syncTeamConnections();
 
     if (!this.isTouchDevice) {
       this.requestPointerLock();
@@ -370,6 +372,12 @@ export class GameEngine {
           remote.respawn(position);
         }
       },
+      onVoiceStateUpdate: (playerId, vState) => {
+        const remote = this.remotePlayers.get(playerId);
+        if (remote) {
+          remote.setSpeaking(vState.isSpeaking);
+        }
+      },
       onMatchStart: (arena, mode) => {
         this.startMultiplayerGame(arena, mode);
       },
@@ -385,6 +393,16 @@ export class GameEngine {
         }
         this.callbacks.onGameStateChange(this.state);
       }
+    });
+
+    voiceChatService.subscribe((vState) => {
+      if (!this.isMultiplayer) return;
+      vState.peers.forEach((peer) => {
+        const remote = this.remotePlayers.get(peer.playerId);
+        if (remote) {
+          remote.setSpeaking(peer.isSpeaking);
+        }
+      });
     });
   }
 

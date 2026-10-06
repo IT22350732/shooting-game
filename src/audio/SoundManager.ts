@@ -199,6 +199,48 @@ export class SoundManager {
     this.playClick(this.ctx.currentTime, 2400, 0.25);
   }
 
+  // --- TACTICAL RADIO CHIRP FOR VOICE CHAT ---
+  public playRadioBeep(type: 'on' | 'off') {
+    this.initContext();
+    if (!this.ctx || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+
+    if (type === 'on') {
+      // Tactical walkie-talkie key-in chirp (ascending dual tone + squelch)
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1180, now);
+      osc.frequency.setValueAtTime(1860, now + 0.022);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.setValueAtTime(0.22, now + 0.022);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.06);
+
+      this.playNoiseBurst(0.035, 3200, 1200, 0.09);
+    } else {
+      // Tactical roger beep (release squelch + clean tone)
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1750, now);
+      osc.frequency.exponentialRampToValueAtTime(1420, now + 0.045);
+      gain.gain.setValueAtTime(0.16, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.048);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.05);
+
+      this.playNoiseBurst(0.025, 2400, 800, 0.08);
+    }
+  }
+
   public playClick(time?: number, freq: number = 1400, vol: number = 0.2) {
     this.initContext();
     if (!this.ctx || !this.sfxGain) return;
