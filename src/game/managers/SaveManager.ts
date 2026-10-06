@@ -40,7 +40,9 @@ const DEFAULT_SAVE: SaveData = {
     screenShake: true,
     crosshairStyle: 'classic',
     fov: 75,
-    difficulty: 'medium'
+    difficulty: 'medium',
+    graphicsQuality: 'high',
+    frameRateLimit: 60
   },
   stats: {
     totalKills: 0,

@@ -14,7 +14,8 @@ import {
   Target,
   HelpCircle,
   Wifi,
-  Skull
+  Skull,
+  Activity
 } from 'lucide-react';
 import {
   WeaponId,
@@ -69,6 +70,8 @@ interface HUDProps {
     multiplayerBravoScore?: number;
     multiplayerScoreLimit?: number;
     multiplayerPing?: number;
+    fps?: number;
+    graphicsQuality?: string;
   };
   hitMarker: HitMarkerInfo | null;
   damageNumbers: FloatingDamageNumber[];
@@ -710,6 +713,50 @@ export const HUD: React.FC<HUDProps> = ({
         >
           {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
         </button>
+
+        {/* Real-time FPS & Graphics Quality Badge */}
+        <div
+          className="glass-panel"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 7,
+            height: 44,
+            padding: '0 12px',
+            borderRadius: 10,
+            border: '1.5px solid rgba(2, 132, 199, 0.35)',
+            background: 'rgba(255, 255, 255, 0.94)',
+            color: '#0f172a',
+            fontFamily: 'var(--font-display)',
+            fontSize: '0.78rem',
+            fontWeight: 800,
+            boxShadow: '0 4px 15px rgba(2, 132, 199, 0.12)',
+            userSelect: 'none'
+          }}
+          title="Live Frame Rate & Graphics Preset"
+        >
+          <Activity size={15} color="#0284c7" />
+          <span style={{ color: (stats.fps || 60) >= 55 ? '#16a34a' : (stats.fps || 60) >= 28 ? '#0284c7' : '#dc2626' }}>
+            {stats.fps || 60} <span style={{ fontSize: '0.66rem', color: '#64748b', fontWeight: 700 }}>FPS</span>
+          </span>
+          <span style={{ color: 'rgba(15, 23, 42, 0.2)' }}>•</span>
+          <span
+            style={{
+              fontSize: '0.68rem',
+              color:
+                (settings?.graphicsQuality || 'high') === 'normal'
+                  ? '#16a34a'
+                  : (settings?.graphicsQuality || 'high') === 'ultra'
+                  ? '#8b5cf6'
+                  : '#0284c7',
+              textTransform: 'uppercase',
+              fontWeight: 900,
+              letterSpacing: '0.04em'
+            }}
+          >
+            {settings?.graphicsQuality || 'HIGH'}
+          </span>
+        </div>
       </div>
 
       {/* TOP BAR: WAVE / BOSS HEALTH */}

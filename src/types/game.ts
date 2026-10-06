@@ -118,6 +118,8 @@ export interface UpgradeLevels {
 }
 
 export type DifficultyLevel = 'easy' | 'medium' | 'hard';
+export type GraphicsQuality = 'normal' | 'high' | 'ultra';
+export type FrameRateLimit = 30 | 60 | 120;
 
 export interface GameSettings {
   mouseSensitivity: number;
@@ -128,6 +130,8 @@ export interface GameSettings {
   crosshairStyle: 'classic' | 'dot' | 'circle' | 'tech';
   fov: number;
   difficulty?: DifficultyLevel;
+  graphicsQuality?: GraphicsQuality;
+  frameRateLimit?: FrameRateLimit;
 }
 
 export interface GameStatsRecord {

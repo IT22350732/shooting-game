@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GraphicsQuality } from '../../types/game';
 
 interface Particle {
   position: THREE.Vector3;
@@ -46,6 +47,9 @@ export class ParticleSystem {
   private ambientPositions: Float32Array | null = null;
   private ambientVelocity: THREE.Vector3 = new THREE.Vector3();
   private ambientCount = 350;
+  private currentArenaType: string = 'suburban';
+  private quality: GraphicsQuality = 'high';
+  private qualityScale: number = 0.75;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -93,7 +97,26 @@ export class ParticleSystem {
     this.scene.add(this.tracerLines);
   }
 
+  public setQuality(quality: GraphicsQuality) {
+    this.quality = quality;
+    if (quality === 'normal') {
+      this.qualityScale = 0.35;
+      this.ambientCount = 80;
+    } else if (quality === 'high') {
+      this.qualityScale = 0.75;
+      this.ambientCount = 200;
+    } else {
+      this.qualityScale = 1.0;
+      this.ambientCount = 350;
+    }
+
+    if (this.ambientMesh) {
+      this.initAtmosphere(this.currentArenaType);
+    }
+  }
+
   public initAtmosphere(arenaType: string) {
+    this.currentArenaType = arenaType;
     if (this.ambientMesh) {
       this.scene.remove(this.ambientMesh);
       this.ambientMesh.geometry.dispose();
@@ -149,8 +172,9 @@ export class ParticleSystem {
   }
 
   public spawnSparks(origin: THREE.Vector3, normal: THREE.Vector3, colorHex: number = 0xf59e0b, count: number = 14) {
+    const effectiveCount = Math.max(3, Math.round(count * this.qualityScale));
     const col = new THREE.Color(colorHex);
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < effectiveCount; i++) {
       if (this.particleList.length >= this.maxParticles) break;
       const spread = new THREE.Vector3(
         normal.x + (Math.random() - 0.5) * 1.5,
@@ -172,8 +196,9 @@ export class ParticleSystem {
   }
 
   public spawnExplosion(center: THREE.Vector3, count: number = 60) {
+    const effectiveCount = Math.max(12, Math.round(count * this.qualityScale));
     const fireColors = [0xef4444, 0xf97316, 0xfacc15, 0xffffff];
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < effectiveCount; i++) {
       if (this.particleList.length >= this.maxParticles) break;
       const dir = new THREE.Vector3(
         (Math.random() - 0.5) * 2,

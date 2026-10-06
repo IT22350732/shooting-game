@@ -1,6 +1,6 @@
 import React from 'react';
-import { X, Sliders, Maximize, Minimize, Shield, Flame, Skull, Gauge } from 'lucide-react';
-import { GameSettings, DifficultyLevel } from '../types/game';
+import { X, Sliders, Maximize, Minimize, Shield, Flame, Skull, Gauge, Monitor, Zap, Sparkles, Cpu, Activity } from 'lucide-react';
+import { GameSettings, DifficultyLevel, GraphicsQuality, FrameRateLimit } from '../types/game';
 import { saveManager } from '../game/managers/SaveManager';
 import { soundManager } from '../audio/SoundManager';
 import { useFullscreen } from '../utils/fullscreen';
@@ -76,6 +76,253 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onSetting
 
         {/* Settings Body */}
         <div style={{ padding: 'clamp(14px, 3vw, 24px)', display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          {/* Graphics Quality (Lag & Performance) */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.06), rgba(15, 23, 42, 0.02))',
+              padding: '14px 16px',
+              borderRadius: 12,
+              border: '1.5px solid rgba(2, 132, 199, 0.22)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Monitor size={18} color="#0284c7" />
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', color: '#0f172a', fontWeight: 800 }}>
+                  GRAPHICS QUALITY
+                </span>
+              </div>
+              <span
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.74rem',
+                  fontWeight: 900,
+                  letterSpacing: '0.06em',
+                  padding: '3px 10px',
+                  borderRadius: 6,
+                  background:
+                    (settings.graphicsQuality || 'high') === 'normal'
+                      ? 'rgba(16, 185, 129, 0.15)'
+                      : (settings.graphicsQuality || 'high') === 'ultra'
+                      ? 'rgba(139, 92, 246, 0.15)'
+                      : 'rgba(2, 132, 199, 0.15)',
+                  color:
+                    (settings.graphicsQuality || 'high') === 'normal'
+                      ? '#10b981'
+                      : (settings.graphicsQuality || 'high') === 'ultra'
+                      ? '#8b5cf6'
+                      : '#0284c7',
+                  border: `1px solid ${
+                    (settings.graphicsQuality || 'high') === 'normal'
+                      ? 'rgba(16, 185, 129, 0.3)'
+                      : (settings.graphicsQuality || 'high') === 'ultra'
+                      ? 'rgba(139, 92, 246, 0.3)'
+                      : 'rgba(2, 132, 199, 0.3)'
+                  }`,
+                  textTransform: 'uppercase'
+                }}
+              >
+                {settings.graphicsQuality || 'high'}
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {[
+                {
+                  id: 'normal' as GraphicsQuality,
+                  label: 'NORMAL',
+                  tag: 'ANTI-LAG',
+                  desc: '1.0x DPR, Shadows Off, Optimized FX. Recommended for lagging PCs',
+                  icon: <Zap size={16} />,
+                  color: '#10b981',
+                  activeBg: 'rgba(16, 185, 129, 0.14)',
+                  activeBorder: '#10b981'
+                },
+                {
+                  id: 'high' as GraphicsQuality,
+                  label: 'HIGH',
+                  tag: 'BALANCED',
+                  desc: '1.25x DPR, PCF Shadows, Dynamic Effects. Balanced gameplay',
+                  icon: <Sparkles size={16} />,
+                  color: '#0284c7',
+                  activeBg: 'rgba(2, 132, 199, 0.14)',
+                  activeBorder: '#0284c7'
+                },
+                {
+                  id: 'ultra' as GraphicsQuality,
+                  label: 'ULTRA',
+                  tag: 'MAX FIDELITY',
+                  desc: '2.0x Retina DPR, Soft Shadows, Full Weather. Requires strong GPU',
+                  icon: <Cpu size={16} />,
+                  color: '#8b5cf6',
+                  activeBg: 'rgba(139, 92, 246, 0.14)',
+                  activeBorder: '#8b5cf6'
+                }
+              ].map((opt) => {
+                const isSelected = (settings.graphicsQuality || 'high') === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => updateSetting('graphicsQuality', opt.id)}
+                    className="glass-panel"
+                    style={{
+                      padding: '10px 8px',
+                      border: isSelected ? `2px solid ${opt.activeBorder}` : '1px solid rgba(15, 23, 42, 0.12)',
+                      background: isSelected ? opt.activeBg : 'rgba(255, 255, 255, 0.85)',
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease',
+                      boxShadow: isSelected ? `0 4px 12px ${opt.activeBg}` : 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: isSelected ? opt.color : '#64748b' }}>
+                      {opt.icon}
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 900 }}>
+                        {opt.label}
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.62rem',
+                        fontWeight: 800,
+                        padding: '1px 6px',
+                        borderRadius: 4,
+                        background: isSelected ? 'rgba(0, 0, 0, 0.06)' : 'rgba(15, 23, 42, 0.05)',
+                        color: isSelected ? opt.color : '#64748b',
+                        letterSpacing: '0.04em'
+                      }}
+                    >
+                      {opt.tag}
+                    </span>
+                    <span style={{ fontSize: '0.65rem', color: isSelected ? '#334155' : '#94a3b8', textAlign: 'center', lineHeight: 1.25, fontWeight: 500 }}>
+                      {opt.desc}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Frame Rate Cap (FPS) */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.06), rgba(15, 23, 42, 0.02))',
+              padding: '14px 16px',
+              borderRadius: 12,
+              border: '1.5px solid rgba(2, 132, 199, 0.22)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Activity size={18} color="#0284c7" />
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', color: '#0f172a', fontWeight: 800 }}>
+                  FRAME RATE (FPS)
+                </span>
+              </div>
+              <span
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.74rem',
+                  fontWeight: 900,
+                  letterSpacing: '0.06em',
+                  padding: '3px 10px',
+                  borderRadius: 6,
+                  background: 'rgba(2, 132, 199, 0.15)',
+                  color: '#0284c7',
+                  border: '1px solid rgba(2, 132, 199, 0.3)'
+                }}
+              >
+                {settings.frameRateLimit || 60} FPS
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {[
+                {
+                  id: 30 as FrameRateLimit,
+                  label: '30 FPS',
+                  tag: 'BATTERY / LOW SPEC',
+                  desc: 'Reduced GPU heating & stable pacing on weaker hardware',
+                  color: '#10b981',
+                  activeBg: 'rgba(16, 185, 129, 0.14)',
+                  activeBorder: '#10b981'
+                },
+                {
+                  id: 60 as FrameRateLimit,
+                  label: '60 FPS',
+                  tag: 'RECOMMENDED',
+                  desc: 'Standard smooth esports target for balanced play',
+                  color: '#0284c7',
+                  activeBg: 'rgba(2, 132, 199, 0.14)',
+                  activeBorder: '#0284c7'
+                },
+                {
+                  id: 120 as FrameRateLimit,
+                  label: '120 FPS',
+                  tag: 'HIGH REFRESH',
+                  desc: 'Ultra fluid response for 120Hz/144Hz+ monitors',
+                  color: '#8b5cf6',
+                  activeBg: 'rgba(139, 92, 246, 0.14)',
+                  activeBorder: '#8b5cf6'
+                }
+              ].map((fpsOpt) => {
+                const isSelected = (settings.frameRateLimit || 60) === fpsOpt.id;
+                return (
+                  <button
+                    key={fpsOpt.id}
+                    type="button"
+                    onClick={() => updateSetting('frameRateLimit', fpsOpt.id)}
+                    className="glass-panel"
+                    style={{
+                      padding: '10px 8px',
+                      border: isSelected ? `2px solid ${fpsOpt.activeBorder}` : '1px solid rgba(15, 23, 42, 0.12)',
+                      background: isSelected ? fpsOpt.activeBg : 'rgba(255, 255, 255, 0.85)',
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 4,
+                      transition: 'all 0.15s ease',
+                      boxShadow: isSelected ? `0 4px 12px ${fpsOpt.activeBg}` : 'none'
+                    }}
+                  >
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.86rem', fontWeight: 900, color: isSelected ? fpsOpt.color : '#0f172a' }}>
+                      {fpsOpt.label}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '0.62rem',
+                        fontWeight: 800,
+                        padding: '1px 6px',
+                        borderRadius: 4,
+                        background: isSelected ? 'rgba(0, 0, 0, 0.06)' : 'rgba(15, 23, 42, 0.05)',
+                        color: isSelected ? fpsOpt.color : '#64748b',
+                        letterSpacing: '0.04em'
+                      }}
+                    >
+                      {fpsOpt.tag}
+                    </span>
+                    <span style={{ fontSize: '0.65rem', color: isSelected ? '#334155' : '#94a3b8', textAlign: 'center', lineHeight: 1.25, fontWeight: 500 }}>
+                      {fpsOpt.desc}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Game Hardness Level (Difficulty) */}
           <div
             style={{

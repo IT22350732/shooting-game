@@ -13,7 +13,9 @@ import {
   TargetLockInfo,
   MissionConfig,
   MissionId,
-  MissionObjectiveInfo
+  MissionObjectiveInfo,
+  GraphicsQuality,
+  FrameRateLimit
 } from '../../types/game';
 import { Player } from '../entities/Player';
 import { WeaponInstance, BASE_WEAPONS } from '../entities/Weapon';
@@ -66,6 +68,8 @@ export interface HUDStats {
   multiplayerBravoScore?: number;
   multiplayerScoreLimit?: number;
   multiplayerPing?: number;
+  fps?: number;
+  graphicsQuality?: GraphicsQuality;
 }
 
 export interface GameEngineCallbacks {
@@ -152,6 +156,14 @@ export class GameEngine {
   public missionBarrelsDestroyed: number = 0;
   public missionCompletedTriggered: boolean = false;
 
+  // Graphics & Performance
+  public graphicsQuality: GraphicsQuality = 'high';
+  public frameRateLimit: FrameRateLimit = 60;
+  private lastFrameTimestamp: number = 0;
+  private calculatedFps: number = 60;
+  private fpsFrameCount: number = 0;
+  private lastFpsSampleTime: number = 0;
+
   // Raycaster
   private raycaster = new THREE.Raycaster();
 
@@ -164,6 +176,8 @@ export class GameEngine {
     this.baseFov = savedData.settings.fov || 75;
     this.mouseSensitivity = savedData.settings.mouseSensitivity;
     this.touchSensitivity = savedData.settings.touchSensitivity ?? 50;
+    this.graphicsQuality = savedData.settings.graphicsQuality || 'high';
+    this.frameRateLimit = savedData.settings.frameRateLimit || 60;
     this.isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.matchMedia('(pointer: coarse)').matches;
 
     // Three.js Scene & Camera
@@ -174,16 +188,15 @@ export class GameEngine {
     // WebGL Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.1;
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.applyGraphicsQuality(this.graphicsQuality, false);
     this.container.appendChild(this.renderer.domElement);
 
     this.player = new Player(this.camera, savedData.upgrades);
     this.arena = new ArenaManager(this.scene);
     this.particles = new ParticleSystem(this.scene);
+    this.particles.setQuality(this.graphicsQuality);
     this.waveManager = new WaveManager(this.mode);
 
     // Load default arena immediately so it's visible in 3D in the menu!
@@ -727,12 +740,89 @@ export class GameEngine {
     }
   }
 
+  public getTargetPixelRatio(): number {
+    if (this.graphicsQuality === 'normal') {
+      return Math.min(window.devicePixelRatio, 1.0);
+    } else if (this.graphicsQuality === 'high') {
+      return Math.min(window.devicePixelRatio, 1.25);
+    } else {
+      return Math.min(window.devicePixelRatio, 2.0);
+    }
+  }
+
+  public applyGraphicsQuality(quality: GraphicsQuality, updateMaterials: boolean = true) {
+    this.graphicsQuality = quality;
+    const dpr = this.getTargetPixelRatio();
+    this.renderer.setPixelRatio(dpr);
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+
+    if (quality === 'normal') {
+      this.renderer.shadowMap.enabled = false;
+    } else if (quality === 'high') {
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    } else {
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
+    this.renderer.shadowMap.needsUpdate = true;
+
+    if (this.particles) {
+      this.particles.setQuality(quality);
+    }
+
+    if (this.scene) {
+      this.scene.traverse((obj) => {
+        if (obj instanceof THREE.DirectionalLight) {
+          if (quality === 'normal') {
+            obj.castShadow = false;
+          } else if (quality === 'high') {
+            obj.castShadow = true;
+            obj.shadow.mapSize.set(1024, 1024);
+            if (obj.shadow.map) {
+              obj.shadow.map.dispose();
+              obj.shadow.map = null as any;
+            }
+          } else {
+            obj.castShadow = true;
+            obj.shadow.mapSize.set(2048, 2048);
+            if (obj.shadow.map) {
+              obj.shadow.map.dispose();
+              obj.shadow.map = null as any;
+            }
+          }
+        }
+        if (updateMaterials && (obj as THREE.Mesh).isMesh) {
+          const mesh = obj as THREE.Mesh;
+          if (mesh.material) {
+            if (Array.isArray(mesh.material)) {
+              mesh.material.forEach((m) => (m.needsUpdate = true));
+            } else {
+              mesh.material.needsUpdate = true;
+            }
+          }
+        }
+      });
+    }
+  }
+
   public updateSettings(settings: Partial<GameSettings> | number) {
     if (typeof settings === 'number') {
       this.mouseSensitivity = settings;
     } else {
       if (settings.mouseSensitivity !== undefined) this.mouseSensitivity = settings.mouseSensitivity;
       if (settings.touchSensitivity !== undefined) this.touchSensitivity = settings.touchSensitivity;
+      if (settings.fov !== undefined && settings.fov !== this.baseFov) {
+        this.baseFov = settings.fov;
+        this.camera.fov = settings.fov;
+        this.camera.updateProjectionMatrix();
+      }
+      if (settings.frameRateLimit !== undefined) {
+        this.frameRateLimit = settings.frameRateLimit;
+      }
+      if (settings.graphicsQuality !== undefined && settings.graphicsQuality !== this.graphicsQuality) {
+        this.applyGraphicsQuality(settings.graphicsQuality, true);
+      }
     }
   }
 
@@ -1620,8 +1710,33 @@ export class GameEngine {
   // --- GAME LOOP ---
   private startLoop() {
     this.isRunning = true;
-    const animate = () => {
+    this.lastFrameTimestamp = performance.now();
+    this.lastFpsSampleTime = performance.now();
+    this.fpsFrameCount = 0;
+
+    const animate = (timestamp: number) => {
       this.animFrameId = requestAnimationFrame(animate);
+
+      const targetFps = this.frameRateLimit || 60;
+      const frameInterval = 1000 / targetFps;
+
+      const elapsed = timestamp - this.lastFrameTimestamp;
+      // Allow a 1.5ms margin for browser display vsync fluctuations
+      if (elapsed < frameInterval - 1.5) {
+        return;
+      }
+
+      this.lastFrameTimestamp = timestamp - (elapsed % frameInterval);
+
+      // Smooth FPS calculation
+      this.fpsFrameCount++;
+      const timeSinceSample = timestamp - this.lastFpsSampleTime;
+      if (timeSinceSample >= 500) {
+        this.calculatedFps = Math.max(1, Math.round((this.fpsFrameCount * 1000) / timeSinceSample));
+        this.fpsFrameCount = 0;
+        this.lastFpsSampleTime = timestamp;
+      }
+
       const delta = Math.min(0.1, this.clock.getDelta());
       const now = performance.now() * 0.001;
 
@@ -1633,7 +1748,8 @@ export class GameEngine {
 
       this.renderer.render(this.scene, this.camera);
     };
-    animate();
+
+    this.animFrameId = requestAnimationFrame(animate);
   }
 
   private updateGame(delta: number, now: number) {
@@ -2023,7 +2139,9 @@ export class GameEngine {
       multiplayerAlphaScore: multiplayerService.room?.teamAlphaScore,
       multiplayerBravoScore: multiplayerService.room?.teamBravoScore,
       multiplayerScoreLimit: multiplayerService.room?.scoreLimit,
-      multiplayerPing: multiplayerService.currentPing
+      multiplayerPing: multiplayerService.currentPing,
+      fps: this.calculatedFps,
+      graphicsQuality: this.graphicsQuality
     });
 
     const activeList: PowerupActiveState[] = [];
@@ -2054,7 +2172,7 @@ export class GameEngine {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(this.getTargetPixelRatio());
   };
 
   public destroy() {
