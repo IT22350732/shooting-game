@@ -2,17 +2,14 @@ import React, { useState, useEffect } from 'react';
 import {
   Mic,
   MicOff,
-  Volume2,
   VolumeX,
   Radio,
-  Settings,
   Shield,
   Users
 } from 'lucide-react';
 import { voiceChatService, VoiceChatServiceState, VoicePeerInfo } from '../../game/multiplayer/VoiceChatService';
 import { multiplayerService } from '../../game/multiplayer/MultiplayerService';
 import { soundManager } from '../../audio/SoundManager';
-import { VoiceSettingsModal } from './VoiceSettingsModal';
 
 interface SquadVoiceHUDProps {
   isMobile?: boolean;
@@ -20,7 +17,6 @@ interface SquadVoiceHUDProps {
 
 export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
   const [voiceState, setVoiceState] = useState<VoiceChatServiceState>(() => voiceChatService.getState());
-  const [showSettings, setShowSettings] = useState<boolean>(false);
   const [isMobilePttActive, setIsMobilePttActive] = useState<boolean>(false);
 
   useEffect(() => {
@@ -46,12 +42,6 @@ export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
     } else {
       voiceChatService.toggleMute();
     }
-  };
-
-  const handleToggleDeafen = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    soundManager.playClick();
-    voiceChatService.toggleDeafen();
   };
 
   // Mobile Touch PTT Handlers (Smart Hold to Talk & Tap to Toggle)
@@ -142,42 +132,6 @@ export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
               title={voiceState.isMuted ? 'Unmute Mic (M)' : 'Mute Mic (M)'}
             >
               {voiceState.isMuted ? <MicOff size={12} /> : <Mic size={12} />}
-            </button>
-
-            <button
-              onClick={handleToggleDeafen}
-              style={{
-                background: voiceState.isDeafened ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255, 255, 255, 0.08)',
-                border: 'none',
-                borderRadius: 4,
-                padding: 4,
-                color: voiceState.isDeafened ? '#ef4444' : '#f8fafc',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title={voiceState.isDeafened ? 'Undeafen Comms' : 'Deafen Comms'}
-            >
-              {voiceState.isDeafened ? <VolumeX size={12} /> : <Volume2 size={12} />}
-            </button>
-
-            <button
-              onClick={() => { soundManager.playClick(); setShowSettings(true); }}
-              style={{
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: 'none',
-                borderRadius: 4,
-                padding: 4,
-                color: '#94a3b8',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Voice Settings"
-            >
-              <Settings size={12} />
             </button>
           </div>
         </div>
@@ -472,12 +426,6 @@ export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
           </span>
         </div>
       )}
-
-      {/* Voice Settings Modal */}
-      <VoiceSettingsModal
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-      />
     </>
   );
 };

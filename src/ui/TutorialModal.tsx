@@ -14,7 +14,12 @@ import {
   Sparkles,
   Compass,
   Eye,
-  ArrowUp
+  ArrowUp,
+  Radio,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
 interface TutorialModalProps {
@@ -201,6 +206,11 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
                     action="SHOOT / FIRE WEAPON"
                     desc="Shoot freely or fire while zoomed with aim-assist"
                   />
+                  <HighlightKeyItem
+                    keys={['V']}
+                    action="SQUAD VOICE CHAT (HOLD PTT / TAP LIVE)"
+                    desc="Hold [V] for temporary push-to-talk. Tap [V] for always live talking; tap [V] again to mute"
+                  />
                 </div>
               </div>
 
@@ -261,6 +271,21 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
                     keys={['ESC', 'P']}
                     label="Tactical Pause"
                     detail="Freeze simulation, view options, or restart run"
+                  />
+                  <KeyCard
+                    keys={['V']}
+                    label="Squad Voice Comms"
+                    detail="Hold V for temporary push-to-talk. Tap V to unmute (always live call). Tap V again to mute."
+                  />
+                  <KeyCard
+                    keys={['M']}
+                    label="Mute / Unmute Mic"
+                    detail="Quick toggle between muted and unmuted microphone."
+                  />
+                  <KeyCard
+                    keys={['TAB']}
+                    label="Tactical Scoreboard"
+                    detail="View squad rankings, team scores, ping, and live voice transmission status."
                   />
                 </div>
               </div>
@@ -333,6 +358,11 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
                   label="Pause & Fullscreen"
                   detail="Access tactical pause menu and immersive fullscreen"
                 />
+                <KeyCard
+                  keys={['FLOATING MIC BUTTON']}
+                  label="Squad Voice Chat (PTT / Live)"
+                  detail="Hold button to talk temporarily (PTT). Tap once for hands-free live calling (LIVE ON). Tap again to mute."
+                />
               </div>
             </div>
           )}
@@ -340,6 +370,64 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
           {/* TAB 3: COMBAT MECHANICS & TIPS */}
           {activeTab === 'mechanics' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Tactical Squad Voice Comms Guidelines Banner */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.1), rgba(56, 189, 248, 0.18))',
+                  border: '1.5px solid #0284c7',
+                  borderRadius: 14,
+                  padding: '16px 18px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Radio size={20} color="#0284c7" />
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.92rem', fontWeight: 900, color: '#0284c7', letterSpacing: '0.04em' }}>
+                    TACTICAL SQUAD VOICE COMMS GUIDELINES (MULTIPLAYER)
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+                  <div style={{ background: 'rgba(255, 255, 255, 0.95)', padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(2, 132, 199, 0.25)' }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.84rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Shield size={14} color="#0284c7" /> STRICT SQUAD PRIVACY (TDM)
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: 4, lineHeight: 1.4 }}>
+                      In Team Deathmatch, communications are strictly team-isolated. Alpha squad talks exclusively to Alpha; Bravo talks exclusively to Bravo. Opponents can <strong>never</strong> overhear your calls.
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(255, 255, 255, 0.95)', padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(2, 132, 199, 0.25)' }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.84rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Mic size={14} color="#16a34a" /> SMART DUAL-ACTION [V] KEY
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: 4, lineHeight: 1.4 }}>
+                      <strong>Hold [V]</strong> for temporary push-to-talk (cuts off on release). <strong>Tap [V]</strong> to unmute into persistent hands-free live calling. <strong>Tap [V] again</strong> to mute.
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(255, 255, 255, 0.95)', padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(2, 132, 199, 0.25)' }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.84rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Volume2 size={14} color="#8b5cf6" /> IN-GAME SETTINGS & DEAFEN
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: 4, lineHeight: 1.4 }}>
+                      You can toggle <strong>Deafen Comms</strong>, adjust incoming squad volume, or calibrate microphones and mic boost anytime in <strong>Game Settings</strong> (Pause &gt; Settings).
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(255, 255, 255, 0.95)', padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(2, 132, 199, 0.25)' }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.84rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Sparkles size={14} color="#d97706" /> IN-WORLD 3D SPEAKER GLOW
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: 4, lineHeight: 1.4 }}>
+                      Whenever a teammate speaks, their overhead 3D nametag illuminates in vivid emerald green with a pulsing <strong>[MIC]</strong> badge and live audio equalizer waves.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
                 <TipCard
                   icon={<Eye size={20} color="#0284c7" />}

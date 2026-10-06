@@ -1,9 +1,11 @@
 import React from 'react';
-import { X, Sliders, Maximize, Minimize, Shield, Flame, Skull, Gauge, Monitor, Zap, Sparkles, Cpu, Activity } from 'lucide-react';
+import { X, Sliders, Maximize, Minimize, Shield, Flame, Skull, Gauge, Monitor, Zap, Sparkles, Cpu, Activity, Volume2, VolumeX, Radio, Settings } from 'lucide-react';
 import { GameSettings, DifficultyLevel, GraphicsQuality, FrameRateLimit } from '../types/game';
 import { saveManager } from '../game/managers/SaveManager';
 import { soundManager } from '../audio/SoundManager';
 import { useFullscreen } from '../utils/fullscreen';
+import { voiceChatService } from '../game/multiplayer/VoiceChatService';
+import { VoiceSettingsModal } from './multiplayer/VoiceSettingsModal';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -13,6 +15,12 @@ interface SettingsModalProps {
 export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onSettingsChanged }) => {
   const [settings, setSettings] = React.useState<GameSettings>(() => saveManager.getData().settings);
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
+  const [voiceState, setVoiceState] = React.useState(() => voiceChatService.getState());
+  const [showVoiceSettings, setShowVoiceSettings] = React.useState(false);
+
+  React.useEffect(() => {
+    return voiceChatService.subscribe(setVoiceState);
+  }, []);
 
   const updateSetting = <K extends keyof GameSettings>(key: K, value: GameSettings[K]) => {
     const updated = { ...settings, [key]: value };
@@ -506,6 +514,142 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onSetting
             />
           </div>
 
+          {/* Tactical Squad Voice Comms & Audio Settings */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+              background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.08), rgba(15, 23, 42, 0.03))',
+              padding: '14px 16px',
+              borderRadius: 12,
+              border: '1.5px solid rgba(2, 132, 199, 0.28)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Radio size={18} color="#0284c7" />
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', color: '#0f172a', fontWeight: 800 }}>
+                  TACTICAL SQUAD VOICE COMMS
+                </span>
+              </div>
+              <span
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.70rem',
+                  fontWeight: 900,
+                  letterSpacing: '0.06em',
+                  padding: '2px 8px',
+                  borderRadius: 6,
+                  background: voiceState.status === 'connected' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(2, 132, 199, 0.15)',
+                  color: voiceState.status === 'connected' ? '#16a34a' : '#0284c7',
+                  border: `1px solid ${voiceState.status === 'connected' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(2, 132, 199, 0.3)'}`
+                }}
+              >
+                {voiceState.mode === 'ptt' ? 'KEY [V] • HYBRID PTT / LIVE' : 'OPEN MIC (VAD)'}
+              </span>
+            </div>
+
+            {/* Deafen Comms Toggle Button (Speaker button moved from HUD) */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255, 255, 255, 0.85)', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(15, 23, 42, 0.08)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 6,
+                    background: voiceState.isDeafened ? 'rgba(239, 68, 68, 0.15)' : 'rgba(2, 132, 199, 0.12)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: voiceState.isDeafened ? '#ef4444' : '#0284c7'
+                  }}
+                >
+                  {voiceState.isDeafened ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                </div>
+                <div>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', display: 'block' }}>
+                    DEAFEN SQUAD COMMS
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    {voiceState.isDeafened ? 'All incoming squad transmissions are muted' : 'Mute all incoming teammate voice audio'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundManager.playClick();
+                  voiceChatService.toggleDeafen();
+                }}
+                className="glass-panel"
+                style={{
+                  padding: '7px 14px',
+                  border: voiceState.isDeafened ? '1.5px solid #ef4444' : '1px solid rgba(15, 23, 42, 0.15)',
+                  background: voiceState.isDeafened ? 'rgba(239, 68, 68, 0.12)' : 'rgba(255, 255, 255, 0.9)',
+                  color: voiceState.isDeafened ? '#ef4444' : '#0f172a',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.78rem',
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {voiceState.isDeafened ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                <span>{voiceState.isDeafened ? 'DEAFENED' : 'ACTIVE'}</span>
+              </button>
+            </div>
+
+            {/* Squad Voice Master Volume Slider */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 700 }}>
+                <span style={{ color: '#0f172a' }}>INCOMING SQUAD VOICE VOLUME</span>
+                <span style={{ color: '#0284c7', fontWeight: 900 }}>{Math.round(voiceState.masterVolume * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={Math.round(voiceState.masterVolume * 100)}
+                onChange={(e) => voiceChatService.setMasterVolume(Number(e.target.value) / 100)}
+                style={{ width: '100%', accentColor: '#0284c7', cursor: 'pointer' }}
+              />
+            </div>
+
+            {/* Advanced Voice Settings Button (Settings gear button moved from HUD) */}
+            <button
+              type="button"
+              onClick={() => {
+                soundManager.playClick();
+                setShowVoiceSettings(true);
+              }}
+              className="glass-panel"
+              style={{
+                padding: '10px 14px',
+                borderRadius: 8,
+                border: '1.5px solid rgba(2, 132, 199, 0.35)',
+                background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.12), rgba(56, 189, 248, 0.08))',
+                color: '#0284c7',
+                fontFamily: 'var(--font-display)',
+                fontSize: '0.82rem',
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Settings size={16} />
+              <span>CONFIGURE MICROPHONE & ADVANCED VOICE CONSOLE</span>
+            </button>
+          </div>
+
           {/* Crosshair Style */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem', color: '#0f172a', fontWeight: 700 }}>
@@ -610,6 +754,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onSetting
           </button>
         </div>
       </div>
+
+      {/* Advanced Voice Settings Modal */}
+      <VoiceSettingsModal
+        isOpen={showVoiceSettings}
+        onClose={() => setShowVoiceSettings(false)}
+      />
     </div>
   );
 };
