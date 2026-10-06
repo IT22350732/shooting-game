@@ -710,7 +710,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             <Play size={18} fill="#ffffff" style={{ flexShrink: 0 }} />
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', minWidth: 0, flexShrink: 1 }}>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', fontWeight: 900, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
-                {selectedMission ? 'DEPLOY OPERATION' : 'DEPLOY TO COMBAT'}
+                {selectedMission ? 'PLAY MISSION' : 'PLAY'}
               </span>
               <span style={{ fontFamily: 'var(--font-sub)', fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255, 255, 255, 0.88)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
                 {selectedMission ? `OP 0${selectedMission.number}: ${selectedMission.title}` : `${currentModeInfo.name} • ${currentArenaInfo.name.split(' ')[0]}`}
@@ -799,7 +799,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
                 <span style={{ fontSize: '0.72rem', color: '#0284c7', fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '0.15em' }}>
-                  TACTICAL DEPLOYMENT PROTOCOL
+                  TACTICAL MISSION PROTOCOL
                 </span>
                 <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', margin: '2px 0 0 0' }}>
                   CONFIGURE MISSION & ARENA
@@ -1072,7 +1072,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                             }}
                           >
                             <Play size={14} fill="#ffffff" />
-                            DEPLOY NOW
+                            PLAY NOW
                           </button>
                         )}
                       </div>

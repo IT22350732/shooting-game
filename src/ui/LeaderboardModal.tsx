@@ -467,7 +467,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose, onO
               className="btn-cyber btn-cyber-primary"
               style={{ padding: '8px 18px', fontSize: '0.78rem' }}
             >
-              DEPLOY TO COMBAT
+              PLAY
               <ChevronRight size={14} />
             </button>
           </div>

@@ -450,10 +450,10 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                     <Zap size={36} />
                   </div>
                   <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 900, margin: '0 0 8px 0' }}>
-                    RAPID COMBAT DEPLOYMENT
+                    RAPID COMBAT PLAY
                   </h3>
                   <p style={{ maxWidth: 480, color: '#94a3b8', fontSize: '0.88rem', margin: '0 0 24px 0', lineHeight: 1.5 }}>
-                    Instantly deploy into an active combat room or host a competitive Team Deathmatch lobby. Players on other browser tabs or anywhere on the internet can join seamlessly.
+                    Instantly play in an active combat room or host a competitive Team Deathmatch lobby. Players on other browser tabs or anywhere on the internet can join seamlessly.
                   </p>
 
                   <button
@@ -1000,7 +1000,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                       }}
                     >
                       <CheckCircle2 size={18} />
-                      <span>{multiplayerService.localPlayer?.isReady ? 'READY TO DEPLOY' : 'SET AS READY'}</span>
+                      <span>{multiplayerService.localPlayer?.isReady ? 'READY TO PLAY' : 'SET AS READY'}</span>
                     </button>
                   )}
 

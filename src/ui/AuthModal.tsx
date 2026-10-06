@@ -14,7 +14,6 @@ import {
   LogIn,
   Sparkles,
   Flame,
-  Cloud,
   Copy,
   Download,
   Loader2,
@@ -249,34 +248,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
               <ShieldCheck size={22} />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '0.04em' }}>
-                  OPERATIVE TERMINAL
-                </h2>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    border: '1px solid rgba(16, 185, 129, 0.3)',
-                    borderRadius: 20,
-                    padding: '2px 8px',
-                    color: '#059669',
-                    fontSize: '0.62rem',
-                    fontWeight: 800,
-                    fontFamily: 'var(--font-display)',
-                    letterSpacing: '0.04em'
-                  }}
-                  title="Cross-device cloud synchronization is online and active"
-                >
-                  <Cloud size={11} />
-                  CLOUD SYNC ACTIVE
-                </span>
-              </div>
-              <span style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'var(--font-sub)', fontWeight: 600 }}>
-                CROSS-DEVICE AUTHENTICATION & PROFILE PERSISTENCE
-              </span>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '0.04em' }}>
+                OPERATIVE TERMINAL
+              </h2>
             </div>
           </div>
 
@@ -448,7 +422,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700 }}>
-                SELECT ACTIVE PROFILE FOR COMBAT DEPLOYMENT:
+                SELECT ACTIVE PROFILE TO PLAY:
               </span>
               <button
                 onClick={() => handleTabChange('register')}
@@ -556,7 +530,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
                             cursor: 'pointer'
                           }}
                         >
-                          DEPLOY AS
+                          PLAY AS
                         </button>
                       )}
 

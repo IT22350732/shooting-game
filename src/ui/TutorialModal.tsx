@@ -462,7 +462,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
                 <TipCard
                   icon={<Award size={20} color="#10b981" />}
                   title="5 TACTICAL MISSIONS"
-                  desc="Deploy into 5 structured campaign operations with tailored objectives (Barrels, Headshots, Boss Elimination, Time Attack) to earn medals and coins."
+                  desc="Play through 5 structured campaign operations with tailored objectives (Barrels, Headshots, Boss Elimination, Time Attack) to earn medals and coins."
                 />
                 <TipCard
                   icon={<Target size={20} color="#06b6d4" />}

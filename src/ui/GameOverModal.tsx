@@ -195,7 +195,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
               style={{ flex: '2 1 180px', padding: '12px 20px', fontSize: '0.95rem' }}
             >
               <Play size={18} fill="#ffffff" />
-              DEPLOY NEXT MISSION
+              PLAY NEXT MISSION
             </button>
           )}
 
