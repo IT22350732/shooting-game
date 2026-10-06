@@ -387,6 +387,29 @@ export class Player {
           newPos.z = this.position.z;
           this.velocity.z = 0;
         }
+
+        // Depenetration safeguard: If player is still intersecting after reverting (e.g. spawned into an obstacle), push out
+        const remainingBox = new THREE.Box3().setFromCenterAndSize(
+          new THREE.Vector3(newPos.x, newPos.y - this.eyeHeight / 2, newPos.z),
+          boxSize
+        );
+        if (obs.box.intersectsBox(remainingBox)) {
+          const pushX1 = obs.box.max.x - remainingBox.min.x;
+          const pushX2 = remainingBox.max.x - obs.box.min.x;
+          const pushZ1 = obs.box.max.z - remainingBox.min.z;
+          const pushZ2 = remainingBox.max.z - obs.box.min.z;
+
+          const minPushX = pushX1 < pushX2 ? pushX1 : -pushX2;
+          const minPushZ = pushZ1 < pushZ2 ? pushZ1 : -pushZ2;
+
+          if (Math.abs(minPushX) < Math.abs(minPushZ)) {
+            newPos.x += minPushX + (minPushX > 0 ? 0.05 : -0.05);
+            this.velocity.x = 0;
+          } else {
+            newPos.z += minPushZ + (minPushZ > 0 ? 0.05 : -0.05);
+            this.velocity.z = 0;
+          }
+        }
       }
     }
 

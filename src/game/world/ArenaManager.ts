@@ -1297,29 +1297,54 @@ export class ArenaManager {
   }
 
   /**
-   * Tactical Enemy Spawn Points situated in streets, driveways, alleyways
+   * Tactical Enemy & Player Spawn Points situated safely on open streets, avenues, and clear ground
    */
   private addSpawnPoints() {
     this.spawnPoints = [
-      { position: new THREE.Vector3(-28, 0, 0), name: 'West Street Entrance' },
-      { position: new THREE.Vector3(28, 0, 0), name: 'East Street Entrance' },
-      { position: new THREE.Vector3(0, 0, -28), name: 'North Boulevard' },
-      { position: new THREE.Vector3(0, 0, 28), name: 'South Boulevard' },
-      { position: new THREE.Vector3(-18, 0, -18), name: 'North-West Alley' },
-      { position: new THREE.Vector3(18, 0, -18), name: 'North-East Driveway' },
-      { position: new THREE.Vector3(-18, 0, 18), name: 'South-West Courtyard' },
-      { position: new THREE.Vector3(18, 0, 18), name: 'South-East Walkway' }
+      { position: new THREE.Vector3(0, 1.8, 18), name: 'South Boulevard' },
+      { position: new THREE.Vector3(0, 1.8, -18), name: 'North Boulevard' },
+      { position: new THREE.Vector3(-18, 1.8, 0), name: 'West Avenue' },
+      { position: new THREE.Vector3(18, 1.8, 0), name: 'East Avenue' },
+      { position: new THREE.Vector3(-3, 1.8, 10), name: 'South-West Street' },
+      { position: new THREE.Vector3(3, 1.8, -10), name: 'North-East Street' },
+      { position: new THREE.Vector3(3, 1.8, 10), name: 'South-East Street' },
+      { position: new THREE.Vector3(-3, 1.8, -10), name: 'North-West Street' }
     ];
   }
 
   public getValidSpawnPoint(playerPos: THREE.Vector3): THREE.Vector3 {
-    const valid = this.spawnPoints.filter(p => p.position.distanceTo(playerPos) > 16);
-    if (valid.length > 0) {
-      const choice = valid[Math.floor(Math.random() * valid.length)].position.clone();
-      choice.x += (Math.random() - 0.5) * 5;
-      choice.z += (Math.random() - 0.5) * 5;
-      return choice;
+    const valid = this.spawnPoints.filter(p => p.position.distanceTo(playerPos) > 10);
+    const pool = valid.length > 0 ? valid : this.spawnPoints;
+
+    const boxSize = new THREE.Vector3(1.0, 1.8, 1.0);
+    const testBox = new THREE.Box3();
+
+    // Verify candidate position against obstacle collision boxes
+    for (let attempts = 0; attempts < 15; attempts++) {
+      const choice = pool[Math.floor(Math.random() * pool.length)].position.clone();
+      choice.x += (Math.random() - 0.5) * 2;
+      choice.z += (Math.random() - 0.5) * 2;
+      choice.y = 1.8;
+
+      testBox.setFromCenterAndSize(
+        new THREE.Vector3(choice.x, choice.y - 0.9, choice.z),
+        boxSize
+      );
+
+      let collides = false;
+      for (const obs of this.obstacles) {
+        if (obs.box.intersectsBox(testBox)) {
+          collides = true;
+          break;
+        }
+      }
+
+      if (!collides) {
+        return choice;
+      }
     }
-    return new THREE.Vector3(24, 0, 24);
+
+    // Guaranteed safe default on open asphalt street
+    return new THREE.Vector3(0, 1.8, 12);
   }
 }

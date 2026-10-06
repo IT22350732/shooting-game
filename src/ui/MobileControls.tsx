@@ -56,7 +56,7 @@ export interface MobileLayoutConfig {
 
 const DEFAULT_PRESET_TWO_THUMB: Record<ControlId, ControlPos> = {
   joystick: { x: 0.12, y: 0.78, size: 130 },
-  sprintLock: { x: 0.12, y: 0.52, size: 44 },
+  sprintLock: { x: 0.12, y: 0.54, size: 42 },
   fire: { x: 0.88, y: 0.78, size: 120 },
   leftFire: { x: 0.10, y: 0.22, size: 68 },
   ads: { x: 0.75, y: 0.78, size: 56 },
@@ -73,7 +73,7 @@ const DEFAULT_PRESET_TWO_THUMB: Record<ControlId, ControlPos> = {
 
 const DEFAULT_PRESET_THREE_CLAW: Record<ControlId, ControlPos> = {
   joystick: { x: 0.12, y: 0.78, size: 130 },
-  sprintLock: { x: 0.12, y: 0.52, size: 44 },
+  sprintLock: { x: 0.12, y: 0.54, size: 42 },
   fire: { x: 0.88, y: 0.78, size: 116 },
   leftFire: { x: 0.10, y: 0.18, size: 76 },
   ads: { x: 0.75, y: 0.78, size: 56 },
@@ -90,7 +90,7 @@ const DEFAULT_PRESET_THREE_CLAW: Record<ControlId, ControlPos> = {
 
 const DEFAULT_PRESET_FOUR_CLAW: Record<ControlId, ControlPos> = {
   joystick: { x: 0.12, y: 0.78, size: 130 },
-  sprintLock: { x: 0.12, y: 0.52, size: 44 },
+  sprintLock: { x: 0.12, y: 0.54, size: 42 },
   fire: { x: 0.88, y: 0.78, size: 110 },
   leftFire: { x: 0.10, y: 0.18, size: 78 },
   ads: { x: 0.88, y: 0.18, size: 68 },
@@ -260,6 +260,41 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
     };
 
     handleJoystickMove(touch.clientX, touch.clientY);
+
+    // Global touch tracking to maintain continuous movement regardless of finger drag distance
+    const onTouchMoveWindow = (ev: TouchEvent) => {
+      for (let i = 0; i < ev.changedTouches.length; i++) {
+        const t = ev.changedTouches[i];
+        if (t.identifier === joystickTouchIdRef.current) {
+          handleJoystickMove(t.clientX, t.clientY);
+          break;
+        }
+      }
+    };
+
+    const onTouchEndWindow = (ev: TouchEvent) => {
+      for (let i = 0; i < ev.changedTouches.length; i++) {
+        const t = ev.changedTouches[i];
+        if (t.identifier === joystickTouchIdRef.current) {
+          joystickTouchIdRef.current = null;
+          setIsSprintingAuto(false);
+          if (joystickKnobRef.current) {
+            joystickKnobRef.current.style.transform = 'translate(0px, 0px)';
+          }
+          if (engine) {
+            engine.setAnalogMove(0, 0, false);
+          }
+          window.removeEventListener('touchmove', onTouchMoveWindow);
+          window.removeEventListener('touchend', onTouchEndWindow);
+          window.removeEventListener('touchcancel', onTouchEndWindow);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('touchmove', onTouchMoveWindow, { passive: false });
+    window.addEventListener('touchend', onTouchEndWindow);
+    window.addEventListener('touchcancel', onTouchEndWindow);
   };
 
   const handleJoystickTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {

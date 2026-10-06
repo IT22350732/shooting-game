@@ -611,13 +611,13 @@ export const HUD: React.FC<HUDProps> = ({
         className="hud-top-actions"
         style={{
           position: 'absolute',
-          top: 'calc(env(safe-area-inset-top, 0px) + 16px)',
-          left: 'calc(env(safe-area-inset-left, 0px) + 16px)',
+          top: isMobileView ? 'calc(env(safe-area-inset-top, 0px) + 10px)' : 'calc(env(safe-area-inset-top, 0px) + 16px)',
+          left: isMobileView ? 'calc(env(safe-area-inset-left, 0px) + 12px)' : 'calc(env(safe-area-inset-left, 0px) + 16px)',
           zIndex: 90,
           pointerEvents: 'auto',
           display: 'flex',
           alignItems: 'center',
-          gap: isMobileView ? 6 : 8
+          gap: isMobileView ? 5 : 8
         }}
       >
         {onPause && (
@@ -630,12 +630,12 @@ export const HUD: React.FC<HUDProps> = ({
             }}
             className="glass-panel"
             style={{
-              width: isMobileView ? 36 : 44,
-              height: isMobileView ? 36 : 44,
+              width: isMobileView ? 32 : 44,
+              height: isMobileView ? 32 : 44,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: 10,
+              borderRadius: isMobileView ? 8 : 10,
               border: '1.5px solid rgba(2, 132, 199, 0.45)',
               background: 'rgba(255, 255, 255, 0.94)',
               color: '#0284c7',
@@ -647,7 +647,7 @@ export const HUD: React.FC<HUDProps> = ({
             aria-label="Pause Combat Simulation"
             title="Pause Simulation"
           >
-            <Pause size={isMobileView ? 17 : 20} />
+            <Pause size={isMobileView ? 15 : 20} />
           </button>
         )}
 
@@ -665,12 +665,12 @@ export const HUD: React.FC<HUDProps> = ({
             }}
             className="glass-panel"
             style={{
-              width: isMobileView ? 36 : 44,
-              height: isMobileView ? 36 : 44,
+              width: isMobileView ? 32 : 44,
+              height: isMobileView ? 32 : 44,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: 10,
+              borderRadius: isMobileView ? 8 : 10,
               border: '1.5px solid rgba(2, 132, 199, 0.45)',
               background: 'rgba(255, 255, 255, 0.94)',
               color: '#0284c7',
@@ -682,7 +682,7 @@ export const HUD: React.FC<HUDProps> = ({
             aria-label="Gameplay Info & Instructions"
             title="Gameplay Info & Instructions"
           >
-            <HelpCircle size={isMobileView ? 17 : 20} />
+            <HelpCircle size={isMobileView ? 15 : 20} />
           </button>
         )}
 
@@ -695,12 +695,12 @@ export const HUD: React.FC<HUDProps> = ({
           }}
           className="glass-panel"
           style={{
-            width: isMobileView ? 36 : 44,
-            height: isMobileView ? 36 : 44,
+            width: isMobileView ? 32 : 44,
+            height: isMobileView ? 32 : 44,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            borderRadius: 10,
+            borderRadius: isMobileView ? 8 : 10,
             border: isFullscreen ? '1.5px solid #0284c7' : '1.5px solid rgba(15, 23, 42, 0.15)',
             background: isFullscreen ? 'rgba(2, 132, 199, 0.15)' : 'rgba(255, 255, 255, 0.94)',
             color: isFullscreen ? '#0284c7' : '#0f172a',
@@ -712,7 +712,7 @@ export const HUD: React.FC<HUDProps> = ({
           aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
           title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
         >
-          {isFullscreen ? <Minimize size={isMobileView ? 17 : 20} /> : <Maximize size={isMobileView ? 17 : 20} />}
+          {isFullscreen ? <Minimize size={isMobileView ? 15 : 20} /> : <Maximize size={isMobileView ? 15 : 20} />}
         </button>
 
         {/* Real-time FPS & Graphics Quality Badge */}
@@ -721,24 +721,24 @@ export const HUD: React.FC<HUDProps> = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: isMobileView ? 4 : 7,
-            height: isMobileView ? 36 : 44,
-            padding: isMobileView ? '0 8px' : '0 12px',
-            borderRadius: 10,
+            gap: isMobileView ? 3 : 7,
+            height: isMobileView ? 32 : 44,
+            padding: isMobileView ? '0 6px' : '0 12px',
+            borderRadius: isMobileView ? 8 : 10,
             border: '1.5px solid rgba(2, 132, 199, 0.35)',
             background: 'rgba(255, 255, 255, 0.94)',
             color: '#0f172a',
             fontFamily: 'var(--font-display)',
-            fontSize: isMobileView ? '0.72rem' : '0.78rem',
+            fontSize: isMobileView ? '0.68rem' : '0.78rem',
             fontWeight: 800,
             boxShadow: '0 4px 15px rgba(2, 132, 199, 0.12)',
             userSelect: 'none'
           }}
           title="Live Frame Rate & Graphics Preset"
         >
-          <Activity size={isMobileView ? 13 : 15} color="#0284c7" />
+          <Activity size={isMobileView ? 12 : 15} color="#0284c7" />
           <span style={{ color: (stats.fps || 60) >= 55 ? '#16a34a' : (stats.fps || 60) >= 28 ? '#0284c7' : '#dc2626' }}>
-            {stats.fps || 60} <span style={{ fontSize: '0.62rem', color: '#64748b', fontWeight: 700 }}>FPS</span>
+            {stats.fps || 60} <span style={{ fontSize: isMobileView ? '0.55rem' : '0.62rem', color: '#64748b', fontWeight: 700 }}>FPS</span>
           </span>
           {!isMobileView && (
             <>
@@ -818,38 +818,38 @@ export const HUD: React.FC<HUDProps> = ({
           <div
             className="glass-panel"
             style={{
-              padding: isMobileView ? '4px 10px' : '8px 20px',
+              padding: isMobileView ? '3px 8px' : '8px 20px',
               display: 'flex',
               alignItems: 'center',
-              gap: isMobileView ? 8 : 14,
+              gap: isMobileView ? 5 : 14,
               border: '1.5px solid rgba(2, 132, 199, 0.45)',
               background: 'rgba(15, 23, 42, 0.92)'
             }}
           >
             {multiplayerService.room?.mode === 'multiplayer_tdm' ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? 6 : 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? 4 : 6 }}>
-                  <Shield size={isMobileView ? 14 : 16} color="#38bdf8" />
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: isMobileView ? '0.90rem' : '1.15rem', fontWeight: 900, color: '#38bdf8' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? 4 : 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? 3 : 6 }}>
+                  <Shield size={isMobileView ? 12 : 16} color="#38bdf8" />
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: isMobileView ? '0.78rem' : '1.15rem', fontWeight: 900, color: '#38bdf8' }}>
                     ALPHA {stats.multiplayerAlphaScore ?? 0}
                   </span>
                 </div>
-                <span style={{ color: '#64748b', fontWeight: 900, fontSize: isMobileView ? '0.70rem' : '0.8rem' }}>VS</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? 4 : 6 }}>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: isMobileView ? '0.90rem' : '1.15rem', fontWeight: 900, color: '#f87171' }}>
+                <span style={{ color: '#64748b', fontWeight: 900, fontSize: isMobileView ? '0.60rem' : '0.8rem' }}>VS</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? 3 : 6 }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: isMobileView ? '0.78rem' : '1.15rem', fontWeight: 900, color: '#f87171' }}>
                     {stats.multiplayerBravoScore ?? 0} BRAVO
                   </span>
-                  <Skull size={isMobileView ? 14 : 16} color="#f87171" />
+                  <Skull size={isMobileView ? 12 : 16} color="#f87171" />
                 </div>
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#c084fc', fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: isMobileView ? '0.78rem' : '1rem' }}>
-                <Target size={isMobileView ? 15 : 18} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#c084fc', fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: isMobileView ? '0.70rem' : '1rem' }}>
+                <Target size={isMobileView ? 13 : 18} />
                 <span>{isMobileView ? `FFA • ${stats.multiplayerScoreLimit || 15} KILLS` : `FREE-FOR-ALL • LIMIT: ${stats.multiplayerScoreLimit || 15} KILLS`}</span>
               </div>
             )}
 
-            <div style={{ width: 1.5, height: isMobileView ? 14 : 20, background: 'rgba(255, 255, 255, 0.15)' }} />
+            <div style={{ width: 1, height: isMobileView ? 12 : 20, background: 'rgba(255, 255, 255, 0.15)' }} />
 
             {/* Scoreboard Button */}
             <button
@@ -857,15 +857,15 @@ export const HUD: React.FC<HUDProps> = ({
               onClick={() => setShowScoreboard(true)}
               className="btn-cyber"
               style={{
-                padding: isMobileView ? '2px 7px' : '4px 10px',
-                fontSize: isMobileView ? '0.64rem' : '0.72rem',
+                padding: isMobileView ? '2px 5px' : '4px 10px',
+                fontSize: isMobileView ? '0.58rem' : '0.72rem',
                 fontWeight: 900,
                 background: 'rgba(2, 132, 199, 0.2)',
                 border: '1px solid rgba(2, 132, 199, 0.5)',
                 color: '#38bdf8',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 4,
+                gap: 3,
                 pointerEvents: 'auto',
                 cursor: 'pointer'
               }}
@@ -874,8 +874,8 @@ export const HUD: React.FC<HUDProps> = ({
             </button>
 
             {/* Ping */}
-            <span style={{ fontSize: isMobileView ? '0.64rem' : '0.72rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 3 }}>
-              <Wifi size={isMobileView ? 11 : 13} color="#22c55e" />
+            <span style={{ fontSize: isMobileView ? '0.58rem' : '0.72rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Wifi size={isMobileView ? 10 : 13} color="#22c55e" />
               {stats.multiplayerPing ?? 20}ms
             </span>
           </div>

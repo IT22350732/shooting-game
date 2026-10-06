@@ -301,44 +301,46 @@ canvas {
 
   /* HUD Interactive Tactical Controls: Highest layer above mobile controls */
   .hud-top-actions {
+    top: calc(var(--safe-top) + 10px) !important;
+    left: calc(var(--safe-left) + 12px) !important;
     z-index: 90 !important;
     pointer-events: auto !important;
-    gap: 6px !important;
+    gap: 5px !important;
   }
 
   .hud-top-actions button {
-    width: 36px !important;
-    height: 36px !important;
-    min-height: 36px !important;
-    border-radius: 9px !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    border-radius: 8px !important;
     padding: 0 !important;
   }
 
   .hud-top-actions svg {
-    width: 17px !important;
-    height: 17px !important;
+    width: 15px !important;
+    height: 15px !important;
   }
 
   /* Health & Armor Panel: Moved cleanly to TOP-LEFT below Pause/Info/Fullscreen buttons */
   .hud-health-panel {
-    top: calc(var(--safe-top) + 58px) !important;
+    top: calc(var(--safe-top) + 48px) !important;
     bottom: auto !important;
-    left: calc(var(--safe-left) + 16px) !important;
-    min-width: 155px !important;
-    max-width: 190px !important;
-    padding: 5px 10px !important;
-    gap: 4px !important;
+    left: calc(var(--safe-left) + 12px) !important;
+    min-width: 145px !important;
+    max-width: 175px !important;
+    padding: 4px 8px !important;
+    gap: 3px !important;
     z-index: 90 !important;
     pointer-events: auto !important;
-    border-radius: 12px !important;
+    border-radius: 10px !important;
   }
 
   .hud-health-panel .stat-label {
-    font-size: 0.68rem !important;
+    font-size: 0.65rem !important;
   }
 
   .hud-health-panel .stat-val {
-    font-size: 0.90rem !important;
+    font-size: 0.85rem !important;
   }
 
   /* Weapon & Ammo Card: Centered at bottom edge, completely free of joystick & action buttons */
@@ -369,13 +371,13 @@ canvas {
   }
 
   .hud-top-wave {
-    top: calc(var(--safe-top) + 12px) !important;
+    top: calc(var(--safe-top) + 10px) !important;
     max-width: calc(100vw - 230px) !important;
   }
 
   .hud-top-wave .glass-panel {
-    padding: 5px 14px !important;
-    gap: 8px !important;
+    padding: 3px 8px !important;
+    gap: 6px !important;
   }
 
   .hud-top-score {
