@@ -54,25 +54,19 @@ export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
     voiceChatService.toggleDeafen();
   };
 
-  // Mobile Touch PTT Handlers
+  // Mobile Touch PTT Handlers (Smart Hold to Talk & Tap to Toggle)
   const handleMobilePttStart = (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsMobilePttActive(true);
-    if (!voiceState.localAudioLevel && voiceState.status !== 'connected') {
-      voiceChatService.initMicrophone().then((ok) => {
-        if (ok) voiceChatService.setTransmitting(true);
-      });
-    } else {
-      voiceChatService.setTransmitting(true);
-    }
+    voiceChatService.handlePttDown();
   };
 
   const handleMobilePttEnd = (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsMobilePttActive(false);
-    voiceChatService.setTransmitting(false);
+    voiceChatService.handlePttUp();
   };
 
   return (
@@ -245,40 +239,93 @@ export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
             {/* Speaking / Audio Waves */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               {voiceState.isMuted ? (
-                <span style={{ fontSize: '0.62rem', color: '#ef4444', fontWeight: 800 }}>MUTED</span>
+                <span
+                  style={{
+                    fontSize: '0.62rem',
+                    color: '#ef4444',
+                    fontWeight: 800,
+                    letterSpacing: 0.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4
+                  }}
+                  title="Mic Muted (Press V to Unmute, Hold V to Talk)"
+                >
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
+                  MUTED
+                  <span style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: 600 }}>
+                    {!isMobile ? '[TAP V: LIVE]' : ''}
+                  </span>
+                </span>
               ) : voiceState.isTransmitting ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <span
-                    style={{
-                      width: 3,
-                      height: 10 + voiceState.localAudioLevel * 8,
-                      background: '#22c55e',
-                      borderRadius: 1,
-                      transition: 'height 0.05s'
-                    }}
-                  />
-                  <span
-                    style={{
-                      width: 3,
-                      height: 6 + voiceState.localAudioLevel * 12,
-                      background: '#22c55e',
-                      borderRadius: 1,
-                      transition: 'height 0.05s'
-                    }}
-                  />
-                  <span
-                    style={{
-                      width: 3,
-                      height: 8 + voiceState.localAudioLevel * 6,
-                      background: '#22c55e',
-                      borderRadius: 1,
-                      transition: 'height 0.05s'
-                    }}
-                  />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {voiceState.isLiveLocked ? (
+                    <span
+                      style={{
+                        fontSize: '0.58rem',
+                        color: '#22c55e',
+                        fontWeight: 900,
+                        background: 'rgba(34, 197, 94, 0.2)',
+                        border: '1px solid rgba(34, 197, 94, 0.5)',
+                        padding: '1px 5px',
+                        borderRadius: 3,
+                        letterSpacing: 0.5,
+                        boxShadow: '0 0 8px rgba(34, 197, 94, 0.3)'
+                      }}
+                      title="Always Live Talking (Tap V to Mute)"
+                    >
+                      ● LIVE
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: '0.58rem',
+                        color: '#38bdf8',
+                        fontWeight: 900,
+                        background: 'rgba(56, 189, 248, 0.2)',
+                        border: '1px solid rgba(56, 189, 248, 0.5)',
+                        padding: '1px 5px',
+                        borderRadius: 3,
+                        letterSpacing: 0.5
+                      }}
+                      title="Temporary Voice (Release V to stop)"
+                    >
+                      PTT
+                    </span>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <span
+                      style={{
+                        width: 3,
+                        height: 10 + voiceState.localAudioLevel * 8,
+                        background: '#22c55e',
+                        borderRadius: 1,
+                        transition: 'height 0.05s'
+                      }}
+                    />
+                    <span
+                      style={{
+                        width: 3,
+                        height: 6 + voiceState.localAudioLevel * 12,
+                        background: '#22c55e',
+                        borderRadius: 1,
+                        transition: 'height 0.05s'
+                      }}
+                    />
+                    <span
+                      style={{
+                        width: 3,
+                        height: 8 + voiceState.localAudioLevel * 6,
+                        background: '#22c55e',
+                        borderRadius: 1,
+                        transition: 'height 0.05s'
+                      }}
+                    />
+                  </div>
                 </div>
               ) : (
-                <span style={{ fontSize: '0.62rem', color: '#64748b', fontWeight: 700 }}>
-                  {voiceState.mode === 'ptt' ? (!isMobile ? 'HOLD [V]' : 'PTT') : 'VAD'}
+                <span style={{ fontSize: '0.60rem', color: '#64748b', fontWeight: 700 }}>
+                  {voiceState.mode === 'ptt' ? (!isMobile ? 'HOLD [V] • TAP LIVE' : 'HOLD/TAP') : 'VAD'}
                 </span>
               )}
             </div>
@@ -398,14 +445,14 @@ export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
             width: 58,
             height: 58,
             borderRadius: '50%',
-            background: isMobilePttActive
+            background: (isMobilePttActive || voiceState.isLiveLocked)
               ? 'radial-gradient(circle, #22c55e 0%, #15803d 100%)'
               : voiceState.isMuted
               ? 'rgba(239, 68, 68, 0.4)'
               : 'rgba(15, 23, 42, 0.85)',
-            border: `2px solid ${isMobilePttActive ? '#4ade80' : voiceState.isMuted ? '#ef4444' : '#0284c7'}`,
-            boxShadow: isMobilePttActive
-              ? '0 0 20px #22c55e'
+            border: `2px solid ${(isMobilePttActive || voiceState.isLiveLocked) ? '#4ade80' : voiceState.isMuted ? '#ef4444' : '#0284c7'}`,
+            boxShadow: (isMobilePttActive || voiceState.isLiveLocked)
+              ? '0 0 22px #22c55e'
               : '0 4px 15px rgba(0, 0, 0, 0.6)',
             display: 'flex',
             flexDirection: 'column',
@@ -420,8 +467,8 @@ export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
           }}
         >
           {voiceState.isMuted ? <MicOff size={22} /> : <Mic size={22} />}
-          <span style={{ fontSize: '0.52rem', fontWeight: 900, letterSpacing: 0.5, marginTop: 1 }}>
-            {isMobilePttActive ? 'TALKING' : 'HOLD PTT'}
+          <span style={{ fontSize: '0.50rem', fontWeight: 900, letterSpacing: 0.5, marginTop: 1 }}>
+            {voiceState.isLiveLocked ? 'LIVE ON' : isMobilePttActive ? 'TALKING' : 'HOLD / TAP'}
           </span>
         </div>
       )}

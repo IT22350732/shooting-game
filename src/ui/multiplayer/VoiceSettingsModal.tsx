@@ -326,9 +326,14 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ isOpen, 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 {/* Voice Mode */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#cbd5e1' }}>
-                    TRANSMISSION MODE
-                  </label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#cbd5e1' }}>
+                      TRANSMISSION MODE
+                    </label>
+                    <span style={{ fontSize: '0.68rem', color: '#38bdf8', fontWeight: 700 }}>
+                      Hold [V]: Temp PTT • Tap [V]: Live Talk / Mute
+                    </span>
+                  </div>
                   <div style={{ display: 'flex', gap: 6, background: 'rgba(0, 0, 0, 0.4)', padding: 4, borderRadius: 8 }}>
                     <button
                       onClick={() => handleModeChange('ptt')}
@@ -345,7 +350,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({ isOpen, 
                         transition: 'all 0.15s'
                       }}
                     >
-                      PUSH-TO-TALK [V]
+                      HYBRID PTT / LIVE [V]
                     </button>
                     <button
                       onClick={() => handleModeChange('open_mic')}

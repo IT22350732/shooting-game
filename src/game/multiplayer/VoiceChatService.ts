@@ -52,6 +52,7 @@ export interface VoiceChatServiceState {
   isMuted: boolean;
   isDeafened: boolean;
   isTransmitting: boolean;
+  isLiveLocked: boolean;
   mode: VoiceMode;
   channel: VoiceChannel;
   pttKey: string;
@@ -73,9 +74,11 @@ const STORAGE_KEY = 'shoot_arena_voice_settings_v1';
 export class VoiceChatService {
   private status: VoiceStatus = 'disconnected';
   private isEnabled: boolean = true;
-  private isMuted: boolean = false;
+  private isMuted: boolean = true;
   private isDeafened: boolean = false;
   private isTransmitting: boolean = false;
+  private isLiveLocked: boolean = false;
+  private pttPressTime: number = 0;
   private isPttKeyDown: boolean = false;
   private isLocalSpeaking: boolean = false;
   private localAudioLevel: number = 0;
@@ -171,6 +174,7 @@ export class VoiceChatService {
       isMuted: this.isMuted,
       isDeafened: this.isDeafened,
       isTransmitting: this.isTransmitting,
+      isLiveLocked: this.isLiveLocked,
       mode: this.mode,
       channel: this.channel,
       pttKey: this.pttKey,
@@ -411,25 +415,70 @@ export class VoiceChatService {
     });
   }
 
-  // --- KEYBOARD CONTROLS (DESKTOP PTT) ---
+  // --- SMART HYBRID PTT & LIVE TALKING CONTROLS ---
+  // Hold V for temporary voice. Tap V for unmute (always live talking). Tap V again to mute.
+  public handlePttDown() {
+    this.pttPressTime = performance.now();
+
+    // Ensure AudioContext is running upon user interaction
+    if (this.audioContext && this.audioContext.state === 'suspended') {
+      this.audioContext.resume().catch(() => {});
+    }
+
+    if (!this.localStream && this.isEnabled && this.status !== 'permission_denied') {
+      this.initMicrophone().then((ok) => {
+        if (ok && !this.isLiveLocked) {
+          this.isMuted = false;
+          this.setTransmitting(true);
+        }
+      });
+      return;
+    }
+
+    // If not currently in persistent live mode, open mic and start transmitting immediately
+    if (!this.isLiveLocked) {
+      this.isMuted = false;
+      this.setTransmitting(true);
+    }
+  }
+
+  public handlePttUp() {
+    const heldDuration = performance.now() - this.pttPressTime;
+
+    if (heldDuration >= 280) {
+      // SCENARIO 1: Held key/button for temporary voice -> Stop transmitting immediately on release & return to muted
+      this.isLiveLocked = false;
+      this.isMuted = true;
+      this.setTransmitting(false);
+    } else {
+      // SCENARIO 2: Quick tap/press -> Toggle between always live talking (unmute) and mute!
+      if (this.isLiveLocked) {
+        // Was already in live talking mode -> tap V to mute!
+        this.isLiveLocked = false;
+        this.isMuted = true;
+        this.setTransmitting(false);
+      } else {
+        // Was idle or muted -> tap V to unmute (always live talking)!
+        this.isLiveLocked = true;
+        this.isMuted = false;
+        this.setTransmitting(true);
+      }
+    }
+    this.notifyState();
+  }
+
+  // --- KEYBOARD CONTROLS (DESKTOP PTT & SMART LIVE VOICE) ---
   private setupKeyboardListeners() {
     window.addEventListener('keydown', (e) => {
       // Don't trigger if user is typing in a chat or text input
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
 
-      // Push-to-Talk Key
+      // Push-to-Talk / Smart Live Voice Key (Default: KeyV)
       if (e.code === this.pttKey && this.mode === 'ptt') {
         if (!this.isPttKeyDown) {
           this.isPttKeyDown = true;
-          // Ensure mic is initialized
-          if (!this.localStream && this.isEnabled && this.status !== 'permission_denied') {
-            this.initMicrophone().then((ok) => {
-              if (ok) this.setTransmitting(true);
-            });
-          } else {
-            this.setTransmitting(true);
-          }
+          this.handlePttDown();
         }
       }
 
@@ -441,16 +490,20 @@ export class VoiceChatService {
 
     window.addEventListener('keyup', (e) => {
       if (e.code === this.pttKey && this.mode === 'ptt') {
-        this.isPttKeyDown = false;
-        this.setTransmitting(false);
+        if (this.isPttKeyDown) {
+          this.isPttKeyDown = false;
+          this.handlePttUp();
+        }
       }
     });
 
-    // Window blur safety: release PTT if user switches window while holding key
+    // Window blur safety: release temporary PTT if user switches window while holding key
     window.addEventListener('blur', () => {
       if (this.isPttKeyDown) {
         this.isPttKeyDown = false;
-        this.setTransmitting(false);
+        if (!this.isLiveLocked) {
+          this.setTransmitting(false);
+        }
       }
     });
   }
@@ -792,10 +845,16 @@ export class VoiceChatService {
 
   public toggleMute(): boolean {
     this.isMuted = !this.isMuted;
-    if (this.isMuted && this.isTransmitting) {
+    if (this.isMuted) {
+      this.isLiveLocked = false;
       this.setTransmitting(false);
     } else {
-      this.updateTrackState();
+      if (this.mode === 'ptt') {
+        this.isLiveLocked = true;
+        this.setTransmitting(true);
+      } else {
+        this.updateTrackState();
+      }
     }
     multiplayerService.broadcastVoiceState(this.isTransmitting, this.isMuted, this.isDeafened);
     this.notifyState();
@@ -812,13 +871,16 @@ export class VoiceChatService {
 
   public setVoiceMode(mode: VoiceMode) {
     this.mode = mode;
+    this.isLiveLocked = false;
     if (mode === 'open_mic') {
+      this.isMuted = false;
       // In open mic, auto-initialize if enabled
       if (!this.localStream && this.isEnabled) {
         this.initMicrophone();
       }
     } else {
-      // Switched to PTT: stop transmission until key is pressed
+      // Switched to PTT: stop transmission until key is pressed/tapped
+      this.isMuted = true;
       this.setTransmitting(false);
     }
     this.saveSettings();
