@@ -235,11 +235,22 @@ canvas {
    ========================================================== */
 
 /* HUD Default Positioning */
-.hud-health-panel {
+.hud-player-status-container {
   position: absolute;
   bottom: calc(var(--safe-bottom) + 24px);
   left: calc(var(--safe-left) + 28px);
-  min-width: 250px;
+  width: 250px;
+  z-index: 90;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hud-health-panel {
+  position: relative;
+  width: 100%;
+  min-width: 0;
   z-index: 90;
   pointer-events: auto;
 }
@@ -321,13 +332,26 @@ canvas {
     height: 14px !important;
   }
 
-  /* Health & Armor Panel: Moved cleanly to TOP-LEFT below Pause/Fullscreen buttons */
-  .hud-health-panel {
-    top: calc(var(--safe-top) + 44px) !important;
+  /* Player Status Container: Positioned at TOP-LEFT on mobile */
+  .hud-player-status-container {
+    top: calc(var(--safe-top) + 42px) !important;
     bottom: auto !important;
     left: calc(var(--safe-left) + 12px) !important;
-    min-width: 170px !important;
-    max-width: 175px !important;
+    width: 175px !important;
+    gap: 6px !important;
+    z-index: 90 !important;
+    pointer-events: auto !important;
+  }
+
+  /* Health & Armor Panel: Child of status container on mobile */
+  .hud-health-panel {
+    position: relative !important;
+    top: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
     padding: 5px 8px !important;
     gap: 3px !important;
     background: rgba(15, 23, 42, 0.88) !important;

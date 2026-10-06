@@ -13,9 +13,10 @@ import { soundManager } from '../../audio/SoundManager';
 
 interface SquadVoiceHUDProps {
   isMobile?: boolean;
+  isEmbedded?: boolean;
 }
 
-export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
+export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile, isEmbedded }) => {
   const [voiceState, setVoiceState] = useState<VoiceChatServiceState>(() => voiceChatService.getState());
   const [isMobilePttActive, setIsMobilePttActive] = useState<boolean>(false);
 
@@ -63,16 +64,16 @@ export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
 
   return (
     <>
-      {/* MOBILE COMPACT TACTICAL COMMS STRIP (Height: 28px, clears Sprint Lock completely) */}
+      {/* MOBILE COMPACT TACTICAL COMMS STRIP (Height: 26px) */}
       {isMobile ? (
-        <>
+        <div style={{ position: 'relative', width: isEmbedded ? '100%' : 175 }}>
           <div
             style={{
-              position: 'fixed',
-              top: 'calc(env(safe-area-inset-top, 0px) + 106px)',
-              left: 'calc(env(safe-area-inset-left, 0px) + 12px)',
+              position: isEmbedded ? 'relative' : 'fixed',
+              top: isEmbedded ? 'auto' : 'calc(env(safe-area-inset-top, 0px) + 106px)',
+              left: isEmbedded ? 'auto' : 'calc(env(safe-area-inset-left, 0px) + 12px)',
               zIndex: 88,
-              width: 175,
+              width: '100%',
               height: 26,
               pointerEvents: 'auto',
               background: 'rgba(15, 23, 42, 0.88)',
@@ -183,11 +184,11 @@ export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
           {isMobileRosterOpen && (
             <div
               style={{
-                position: 'fixed',
-                top: 'calc(env(safe-area-inset-top, 0px) + 144px)',
-                left: 'calc(env(safe-area-inset-left, 0px) + 12px)',
+                position: isEmbedded ? 'absolute' : 'fixed',
+                top: isEmbedded ? 'calc(100% + 4px)' : 'calc(env(safe-area-inset-top, 0px) + 144px)',
+                left: isEmbedded ? 0 : 'calc(env(safe-area-inset-left, 0px) + 12px)',
                 zIndex: 96,
-                width: 185,
+                width: isEmbedded ? '100%' : 185,
                 maxHeight: 140,
                 overflowY: 'auto',
                 background: 'rgba(10, 15, 30, 0.95)',
@@ -230,7 +231,7 @@ export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
               ))}
             </div>
           )}
-        </>
+        </div>
       ) : (
         /* DESKTOP TACTICAL SQUAD VOICE OVERLAY */
         <div

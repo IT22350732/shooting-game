@@ -1136,65 +1136,87 @@ export const HUD: React.FC<HUDProps> = ({
         )}
       </div>
 
-      {/* BOTTOM LEFT: HEALTH & ARMOR BARS */}
+      {/* BOTTOM LEFT (DESKTOP) / TOP-LEFT (MOBILE): HEALTH, ARMOR & SQUAD VOICE */}
       <div
-        className="glass-panel hud-health-panel"
+        className="hud-player-status-container"
         style={{
-          padding: '14px 18px',
+          position: 'absolute',
+          top: isMobileView ? 'calc(env(safe-area-inset-top, 0px) + 42px)' : 'auto',
+          bottom: isMobileView ? 'auto' : 'calc(var(--safe-bottom) + 24px)',
+          left: isMobileView ? 'calc(env(safe-area-inset-left, 0px) + 12px)' : 'calc(var(--safe-left) + 28px)',
+          zIndex: 90,
           display: 'flex',
           flexDirection: 'column',
-          gap: 10
+          gap: 6,
+          width: isMobileView ? 175 : 250,
+          pointerEvents: 'auto'
         }}
       >
-        {/* Health */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#e11d48', fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 800 }}>
-              <Heart size={15} fill="#e11d48" />
-              <span className="stat-label">HEALTH</span>
+        <div
+          className="glass-panel hud-health-panel"
+          style={{
+            padding: isMobileView ? '5px 8px' : '14px 18px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: isMobileView ? 4 : 10,
+            width: '100%'
+          }}
+        >
+          {/* Health */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: isMobileView ? 2 : 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? 4 : 6, color: '#e11d48', fontFamily: 'var(--font-display)', fontSize: isMobileView ? '0.70rem' : '0.82rem', fontWeight: 800 }}>
+                <Heart size={isMobileView ? 13 : 15} fill="#e11d48" />
+                <span className="stat-label">HEALTH</span>
+              </div>
+              <span className="stat-val" style={{ fontFamily: "'Rajdhani', var(--font-sub), sans-serif", fontSize: isMobileView ? '0.88rem' : '1.15rem', fontWeight: 900, color: isMobileView ? '#ffffff' : '#0f172a' }}>
+                {stats.health} <span style={{ color: isMobileView ? '#94a3b8' : '#64748b', fontSize: isMobileView ? '0.68rem' : '0.78rem' }}>/ {stats.maxHealth}</span>
+              </span>
             </div>
-            <span className="stat-val" style={{ fontFamily: "'Rajdhani', var(--font-sub), sans-serif", fontSize: '1.15rem', fontWeight: 900, color: isMobileView ? '#ffffff' : '#0f172a' }}>
-              {stats.health} <span style={{ color: isMobileView ? '#94a3b8' : '#64748b', fontSize: '0.78rem' }}>/ {stats.maxHealth}</span>
-            </span>
+
+            <div style={{ width: '100%', height: isMobileView ? 6 : 8, background: isMobileView ? 'rgba(0, 0, 0, 0.45)' : 'rgba(15, 23, 42, 0.08)', borderRadius: 3, overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: `${hpPercent}%`,
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #e11d48, #f43f5e)',
+                  boxShadow: '0 0 10px rgba(244, 63, 94, 0.5)',
+                  transition: 'width 0.2s ease-out'
+                }}
+              />
+            </div>
           </div>
 
-          <div style={{ width: '100%', height: 8, background: isMobileView ? 'rgba(0, 0, 0, 0.45)' : 'rgba(15, 23, 42, 0.08)', borderRadius: 4, overflow: 'hidden' }}>
-            <div
-              style={{
-                width: `${hpPercent}%`,
-                height: '100%',
-                background: 'linear-gradient(90deg, #e11d48, #f43f5e)',
-                boxShadow: '0 0 10px rgba(244, 63, 94, 0.5)',
-                transition: 'width 0.2s ease-out'
-              }}
-            />
+          {/* Armor */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: isMobileView ? 2 : 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? 4 : 6, color: '#0284c7', fontFamily: 'var(--font-display)', fontSize: isMobileView ? '0.70rem' : '0.82rem', fontWeight: 800 }}>
+                <Shield size={isMobileView ? 13 : 15} fill="#0284c7" />
+                <span className="stat-label">ARMOR</span>
+              </div>
+              <span className="stat-val" style={{ fontFamily: "'Rajdhani', var(--font-sub), sans-serif", fontSize: isMobileView ? '0.88rem' : '1.15rem', fontWeight: 900, color: isMobileView ? '#ffffff' : '#0f172a' }}>
+                {stats.armor} <span style={{ color: isMobileView ? '#94a3b8' : '#64748b', fontSize: isMobileView ? '0.68rem' : '0.78rem' }}>/ {stats.maxArmor}</span>
+              </span>
+            </div>
+
+            <div style={{ width: '100%', height: isMobileView ? 5 : 7, background: isMobileView ? 'rgba(0, 0, 0, 0.45)' : 'rgba(15, 23, 42, 0.08)', borderRadius: 3, overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: `${armorPercent}%`,
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #0284c7, #38bdf8)',
+                  boxShadow: '0 0 8px rgba(2, 132, 199, 0.5)',
+                  transition: 'width 0.2s ease-out'
+                }}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Armor */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0284c7', fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 800 }}>
-              <Shield size={15} fill="#0284c7" />
-              <span className="stat-label">ARMOR</span>
-            </div>
-            <span className="stat-val" style={{ fontFamily: "'Rajdhani', var(--font-sub), sans-serif", fontSize: '1.15rem', fontWeight: 900, color: isMobileView ? '#ffffff' : '#0f172a' }}>
-              {stats.armor} <span style={{ color: isMobileView ? '#94a3b8' : '#64748b', fontSize: '0.78rem' }}>/ {stats.maxArmor}</span>
-            </span>
-          </div>
-
-          <div style={{ width: '100%', height: 7, background: isMobileView ? 'rgba(0, 0, 0, 0.45)' : 'rgba(15, 23, 42, 0.08)', borderRadius: 4, overflow: 'hidden' }}>
-            <div
-              style={{
-                width: `${armorPercent}%`,
-                height: '100%',
-                background: 'linear-gradient(90deg, #0284c7, #38bdf8)',
-                boxShadow: '0 0 8px rgba(2, 132, 199, 0.5)',
-                transition: 'width 0.2s ease-out'
-              }}
-            />
-          </div>
-        </div>
+        {/* ON MOBILE MULTIPLAYER: Squad Voice Strip directly docked below Health & Armor */}
+        {isMobileView && stats.isMultiplayer && (
+          <SquadVoiceHUD isMobile={true} isEmbedded={true} />
+        )}
       </div>
 
       {/* BOTTOM RIGHT: WEAPONS INVENTORY & AMMO */}
@@ -1316,9 +1338,9 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       </div>
 
-      {/* MULTIPLAYER LIVE SQUAD VOICE CHAT HUD */}
-      {stats.isMultiplayer && (
-        <SquadVoiceHUD isMobile={isMobileView} />
+      {/* MULTIPLAYER LIVE SQUAD VOICE CHAT HUD (DESKTOP) */}
+      {!isMobileView && stats.isMultiplayer && (
+        <SquadVoiceHUD isMobile={false} />
       )}
 
       {/* MULTIPLAYER KILL FEED */}
