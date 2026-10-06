@@ -254,7 +254,7 @@ export const App: React.FC = () => {
           onOpenTutorial={() => setShowTutorial(true)}
           onMainMenu={() => {
             setGameState('MENU');
-            setShowAuth(true);
+            setShowAuth(false);
             engineRef.current?.showMenu();
           }}
         />
@@ -286,7 +286,7 @@ export const App: React.FC = () => {
           onOpenLeaderboard={() => setShowLeaderboard(true)}
           onMainMenu={() => {
             setGameState('MENU');
-            setShowAuth(true);
+            setShowAuth(false);
             engineRef.current?.showMenu();
           }}
         />
