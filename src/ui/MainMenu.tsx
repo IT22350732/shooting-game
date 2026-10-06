@@ -274,31 +274,6 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             </div>
           </div>
 
-          {/* Leaderboard Trophy Quick Button */}
-          <button
-            onClick={onOpenLeaderboard}
-            className="glass-panel"
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 10,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1.5px solid rgba(234, 179, 8, 0.45)',
-              background: 'rgba(255, 255, 255, 0.92)',
-              color: '#d97706',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(234, 179, 8, 0.2)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)'
-            }}
-            aria-label="Leaderboard & High Scores"
-            title="High Scores & Leaderboard"
-          >
-            <Trophy size={18} />
-          </button>
-
           {/* Settings Button */}
           <button
             onClick={onOpenSettings}
@@ -319,38 +294,9 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               WebkitBackdropFilter: 'blur(12px)'
             }}
             aria-label="Settings"
+            title="Settings & System Configuration"
           >
             <Sliders size={18} />
-          </button>
-
-          {/* Gameplay Instructions & Controls Info Button */}
-          <button
-            onClick={onOpenTutorial}
-            className="glass-panel menu-top-info-btn"
-            style={{
-              height: 42,
-              padding: '0 12px',
-              borderRadius: 10,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              border: '1.5px solid rgba(2, 132, 199, 0.4)',
-              background: 'rgba(255, 255, 255, 0.94)',
-              color: '#0284c7',
-              cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(2, 132, 199, 0.15)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              fontFamily: 'var(--font-display)',
-              fontSize: '0.8rem',
-              fontWeight: 800,
-              letterSpacing: '0.04em'
-            }}
-            aria-label="Game Instructions & Controls"
-            title="Game Instructions & Controls"
-          >
-            <HelpCircle size={18} color="#0284c7" />
-            <span>INFO</span>
           </button>
 
           {/* Fullscreen Toggle Button */}

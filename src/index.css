@@ -770,10 +770,6 @@ canvas {
     padding: 0 8px !important;
   }
 
-  /* Hide duplicate Info button in top-bar (since Info is docked in bottom bar) */
-  .menu-top-info-btn {
-    display: none !important;
-  }
 
   /* Hide floating corner selectors dropdowns on mobile to maximize viewport */
   .menu-corner-selectors {
@@ -930,9 +926,6 @@ canvas {
     gap: 6px !important;
   }
 
-  .menu-top-info-btn {
-    display: none !important;
-  }
 
   .menu-corner-selectors {
     display: none !important;
