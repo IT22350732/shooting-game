@@ -14,14 +14,12 @@ import {
   ChevronRight,
   ChevronDown,
   X,
-  ShieldCheck,
   Shield,
   Target,
   Maximize,
   Minimize,
   Lock,
   CheckCircle2,
-  Clock,
   Trophy,
   User,
   Users
@@ -75,7 +73,6 @@ export const MainMenu: React.FC<MainMenuProps> = ({
     }
   };
 
-  const savedData = saveManager.getData();
   const currentUser = userManager.getCurrentUser();
   const currentAvatar = AVATAR_OPTIONS.find(a => a.id === currentUser?.avatarId) || AVATAR_OPTIONS[0];
 
@@ -218,9 +215,9 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             <User size={20} strokeWidth={2.4} />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem', color: '#0f172a', fontWeight: 900, letterSpacing: '0.04em' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.85rem', color: '#0f172a', fontWeight: 900, letterSpacing: '0.04em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 }}>
                 {currentUser.username}
               </span>
               <span
@@ -231,19 +228,20 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                   fontFamily: 'var(--font-display)',
                   fontWeight: 800,
                   padding: '1px 6px',
-                  borderRadius: 4
+                  borderRadius: 4,
+                  whiteSpace: 'nowrap'
                 }}
               >
                 {currentUser.tier.replace('_', ' ')}
               </span>
             </div>
 
-            <div className="menu-top-profile-stats" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
-              <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'var(--font-sub)', fontWeight: 600 }}>
+            <div className="menu-top-profile-stats" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2, whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'var(--font-sub)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                 RECORD: <strong style={{ color: '#0284c7' }}>{currentUser.highScore.toLocaleString()}</strong>
               </span>
               <span style={{ width: 3, height: 3, borderRadius: '50%', background: '#94a3b8' }} />
-              <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'var(--font-sub)', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.7rem', color: '#64748b', fontFamily: 'var(--font-sub)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                 BEST: <strong style={{ color: '#f97316' }}>WAVE {currentUser.highestWave}</strong>
               </span>
             </div>
@@ -527,7 +525,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             }}
           >
             <Award size={18} color="#0284c7" />
-            <span>MISSIONS (5)</span>
+            <span style={{ whiteSpace: 'nowrap' }}>MISSIONS (5)</span>
           </button>
 
           <button
@@ -541,7 +539,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             }}
           >
             <Crosshair size={18} color="#0284c7" />
-            <span>ARMORY</span>
+            <span style={{ whiteSpace: 'nowrap' }}>ARMORY</span>
           </button>
 
           <button
@@ -554,7 +552,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             }}
           >
             <Zap size={18} />
-            <span>UPGRADES</span>
+            <span style={{ whiteSpace: 'nowrap' }}>UPGRADES</span>
           </button>
 
           <button
@@ -571,7 +569,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             }}
           >
             <Users size={18} color="#ffffff" />
-            <span>MULTIPLAYER</span>
+            <span style={{ whiteSpace: 'nowrap' }}>MULTIPLAYER</span>
           </button>
 
           <button
@@ -588,7 +586,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             }}
           >
             <Trophy size={18} color="#d97706" />
-            <span>RANKS</span>
+            <span style={{ whiteSpace: 'nowrap' }}>RANKS</span>
           </button>
 
           <button
@@ -604,7 +602,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             }}
           >
             <HelpCircle size={18} color="#0284c7" />
-            <span>INFO</span>
+            <span style={{ whiteSpace: 'nowrap' }}>INFO</span>
           </button>
         </div>
 
@@ -624,10 +622,12 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               background: 'rgba(255, 255, 255, 0.92)',
               boxShadow: '0 4px 18px rgba(15, 23, 42, 0.15)',
               backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)'
+              WebkitBackdropFilter: 'blur(12px)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
               {selectedMission ? (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -639,17 +639,19 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                         color: selectedMission.accentColor,
                         fontFamily: 'var(--font-display)',
                         fontSize: '0.62rem',
-                        fontWeight: 900
+                        fontWeight: 900,
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0
                       }}
                     >
                       OP 0{selectedMission.number}
                     </span>
-                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {selectedMission.title}
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 1 }}>
-                    <span style={{ fontSize: '0.66rem', fontFamily: 'var(--font-display)', color: selectedMission.accentColor, fontWeight: 800 }}>
+                    <span style={{ fontSize: '0.66rem', fontFamily: 'var(--font-display)', color: selectedMission.accentColor, fontWeight: 800, whiteSpace: 'nowrap', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       MAP: {selectedMission.arenaName}
                     </span>
                   </div>
@@ -658,12 +660,12 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     {currentModeInfo.icon}
-                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a' }}>
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap' }}>
                       {currentModeInfo.name}
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 1 }}>
-                    <span style={{ fontSize: '0.66rem', fontFamily: 'var(--font-display)', color: '#0284c7', fontWeight: 800 }}>
+                    <span style={{ fontSize: '0.66rem', fontFamily: 'var(--font-display)', color: '#0284c7', fontWeight: 800, whiteSpace: 'nowrap', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       MAP: {currentArenaInfo.name}
                     </span>
                   </div>
@@ -699,11 +701,12 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               alignItems: 'center',
               gap: 10,
               boxShadow: '0 6px 25px rgba(2, 132, 199, 0.45)',
-              flexShrink: 0
+              flexShrink: 0,
+              whiteSpace: 'nowrap'
             }}
           >
             <Play size={18} fill="#ffffff" />
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', minWidth: 0 }}>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', fontWeight: 900, lineHeight: 1.15, whiteSpace: 'nowrap' }}>
                 {selectedMission ? 'DEPLOY OPERATION' : 'DEPLOY TO COMBAT'}
               </span>
