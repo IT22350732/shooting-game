@@ -613,6 +613,14 @@ canvas {
   flex-shrink: 0 !important;
 }
 
+.menu-dock-text-short {
+  display: none !important;
+}
+
+.menu-dock-text-full {
+  display: inline !important;
+}
+
 .menu-bottom-deploy {
   display: flex;
   align-items: center;
@@ -844,14 +852,14 @@ canvas {
   .menu-bottom-dock {
     display: flex !important;
     align-items: center !important;
-    gap: 5px !important;
+    gap: 3px !important;
     flex: 1 1 auto !important;
     min-width: 0 !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
     -webkit-overflow-scrolling: touch !important;
     scrollbar-width: none !important;
-    padding: 3px 2px !important;
+    padding: 2px 2px !important;
     touch-action: pan-x !important;
   }
 
@@ -859,19 +867,29 @@ canvas {
     display: none !important;
   }
 
+  .menu-dock-text-short {
+    display: inline !important;
+  }
+
+  .menu-dock-text-full {
+    display: none !important;
+  }
+
   .menu-dock-btn,
   .menu-bottom-dock .btn-cyber {
-    padding: 5px 6px !important;
-    font-size: 0.68rem !important;
-    min-height: 32px !important;
+    padding: 4px 6px !important;
+    font-size: 0.62rem !important;
+    letter-spacing: 0.02em !important;
+    min-height: 30px !important;
     gap: 3px !important;
     white-space: nowrap !important;
     flex-shrink: 0 !important;
+    clip-path: polygon(5px 0%, 100% 0%, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0% 100%, 0% 5px) !important;
   }
 
   .menu-dock-btn svg {
-    width: 13px !important;
-    height: 13px !important;
+    width: 12px !important;
+    height: 12px !important;
     flex-shrink: 0 !important;
   }
 
@@ -879,10 +897,9 @@ canvas {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    gap: 6px !important;
+    gap: 4px !important;
     flex-shrink: 0 !important;
     margin-left: 4px !important;
-    max-width: 50% !important;
   }
 
   /* On mobile landscape, mission card is hidden because deploy button has integrated summary */
@@ -891,19 +908,42 @@ canvas {
   }
 
   .menu-deploy-btn {
-    padding: 6px 14px !important;
-    min-height: 38px !important;
+    padding: 4px 10px !important;
+    min-height: 32px !important;
     white-space: nowrap !important;
-    gap: 8px !important;
+    gap: 6px !important;
     flex-shrink: 0 !important;
-    max-width: 100% !important;
     box-sizing: border-box !important;
+    clip-path: polygon(6px 0%, 100% 0%, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0% 100%, 0% 6px) !important;
   }
 
   .menu-deploy-btn svg {
-    width: 16px !important;
-    height: 16px !important;
+    width: 14px !important;
+    height: 14px !important;
     flex-shrink: 0 !important;
+  }
+
+  .menu-deploy-btn div span:first-child {
+    font-size: 0.88rem !important;
+  }
+
+  .menu-deploy-btn div span:last-child {
+    font-size: 0.56rem !important;
+  }
+
+  /* Compact width landscape (e.g. phones with width <= 760px) */
+  @media (max-width: 760px) {
+    .menu-dock-btn,
+    .menu-bottom-dock .btn-cyber {
+      padding: 3px 5px !important;
+      font-size: 0.58rem !important;
+      letter-spacing: 0.01em !important;
+      gap: 2px !important;
+    }
+    .menu-dock-btn svg {
+      width: 11px !important;
+      height: 11px !important;
+    }
   }
 
   /* Owner watermark footer stays docked cleanly without overlapping */

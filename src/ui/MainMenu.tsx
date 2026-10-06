@@ -508,7 +508,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             }}
           >
             <Award size={18} color="#0284c7" />
-            <span style={{ whiteSpace: 'nowrap' }}>MISSIONS (5)</span>
+            <span className="menu-dock-text-full" style={{ whiteSpace: 'nowrap' }}>MISSIONS (5)</span>
+            <span className="menu-dock-text-short" style={{ whiteSpace: 'nowrap' }}>MISSIONS</span>
           </button>
 
           <button
@@ -552,7 +553,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             }}
           >
             <Users size={18} color="#ffffff" />
-            <span style={{ whiteSpace: 'nowrap' }}>MULTIPLAYER</span>
+            <span className="menu-dock-text-full" style={{ whiteSpace: 'nowrap' }}>MULTIPLAYER</span>
+            <span className="menu-dock-text-short" style={{ whiteSpace: 'nowrap' }}>CO-OP</span>
           </button>
 
           <button
