@@ -150,6 +150,9 @@ export const MultiplayerScoreboard: React.FC<MultiplayerScoreboardProps> = ({
         style={{
           width: '100%',
           maxWidth: 780,
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
           background: 'rgba(15, 23, 42, 0.94)',
           border: '1.5px solid rgba(2, 132, 199, 0.5)',
           borderRadius: 14,

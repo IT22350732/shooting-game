@@ -702,15 +702,17 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               gap: 10,
               boxShadow: '0 6px 25px rgba(2, 132, 199, 0.45)',
               flexShrink: 0,
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
+              maxWidth: '100%',
+              boxSizing: 'border-box'
             }}
           >
-            <Play size={18} fill="#ffffff" />
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', minWidth: 0 }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', fontWeight: 900, lineHeight: 1.15, whiteSpace: 'nowrap' }}>
+            <Play size={18} fill="#ffffff" style={{ flexShrink: 0 }} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', minWidth: 0, flexShrink: 1 }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.88rem', fontWeight: 900, lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
                 {selectedMission ? 'DEPLOY OPERATION' : 'DEPLOY TO COMBAT'}
               </span>
-              <span style={{ fontFamily: 'var(--font-sub)', fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255, 255, 255, 0.88)', whiteSpace: 'nowrap' }}>
+              <span style={{ fontFamily: 'var(--font-sub)', fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255, 255, 255, 0.88)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
                 {selectedMission ? `OP 0${selectedMission.number}: ${selectedMission.title}` : `${currentModeInfo.name} • ${currentArenaInfo.name.split(' ')[0]}`}
               </span>
             </div>

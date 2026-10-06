@@ -4,9 +4,10 @@ import { Crosshair, Target } from 'lucide-react';
 
 interface KillFeedProps {
   entries: KillFeedEntry[];
+  isMobile?: boolean;
 }
 
-export const KillFeed: React.FC<KillFeedProps> = ({ entries }) => {
+export const KillFeed: React.FC<KillFeedProps> = ({ entries, isMobile }) => {
   if (entries.length === 0) return null;
 
   const getTeamColor = (team: string) => {
@@ -30,14 +31,14 @@ export const KillFeed: React.FC<KillFeedProps> = ({ entries }) => {
     <div
       style={{
         position: 'fixed',
-        top: 65,
-        right: 18,
+        top: isMobile ? 'calc(env(safe-area-inset-top, 0px) + 84px)' : 65,
+        right: isMobile ? 'calc(env(safe-area-inset-right, 0px) + 16px)' : 18,
         display: 'flex',
         flexDirection: 'column',
-        gap: 6,
+        gap: isMobile ? 4 : 6,
         zIndex: 50,
         pointerEvents: 'none',
-        maxWidth: 320
+        maxWidth: isMobile ? 240 : 320
       }}
     >
       {entries.map((entry) => (

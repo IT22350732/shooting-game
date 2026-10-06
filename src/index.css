@@ -303,28 +303,42 @@ canvas {
   .hud-top-actions {
     z-index: 90 !important;
     pointer-events: auto !important;
+    gap: 6px !important;
+  }
+
+  .hud-top-actions button {
+    width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    border-radius: 9px !important;
+    padding: 0 !important;
+  }
+
+  .hud-top-actions svg {
+    width: 17px !important;
+    height: 17px !important;
   }
 
   /* Health & Armor Panel: Moved cleanly to TOP-LEFT below Pause/Info/Fullscreen buttons */
   .hud-health-panel {
-    top: calc(var(--safe-top) + 68px) !important;
+    top: calc(var(--safe-top) + 58px) !important;
     bottom: auto !important;
     left: calc(var(--safe-left) + 16px) !important;
     min-width: 155px !important;
-    max-width: 195px !important;
-    padding: 6px 12px !important;
-    gap: 5px !important;
+    max-width: 190px !important;
+    padding: 5px 10px !important;
+    gap: 4px !important;
     z-index: 90 !important;
     pointer-events: auto !important;
     border-radius: 12px !important;
   }
 
   .hud-health-panel .stat-label {
-    font-size: 0.7rem !important;
+    font-size: 0.68rem !important;
   }
 
   .hud-health-panel .stat-val {
-    font-size: 0.95rem !important;
+    font-size: 0.90rem !important;
   }
 
   /* Weapon & Ammo Card: Centered at bottom edge, completely free of joystick & action buttons */
@@ -528,7 +542,16 @@ canvas {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-shrink: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.menu-bottom-dock::-webkit-scrollbar {
+  display: none;
 }
 
 .menu-dock-btn {
@@ -760,27 +783,43 @@ canvas {
     justify-content: space-between !important;
     gap: 8px !important;
     width: 100% !important;
+    max-width: 100% !important;
     position: relative !important;
+    box-sizing: border-box !important;
   }
 
   .menu-bottom-dock {
     display: flex !important;
+    align-items: center !important;
     gap: 5px !important;
-    flex-shrink: 1 !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    padding: 3px 2px !important;
+    touch-action: pan-x !important;
+  }
+
+  .menu-bottom-dock::-webkit-scrollbar {
+    display: none !important;
   }
 
   .menu-dock-btn,
   .menu-bottom-dock .btn-cyber {
     padding: 5px 8px !important;
-    font-size: 0.72rem !important;
+    font-size: 0.70rem !important;
     min-height: 34px !important;
-    gap: 3px !important;
+    gap: 4px !important;
     white-space: nowrap !important;
+    flex-shrink: 0 !important;
   }
 
   .menu-dock-btn svg {
     width: 14px !important;
     height: 14px !important;
+    flex-shrink: 0 !important;
   }
 
   .menu-bottom-deploy {
@@ -789,6 +828,8 @@ canvas {
     align-items: center !important;
     gap: 6px !important;
     flex-shrink: 0 !important;
+    margin-left: 4px !important;
+    max-width: 50% !important;
   }
 
   /* On mobile landscape, mission card is hidden because deploy button has integrated summary */
@@ -801,6 +842,9 @@ canvas {
     min-height: 38px !important;
     white-space: nowrap !important;
     gap: 8px !important;
+    flex-shrink: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .menu-deploy-btn svg {

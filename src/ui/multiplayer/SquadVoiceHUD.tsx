@@ -65,14 +65,16 @@ export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
       <div
         style={{
           position: 'fixed',
-          top: isMobile ? 80 : 100,
-          left: 16,
+          top: isMobile ? 'calc(env(safe-area-inset-top, 0px) + 132px)' : 100,
+          left: 'calc(env(safe-area-inset-left, 0px) + 16px)',
           zIndex: 45,
           display: 'flex',
           flexDirection: 'column',
-          gap: 6,
+          gap: isMobile ? 4 : 6,
           pointerEvents: 'auto',
-          maxWidth: isMobile ? 220 : 260
+          maxWidth: isMobile ? 190 : 260,
+          maxHeight: isMobile ? 130 : 'none',
+          overflowY: isMobile ? 'auto' : 'visible'
         }}
       >
         {/* Header Bar */}
@@ -393,11 +395,11 @@ export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
           onMouseUp={handleMobilePttEnd}
           style={{
             position: 'fixed',
-            bottom: 110,
-            left: 20,
+            top: 'calc(env(safe-area-inset-top, 0px) + 58px)',
+            left: 'calc(env(safe-area-inset-left, 0px) + 214px)',
             zIndex: 60,
-            width: 58,
-            height: 58,
+            width: 48,
+            height: 48,
             borderRadius: '50%',
             background: (isMobilePttActive || voiceState.isLiveLocked)
               ? 'radial-gradient(circle, #22c55e 0%, #15803d 100%)'
@@ -406,7 +408,7 @@ export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
               : 'rgba(15, 23, 42, 0.85)',
             border: `2px solid ${(isMobilePttActive || voiceState.isLiveLocked) ? '#4ade80' : voiceState.isMuted ? '#ef4444' : '#0284c7'}`,
             boxShadow: (isMobilePttActive || voiceState.isLiveLocked)
-              ? '0 0 22px #22c55e'
+              ? '0 0 18px #22c55e'
               : '0 4px 15px rgba(0, 0, 0, 0.6)',
             display: 'flex',
             flexDirection: 'column',
@@ -420,9 +422,9 @@ export const SquadVoiceHUD: React.FC<SquadVoiceHUDProps> = ({ isMobile }) => {
             transition: 'transform 0.1s ease, box-shadow 0.1s ease'
           }}
         >
-          {voiceState.isMuted ? <MicOff size={22} /> : <Mic size={22} />}
-          <span style={{ fontSize: '0.50rem', fontWeight: 900, letterSpacing: 0.5, marginTop: 1 }}>
-            {voiceState.isLiveLocked ? 'LIVE ON' : isMobilePttActive ? 'TALKING' : 'HOLD / TAP'}
+          {voiceState.isMuted ? <MicOff size={18} /> : <Mic size={18} />}
+          <span style={{ fontSize: '0.45rem', fontWeight: 900, letterSpacing: 0.4, marginTop: 1 }}>
+            {voiceState.isLiveLocked ? 'LIVE' : isMobilePttActive ? 'TALK' : 'PTT'}
           </span>
         </div>
       )}
