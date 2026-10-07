@@ -34,6 +34,7 @@ import { multiplayerService } from '../multiplayer/MultiplayerService';
 import { voiceChatService } from '../multiplayer/VoiceChatService';
 import { RemotePlayer } from '../entities/RemotePlayer';
 import { NetworkPlayerState } from '../multiplayer/MultiplayerTypes';
+import { RadarPing } from '../../ui/multiplayer/TacticalRadar';
 
 export interface HUDStats {
   health: number;
@@ -71,6 +72,9 @@ export interface HUDStats {
   multiplayerPing?: number;
   fps?: number;
   graphicsQuality?: GraphicsQuality;
+  radarPings?: RadarPing[];
+  playerPos?: { x: number; y: number; z: number };
+  playerYaw?: number;
 }
 
 export interface GameEngineCallbacks {
@@ -113,6 +117,7 @@ export class GameEngine {
   public respawnCountdown: number = 0;
   public killerName: string = '';
   private multiplayerBroadcastTimer: number = 0;
+  private multiplayerEnemySyncTimer: number = 0;
 
   // State
   public state: GameState = 'MENU';
@@ -274,10 +279,36 @@ export class GameEngine {
     this.arena.loadArena(arenaId);
     this.particles.initAtmosphere(arenaId);
 
-    // Spawn player at valid spawn point
-    const spawn = this.arena.getValidSpawnPoint(new THREE.Vector3(0, 0, 0));
+    // Spawn player at valid team spawn point with proper ground eye-height
+    let spawn: THREE.Vector3;
+    const localTeam = multiplayerService.localPlayer?.team || 'alpha';
+    if (mode === 'multiplayer_coop') {
+      spawn = new THREE.Vector3(0, this.player.eyeHeight, 14);
+      this.waveManager.reset();
+      this.waveManager.currentWave = 1;
+    } else if (mode === 'multiplayer_tdm') {
+      spawn = localTeam === 'alpha' ? new THREE.Vector3(0, this.player.eyeHeight, 16) : new THREE.Vector3(0, this.player.eyeHeight, -16);
+    } else {
+      spawn = this.arena.getValidSpawnPoint(new THREE.Vector3(0, 0, 0));
+      spawn.y = this.player.eyeHeight;
+    }
+
     this.player.position.copy(spawn);
     this.player.activatePowerup('shield', 3.5);
+
+    // Immediately broadcast local spawn state so all remote players see us without delay
+    multiplayerService.broadcastSnapshot({
+      position: { x: this.player.position.x, y: this.player.position.y, z: this.player.position.z },
+      yaw: this.player.yaw,
+      pitch: this.player.pitch,
+      stance: this.player.stance,
+      velocity: { x: 0, y: 0, z: 0 },
+      isMoving: false,
+      health: this.player.stats.health,
+      armor: this.player.stats.armor,
+      activeWeapon: this.currentWeaponId,
+      isFiring: false
+    });
 
     soundManager.startMusic();
     soundManager.playMatchStartCountdown(0);
@@ -378,6 +409,81 @@ export class GameEngine {
           remote.setSpeaking(vState.isSpeaking);
         }
       },
+      onEnemiesSync: (wave, remoteEnemies) => {
+        if (!this.isMultiplayer) return;
+        this.waveManager.currentWave = wave;
+
+        const currentMap = new Map<string, Enemy>();
+        this.enemies.forEach(e => currentMap.set(e.id, e));
+        const activeIds = new Set<string>();
+
+        remoteEnemies.forEach(re => {
+          activeIds.add(re.id);
+          let localEnemy = currentMap.get(re.id);
+          if (!localEnemy) {
+            const spawnPos = new THREE.Vector3(re.position.x, re.position.y, re.position.z);
+            localEnemy = new Enemy(re.id, re.type as EnemyType, spawnPos, 1.0, { hp: 1, dmg: 1, speed: 1 });
+            localEnemy.health = re.health;
+            localEnemy.maxHealth = re.maxHealth;
+            this.enemies.push(localEnemy);
+            this.scene.add(localEnemy.mesh);
+          } else {
+            localEnemy.position.lerp(new THREE.Vector3(re.position.x, re.position.y, re.position.z), 0.35);
+            localEnemy.mesh.position.copy(localEnemy.position);
+            localEnemy.mesh.rotation.y = re.yaw;
+            localEnemy.health = re.health;
+            if (re.isDead && !localEnemy.isDead) {
+              localEnemy.isDead = true;
+              this.particles.spawnExplosion(localEnemy.position, 25);
+            }
+          }
+        });
+
+        // If client, clean up dead enemies not in sync
+        if (!multiplayerService.isHost) {
+          for (let i = this.enemies.length - 1; i >= 0; i--) {
+            const e = this.enemies[i];
+            if (!activeIds.has(e.id)) {
+              this.scene.remove(e.mesh);
+              e.dispose();
+              this.enemies.splice(i, 1);
+            }
+          }
+        }
+      },
+      onEnemyHit: (shooterId, enemyId, damage, isHeadshot, hitPoint) => {
+        if (!this.isMultiplayer || !multiplayerService.isHost) return;
+        const enemy = this.enemies.find(e => e.id === enemyId);
+        if (enemy && !enemy.isDead) {
+          const res = enemy.takeDamage(damage, isHeadshot);
+          const hpVec = new THREE.Vector3(hitPoint.x, hitPoint.y, hitPoint.z);
+          this.particles.spawnSparks(hpVec, new THREE.Vector3(0, 1, 0), isHeadshot ? 0xfef08a : 0xef4444, 12);
+          if (res.killed) {
+            this.handleMultiplayerEnemyKilled(enemy, shooterId, isHeadshot);
+          }
+        }
+      },
+      onEnemyKilled: (enemyId, killerId, isHeadshot, rewardScore) => {
+        const enemy = this.enemies.find(e => e.id === enemyId);
+        if (enemy) {
+          enemy.isDead = true;
+          this.particles.spawnExplosion(enemy.position, 25);
+        }
+        if (killerId === multiplayerService.localPlayerId) {
+          this.player.stats.kills++;
+          this.player.stats.score += rewardScore;
+          if (isHeadshot) {
+            this.player.stats.headshots++;
+            soundManager.playHeadshotKill();
+          } else {
+            soundManager.playKillConfirmed();
+          }
+        }
+      },
+      onWaveCompleted: (wave, rewardCoins) => {
+        soundManager.playWaveComplete();
+        this.player.stats.coins += rewardCoins;
+      },
       onMatchStart: (arena, mode) => {
         this.startMultiplayerGame(arena, mode);
       },
@@ -404,6 +510,31 @@ export class GameEngine {
         }
       });
     });
+  }
+
+  private handleMultiplayerEnemyKilled(enemy: Enemy, killerId: string, isHeadshot: boolean) {
+    enemy.isDead = true;
+    this.particles.spawnExplosion(enemy.position, 30);
+    const reward = isHeadshot ? 150 : 100;
+    multiplayerService.broadcastEnemyKilled(enemy.id, isHeadshot, reward);
+
+    if (multiplayerService.room?.mode === 'multiplayer_tdm') {
+      const killer = multiplayerService.players.get(killerId);
+      if (killer?.team === 'alpha') multiplayerService.room.teamAlphaScore++;
+      else if (killer?.team === 'bravo') multiplayerService.room.teamBravoScore++;
+      multiplayerService.broadcastSnapshot({});
+    }
+
+    if (killerId === multiplayerService.localPlayerId) {
+      this.player.stats.kills++;
+      this.player.stats.score += reward;
+      if (isHeadshot) {
+        this.player.stats.headshots++;
+        soundManager.playHeadshotKill();
+      } else {
+        soundManager.playKillConfirmed();
+      }
+    }
   }
 
   private handleMultiplayerDeath(killerName: string) {
@@ -1476,6 +1607,14 @@ export class GameEngine {
           }
 
           const baseDmg = this.currentWeapon.config.damage * (hasDamageBoost ? 2.0 : 1.0);
+
+          if (this.isMultiplayer && !multiplayerService.isHost) {
+            this.particles.spawnSparks(hitPoint, hitNormal, isHeadshot ? 0xfef08a : 0xf97316, 14);
+            this.triggerHitFeedback(hitPoint, Math.round(baseDmg), isHeadshot);
+            multiplayerService.reportEnemyHit(enemy.id, baseDmg, isHeadshot, { x: hitPoint.x, y: hitPoint.y, z: hitPoint.z });
+            return;
+          }
+
           const res = enemy.takeDamage(baseDmg, isHeadshot, hitNormal);
 
           if (res.blocked) {
@@ -1488,7 +1627,11 @@ export class GameEngine {
           this.triggerHitFeedback(hitPoint, res.finalDamage, isHeadshot);
 
           if (res.killed) {
-            this.handleEnemyKill(enemy, isHeadshot);
+            if (this.isMultiplayer) {
+              this.handleMultiplayerEnemyKilled(enemy, multiplayerService.localPlayerId, isHeadshot);
+            } else {
+              this.handleEnemyKill(enemy, isHeadshot);
+            }
           }
           return;
         }
@@ -1849,7 +1992,16 @@ export class GameEngine {
         this.respawnCountdown -= delta;
         if (this.respawnCountdown <= 0) {
           this.isRespawning = false;
-          const spawn = this.arena.getValidSpawnPoint(new THREE.Vector3(0, 0, 0));
+          let spawn: THREE.Vector3;
+          const localTeam = multiplayerService.localPlayer?.team || 'alpha';
+          if (this.mode === 'multiplayer_coop') {
+            spawn = new THREE.Vector3(0, this.player.eyeHeight, 14);
+          } else if (this.mode === 'multiplayer_tdm') {
+            spawn = localTeam === 'alpha' ? new THREE.Vector3(0, this.player.eyeHeight, 16) : new THREE.Vector3(0, this.player.eyeHeight, -16);
+          } else {
+            spawn = this.arena.getValidSpawnPoint(new THREE.Vector3(0, 0, 0));
+            spawn.y = this.player.eyeHeight;
+          }
           this.player.position.copy(spawn);
           this.player.velocity.set(0, 0, 0);
           this.player.stats.health = this.player.stats.maxHealth;
@@ -1859,9 +2011,9 @@ export class GameEngine {
         }
       }
 
-      // 2. Update Remote Players
+      // 2. Update Remote Players (with local position for distance calculations)
       for (const [, remote] of this.remotePlayers) {
-        remote.update(delta);
+        remote.update(delta, this.player.position);
       }
 
       // 3. Broadcast snapshot at ~30Hz (every 33ms)
@@ -1880,6 +2032,63 @@ export class GameEngine {
           activeWeapon: this.currentWeaponId,
           isFiring: this.isLeftMouseDown || this.isTouchShooting
         });
+      }
+
+      // 4. Host Authoritative Enemy Simulation in Co-op and TDM Bot Fill
+      if (multiplayerService.isHost) {
+        const isCoop = this.mode === 'multiplayer_coop';
+        const isTDM = this.mode === 'multiplayer_tdm';
+        const enableBots = multiplayerService.room?.enableBots !== false;
+
+        if (isCoop) {
+          const isGameOver = this.waveManager.update(
+            delta,
+            (type: EnemyType) => {
+              const spawnPos = this.arena.getValidSpawnPoint(this.player.position);
+              const waveMultiplier = 1 + (this.waveManager.currentWave - 1) * 0.18;
+              const enemy = new Enemy(Math.random().toString(), type, spawnPos, waveMultiplier, { hp: 1.0, dmg: 1.0, speed: 1.0 });
+              this.enemies.push(enemy);
+              this.scene.add(enemy.mesh);
+            },
+            () => {
+              if (!this.boss) {
+                const waveMultiplier = 1 + (this.waveManager.currentWave - 1) * 0.25;
+                this.boss = new Boss(waveMultiplier);
+                this.scene.add(this.boss.mesh);
+              }
+            }
+          );
+          if (isGameOver) {
+            this.triggerGameOver();
+            return;
+          }
+        } else if (isTDM && enableBots) {
+          // Maintain 3-4 tactical enemy combatant bots so players always have combat
+          const aliveEnemies = this.enemies.filter(e => !e.isDead).length;
+          if (aliveEnemies < 4 && this.enemies.length < 5) {
+            const spawnPos = this.arena.getValidSpawnPoint(this.player.position);
+            const botType: EnemyType = Math.random() > 0.4 ? 'ranged' : 'basic';
+            const enemy = new Enemy(Math.random().toString(), botType, spawnPos, 1.0, { hp: 0.9, dmg: 0.85, speed: 0.95 });
+            this.enemies.push(enemy);
+            this.scene.add(enemy.mesh);
+          }
+        }
+
+        // Broadcast enemy sync at 10Hz (every 100ms)
+        this.multiplayerEnemySyncTimer += delta;
+        if ((isCoop || (isTDM && enableBots)) && this.multiplayerEnemySyncTimer >= 0.1) {
+          this.multiplayerEnemySyncTimer = 0;
+          const enemyStates = this.enemies.map(e => ({
+            id: e.id,
+            type: e.type,
+            position: { x: e.position.x, y: e.position.y, z: e.position.z },
+            yaw: e.mesh.rotation.y,
+            health: e.health,
+            maxHealth: e.maxHealth,
+            isDead: e.isDead
+          }));
+          multiplayerService.broadcastEnemiesSync(this.waveManager.currentWave, enemyStates);
+        }
       }
     }
 
@@ -2048,10 +2257,24 @@ export class GameEngine {
         if (!proj.isDead) {
           for (const enemy of this.enemies) {
             if (!enemy.isDead && enemy.position.distanceTo(proj.position) < (enemy.getHeight() * 0.7 + proj.radius)) {
+              if (this.isMultiplayer && !multiplayerService.isHost) {
+                this.particles.spawnExplosion(proj.position, 20);
+                this.triggerHitFeedback(proj.position, Math.round(proj.damage), false);
+                multiplayerService.reportEnemyHit(enemy.id, proj.damage, false, { x: proj.position.x, y: proj.position.y, z: proj.position.z });
+                proj.isDead = true;
+                break;
+              }
+
               const res = enemy.takeDamage(proj.damage, false);
               this.particles.spawnExplosion(proj.position, 20);
               this.triggerHitFeedback(proj.position, res.finalDamage, false);
-              if (res.killed) this.handleEnemyKill(enemy, false);
+              if (res.killed) {
+                if (this.isMultiplayer) {
+                  this.handleMultiplayerEnemyKilled(enemy, multiplayerService.localPlayerId, false);
+                } else {
+                  this.handleEnemyKill(enemy, false);
+                }
+              }
               proj.isDead = true;
               break;
             }
@@ -2143,12 +2366,58 @@ export class GameEngine {
       multiplayerScoreLimit: multiplayerService.room?.scoreLimit,
       multiplayerPing: multiplayerService.currentPing,
       fps: this.calculatedFps,
-      graphicsQuality: this.graphicsQuality
+      graphicsQuality: this.graphicsQuality,
+      radarPings: this.getRadarPings(),
+      playerPos: { x: this.player.position.x, y: this.player.position.y, z: this.player.position.z },
+      playerYaw: this.player.yaw
     });
 
     const activeList: PowerupActiveState[] = [];
     this.player.activePowerups.forEach(p => activeList.push(p));
     this.callbacks.onPowerupChange(activeList);
+  }
+
+  public getRadarPings(): Array<{ id: string; type: 'teammate' | 'enemy' | 'boss'; x: number; z: number; name?: string; distance?: number }> {
+    const pings: Array<{ id: string; type: 'teammate' | 'enemy' | 'boss'; x: number; z: number; name?: string; distance?: number }> = [];
+    const localPos = this.player.position;
+    const localTeam = multiplayerService.localPlayer?.team || 'alpha';
+
+    if (this.isMultiplayer) {
+      for (const [, remote] of this.remotePlayers) {
+        if (!remote.isAlive) continue;
+        const isTeammate = (this.mode === 'multiplayer_coop') || (this.mode === 'multiplayer_tdm' && remote.team === localTeam);
+        pings.push({
+          id: remote.id,
+          type: isTeammate ? 'teammate' : 'enemy',
+          x: remote.position.x,
+          z: remote.position.z,
+          name: remote.name,
+          distance: Math.round(remote.position.distanceTo(localPos))
+        });
+      }
+    }
+
+    for (const enemy of this.enemies) {
+      if (!enemy.isDead) {
+        pings.push({
+          id: enemy.id,
+          type: 'enemy',
+          x: enemy.position.x,
+          z: enemy.position.z
+        });
+      }
+    }
+
+    if (this.boss && !this.boss.isDead) {
+      pings.push({
+        id: 'boss',
+        type: 'boss',
+        x: this.boss.position.x,
+        z: this.boss.position.z
+      });
+    }
+
+    return pings;
   }
 
   private triggerGameOver() {

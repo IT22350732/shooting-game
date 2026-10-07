@@ -189,20 +189,22 @@ export class RemotePlayer {
     this.shieldMesh.visible = false;
     this.mesh.add(this.shieldMesh);
 
-    // Overhead 3D Canvas Sprite for Name, Team, HP bar & Ping
+    // Overhead 3D Canvas Sprite for Name, Team, HP bar, Ping & Distance
     this.overheadCanvas = document.createElement('canvas');
-    this.overheadCanvas.width = 256;
-    this.overheadCanvas.height = 80;
+    this.overheadCanvas.width = 320;
+    this.overheadCanvas.height = 96;
     this.overheadCtx = this.overheadCanvas.getContext('2d')!;
     this.overheadTexture = new THREE.CanvasTexture(this.overheadCanvas);
     const spriteMat = new THREE.SpriteMaterial({
       map: this.overheadTexture,
       transparent: true,
-      depthTest: false
+      depthTest: false,
+      depthWrite: false
     });
     this.overheadSprite = new THREE.Sprite(spriteMat);
-    this.overheadSprite.scale.set(1.7, 0.55, 1);
-    this.overheadSprite.position.set(0, 2.3, 0);
+    this.overheadSprite.renderOrder = 9999; // Render above world geometry so teammates can always be located
+    this.overheadSprite.scale.set(2.3, 0.7, 1);
+    this.overheadSprite.position.set(0, 2.35, 0);
     this.mesh.add(this.overheadSprite);
 
     this.updateOverheadUI();
@@ -424,13 +426,16 @@ export class RemotePlayer {
     this.overheadSprite.visible = false;
   }
 
+  private lastDistanceMeters: number = 0;
+
   public respawn(pos: { x: number; y: number; z: number }) {
     this.isAlive = true;
     this.health = this.maxHealth;
     this.armor = this.maxArmor;
     this.position.set(pos.x, pos.y, pos.z);
     this.targetPosition.copy(this.position);
-    this.mesh.position.copy(this.position);
+    const meshY = Math.max(0, this.position.y - 1.75);
+    this.mesh.position.set(this.position.x, meshY, this.position.z);
     this.torsoGroup.rotation.x = 0;
     this.overheadSprite.visible = true;
     this.activateShield(3.5);
@@ -438,7 +443,16 @@ export class RemotePlayer {
   }
 
   // Smooth Hermite / Lerp Interpolation
-  public update(delta: number) {
+  public update(delta: number, localPlayerPos?: THREE.Vector3) {
+    // Distance tracker for overhead tag
+    if (localPlayerPos) {
+      const dist = this.position.distanceTo(localPlayerPos);
+      if (Math.abs(dist - this.lastDistanceMeters) >= 1.5) {
+        this.lastDistanceMeters = dist;
+        this.updateOverheadUI(dist);
+      }
+    }
+
     // Hit flash decay
     if (this.hitFlashTimer > 0) {
       this.hitFlashTimer -= delta;
@@ -514,21 +528,22 @@ export class RemotePlayer {
     }
   }
 
-  public updateOverheadUI() {
+  public updateOverheadUI(distanceMeters?: number) {
     const ctx = this.overheadCtx;
-    const w = 256;
-    const h = 80;
+    const w = 320;
+    const h = 96;
     ctx.clearRect(0, 0, w, h);
 
     const colors = this.getTeamThemeColors(this.team);
+    const distText = distanceMeters !== undefined ? ` • ${Math.max(1, Math.round(distanceMeters))}m` : '';
 
-    // Background pill
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+    // Background tactical pill
+    ctx.fillStyle = 'rgba(10, 15, 30, 0.85)';
     ctx.beginPath();
-    ctx.roundRect(10, 5, w - 20, h - 10, 10);
+    ctx.roundRect(8, 4, w - 16, h - 8, 12);
     ctx.fill();
 
-    // Border (glowing green when speaking in live voice chat)
+    // Border (glowing green when speaking in live voice chat, or team color)
     ctx.strokeStyle = this.isSpeaking ? '#22c55e' : colors.nameColor;
     ctx.lineWidth = this.isSpeaking ? 3.5 : 2;
     ctx.stroke();
@@ -540,14 +555,14 @@ export class RemotePlayer {
     const nameText = this.isSpeaking ? `[MIC] ${this.name}` : `${this.name}`;
     ctx.fillText(nameText, w / 2, 32);
 
-    // Team Badge / Role Tag
-    ctx.font = 'bold 12px Rajdhani, sans-serif';
+    // Team Badge / Role Tag & Distance
+    ctx.font = 'bold 14px Rajdhani, sans-serif';
     ctx.fillStyle = colors.nameColor;
-    ctx.fillText(colors.tag, w / 2, 47);
+    ctx.fillText(`${colors.tag}${distText}`, w / 2, 50);
 
     // Health Bar Background
     const barX = 24;
-    const barY = 54;
+    const barY = 62;
     const barW = w - 48;
     const barH = 10;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';

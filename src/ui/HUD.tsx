@@ -35,6 +35,7 @@ import { MultiplayerScoreboard } from './multiplayer/MultiplayerScoreboard';
 import { SquadVoiceHUD } from './multiplayer/SquadVoiceHUD';
 import { multiplayerService } from '../game/multiplayer/MultiplayerService';
 import { KillFeedEntry } from '../game/multiplayer/MultiplayerTypes';
+import { TacticalRadar, RadarPing } from './multiplayer/TacticalRadar';
 
 interface HUDProps {
   stats: {
@@ -73,6 +74,9 @@ interface HUDProps {
     multiplayerPing?: number;
     fps?: number;
     graphicsQuality?: string;
+    radarPings?: RadarPing[];
+    playerPos?: { x: number; y: number; z: number };
+    playerYaw?: number;
   };
   hitMarker: HitMarkerInfo | null;
   damageNumbers: FloatingDamageNumber[];
@@ -826,7 +830,29 @@ export const HUD: React.FC<HUDProps> = ({
               background: 'rgba(15, 23, 42, 0.92)'
             }}
           >
-            {multiplayerService.room?.mode === 'multiplayer_tdm' ? (
+            {multiplayerService.room?.mode === 'multiplayer_coop' ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? 4 : 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? 3 : 6 }}>
+                  <Shield size={isMobileView ? 12 : 16} color="#10b981" />
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: isMobileView ? '0.78rem' : '1.15rem', fontWeight: 900, color: '#10b981' }}>
+                    CO-OP STRIKE
+                  </span>
+                </div>
+                <div style={{ width: 1, height: isMobileView ? 10 : 16, background: 'rgba(255, 255, 255, 0.2)' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? 3 : 6 }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: isMobileView ? '0.78rem' : '1.1rem', fontWeight: 900, color: '#38bdf8' }}>
+                    WAVE {stats.wave || 1}
+                  </span>
+                </div>
+                <div style={{ width: 1, height: isMobileView ? 10 : 16, background: 'rgba(255, 255, 255, 0.2)' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? 3 : 6 }}>
+                  <Skull size={isMobileView ? 12 : 16} color="#f43f5e" />
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: isMobileView ? '0.78rem' : '1.1rem', fontWeight: 900, color: '#f43f5e' }}>
+                    HOSTILES: {stats.enemiesRemaining ?? 0}
+                  </span>
+                </div>
+              </div>
+            ) : multiplayerService.room?.mode === 'multiplayer_tdm' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? 4 : 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? 3 : 6 }}>
                   <Shield size={isMobileView ? 12 : 16} color="#38bdf8" />
@@ -1133,6 +1159,16 @@ export const HUD: React.FC<HUDProps> = ({
               />
             </div>
           </div>
+        )}
+
+        {/* TACTICAL RADAR MINI-MAP FOR MULTIPLAYER */}
+        {stats.isMultiplayer && (
+          <TacticalRadar
+            pings={stats.radarPings}
+            playerPos={stats.playerPos}
+            playerYaw={stats.playerYaw}
+            isMobile={isMobileView}
+          />
         )}
       </div>
 

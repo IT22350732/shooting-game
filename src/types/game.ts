@@ -1,4 +1,4 @@
-export type GameMode = 'easy' | 'medium' | 'hard' | 'free_mode' | 'survival' | 'time_attack' | 'boss_arena' | 'mission' | 'multiplayer_tdm' | 'multiplayer_ffa';
+export type GameMode = 'easy' | 'medium' | 'hard' | 'free_mode' | 'survival' | 'time_attack' | 'boss_arena' | 'mission' | 'multiplayer_tdm' | 'multiplayer_ffa' | 'multiplayer_coop';
 
 export type MissionId = 
   | 'mission_1_suburb_recon'

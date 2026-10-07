@@ -1,6 +1,6 @@
 import { ArenaId, WeaponId } from '../../types/game';
 
-export type MultiplayerMode = 'multiplayer_tdm' | 'multiplayer_ffa';
+export type MultiplayerMode = 'multiplayer_tdm' | 'multiplayer_ffa' | 'multiplayer_coop';
 
 export type TeamId = 'alpha' | 'bravo' | 'ffa';
 
@@ -28,6 +28,7 @@ export interface NetworkPlayerState {
   maxArmor: number;
   activeWeapon: WeaponId;
   isAlive: boolean;
+  isBot?: boolean;
   voiceState?: {
     isSpeaking: boolean;
     isMuted: boolean;
@@ -44,6 +45,17 @@ export interface NetworkPlayerState {
   timestamp: number;
 }
 
+export interface NetworkEnemyState {
+  id: string;
+  type: string;
+  position: NetworkVector3;
+  yaw: number;
+  health: number;
+  maxHealth: number;
+  isDead: boolean;
+  targetPlayerId?: string;
+}
+
 export interface RoomConfig {
   roomId: string;
   roomName: string;
@@ -58,6 +70,9 @@ export interface RoomConfig {
   teamAlphaScore: number;
   teamBravoScore: number;
   timeRemaining: number;
+  enableBots?: boolean;
+  botDifficulty?: 'easy' | 'medium' | 'hard';
+  currentWave?: number;
 }
 
 export interface KillFeedEntry {
@@ -85,8 +100,8 @@ export interface ChatMessage {
 
 export type NetworkPacket =
   | { type: 'ROOM_STATE'; room: RoomConfig; players: NetworkPlayerState[] }
-  | { type: 'PLAYER_JOIN'; player: NetworkPlayerState }
-  | { type: 'PLAYER_LEAVE'; playerId: string }
+  | { type: 'PLAYER_JOIN'; player: NetworkPlayerState; roomId?: string }
+  | { type: 'PLAYER_LEAVE'; playerId: string; roomId?: string }
   | { type: 'PLAYER_READY'; playerId: string; isReady: boolean }
   | { type: 'PLAYER_TEAM_SWITCH'; playerId: string; team: TeamId }
   | { type: 'ROOM_CONFIG_UPDATE'; config: Partial<RoomConfig> }
@@ -120,6 +135,31 @@ export type NetworkPacket =
       type: 'PLAYER_RESPAWN';
       playerId: string;
       position: NetworkVector3;
+    }
+  | {
+      type: 'MULTIPLAYER_ENEMIES_SYNC';
+      wave: number;
+      enemies: NetworkEnemyState[];
+    }
+  | {
+      type: 'MULTIPLAYER_ENEMY_HIT';
+      shooterId: string;
+      enemyId: string;
+      damage: number;
+      isHeadshot: boolean;
+      hitPoint: NetworkVector3;
+    }
+  | {
+      type: 'MULTIPLAYER_ENEMY_KILLED';
+      enemyId: string;
+      killerId: string;
+      isHeadshot: boolean;
+      rewardScore: number;
+    }
+  | {
+      type: 'MULTIPLAYER_WAVE_COMPLETED';
+      wave: number;
+      rewardCoins: number;
     }
   | { type: 'CHAT'; message: ChatMessage }
   | { type: 'PING'; timestamp: number; senderId: string }

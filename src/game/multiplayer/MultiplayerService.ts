@@ -2,6 +2,7 @@ import { Peer, DataConnection } from 'peerjs';
 import {
   NetworkPacket,
   NetworkPlayerState,
+  NetworkEnemyState,
   RoomConfig,
   MultiplayerMode,
   TeamId,
@@ -38,6 +39,10 @@ export interface MultiplayerServiceEvents {
   onConnectionStatusChange?: (status: 'disconnected' | 'connecting' | 'connected' | 'error', message?: string) => void;
   onPingUpdate?: (ping: number) => void;
   onVoiceStateUpdate?: (playerId: string, voiceState: { isSpeaking: boolean; isMuted: boolean; isDeafened: boolean }) => void;
+  onEnemiesSync?: (wave: number, enemies: NetworkEnemyState[]) => void;
+  onEnemyHit?: (shooterId: string, enemyId: string, damage: number, isHeadshot: boolean, hitPoint: { x: number; y: number; z: number }) => void;
+  onEnemyKilled?: (enemyId: string, killerId: string, isHeadshot: boolean, rewardScore: number) => void;
+  onWaveCompleted?: (wave: number, rewardCoins: number) => void;
 }
 
 const PEER_PREFIX = 'shoot-arena-v1-';
@@ -46,6 +51,8 @@ export class MultiplayerService {
   private peer: Peer | null = null;
   private connections: Map<string, DataConnection> = new Map();
   private broadcastChannel: BroadcastChannel | null = null;
+  private ws: WebSocket | null = null;
+  public wsConnected: boolean = false;
 
   public isHost: boolean = false;
   public localPlayerId: string = '';
@@ -116,7 +123,7 @@ export class MultiplayerService {
       maxArmor: 50,
       activeWeapon: 'assault_rifle',
       isAlive: true,
-      position: { x: 0, y: 1.8, z: 12 },
+      position: { x: 0, y: 1.75, z: 12 },
       yaw: 0,
       pitch: 0,
       stance: 'stand',
@@ -129,6 +136,58 @@ export class MultiplayerService {
     return this.localPlayer;
   }
 
+  // --- WEBSOCKET RELAY INITIALIZATION ---
+  private initWebSocket(roomCode: string) {
+    if (this.ws) {
+      try { this.ws.close(); } catch (_) {}
+      this.ws = null;
+      this.wsConnected = false;
+    }
+    try {
+      if (typeof window === 'undefined') return;
+      const isHttps = window.location.protocol === 'https:';
+      const wsProtocol = isHttps ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const wsUrl = `${wsProtocol}//${host}/api/multiplayer-ws`;
+
+      const socket = new WebSocket(wsUrl);
+      this.ws = socket;
+
+      socket.onopen = () => {
+        this.wsConnected = true;
+        if (this.localPlayer) {
+          const packet: NetworkPacket = {
+            type: 'PLAYER_JOIN',
+            player: this.localPlayer,
+            roomId: roomCode
+          };
+          try {
+            socket.send(JSON.stringify(packet));
+          } catch (_) {}
+        }
+      };
+
+      socket.onmessage = (evt) => {
+        try {
+          const packet = JSON.parse(evt.data);
+          this.handleIncomingPacket(packet, 'ws');
+        } catch (e) {
+          console.warn('[WS message error]', e);
+        }
+      };
+
+      socket.onerror = () => {
+        this.wsConnected = false;
+      };
+
+      socket.onclose = () => {
+        this.wsConnected = false;
+      };
+    } catch (e) {
+      console.warn('WebSocket relay initialization fallback to WebRTC/local channel:', e);
+    }
+  }
+
   // --- HOSTING A ROOM ---
   public async createRoom(
     roomName: string,
@@ -136,18 +195,19 @@ export class MultiplayerService {
     arena: ArenaId,
     scoreLimit: number = 15,
     timeLimit: number = 300,
-    customRoomCode?: string
+    customRoomCode?: string,
+    enableBots: boolean = true
   ): Promise<string> {
     this.leaveRoom();
     this.isHost = true;
-    this.events.onConnectionStatusChange?.('connecting', 'Creating tactical lobby...');
+    this.events.onConnectionStatusChange?.('connecting', 'Creating tactical combat sector...');
 
     const code = customRoomCode ? customRoomCode.trim().toUpperCase() : Math.random().toString(36).substring(2, 7).toUpperCase();
     const peerId = PEER_PREFIX + code;
 
     this.room = {
       roomId: code,
-      roomName: roomName || `Strike Room ${code}`,
+      roomName: roomName || `Combat Sector ${code}`,
       hostId: this.localPlayerId,
       hostName: userManager.getCurrentUser()?.username || 'Host Operative',
       mode,
@@ -158,7 +218,9 @@ export class MultiplayerService {
       status: 'lobby',
       teamAlphaScore: 0,
       teamBravoScore: 0,
-      timeRemaining: timeLimit
+      timeRemaining: timeLimit,
+      enableBots,
+      currentWave: 1
     };
 
     this.createInitialLocalPlayer(mode === 'multiplayer_ffa' ? 'ffa' : 'alpha');
@@ -166,7 +228,8 @@ export class MultiplayerService {
     this.players.clear();
     this.players.set(this.localPlayerId, this.localPlayer!);
 
-    // Initialize Local BroadcastChannel for seamless instant multi-tab testing
+    // Initialize all transports: WebSocket relay + Local BroadcastChannel + WebRTC PeerJS
+    this.initWebSocket(code);
     this.initBroadcastChannel(code);
 
     try {
@@ -176,8 +239,8 @@ export class MultiplayerService {
       this.startPingLoop();
       return code;
     } catch (err) {
-      console.warn('PeerJS server connection warning, using BroadcastChannel & local signaling', err);
-      this.trigger('onConnectionStatusChange', 'connected', `Lobby Ready (Local): ${code}`);
+      console.warn('PeerJS server connection warning, using WebSocket relay & local signaling', err);
+      this.trigger('onConnectionStatusChange', 'connected', `Lobby Ready: ${code}`);
       this.notifyRoomUpdate();
       this.startPingLoop();
       return code;
@@ -194,6 +257,9 @@ export class MultiplayerService {
     this.createInitialLocalPlayer('bravo');
     const clientPeerId = PEER_PREFIX + this.localPlayerId;
     this.localPlayer!.peerId = clientPeerId;
+
+    // Connect to WebSocket Relay and Local BroadcastChannel immediately
+    this.initWebSocket(cleanCode);
     this.initBroadcastChannel(cleanCode);
 
     const targetPeerId = PEER_PREFIX + cleanCode;
@@ -201,7 +267,27 @@ export class MultiplayerService {
     return new Promise(async (resolve) => {
       let resolved = false;
 
-      const clientPeerId = PEER_PREFIX + this.localPlayerId;
+      // Listen for room update from Host via any transport
+      const removeListener = this.addListener({
+        onRoomUpdate: (_r: RoomConfig) => {
+          if (!resolved) {
+            resolved = true;
+            this.trigger('onConnectionStatusChange', 'connected', `Connected to Room ${cleanCode}`);
+            this.startPingLoop();
+            removeListener();
+            resolve(true);
+          }
+        }
+      });
+
+      // Send join packet over WebSocket & BroadcastChannel immediately
+      this.sendPacket({
+        type: 'PLAYER_JOIN',
+        player: this.localPlayer!,
+        roomId: cleanCode
+      });
+
+      // Also attempt WebRTC PeerJS connection
       try {
         await this.initPeer(clientPeerId);
 
@@ -214,16 +300,17 @@ export class MultiplayerService {
           this.connections.set(targetPeerId, conn);
           this.setupConnectionListeners(conn);
 
-          // Send Join Packet
           conn.send({
             type: 'PLAYER_JOIN',
-            player: this.localPlayer!
+            player: this.localPlayer!,
+            roomId: cleanCode
           });
 
-          this.events.onConnectionStatusChange?.('connected', `Connected to Room ${cleanCode}`);
-          this.startPingLoop();
           if (!resolved) {
             resolved = true;
+            this.trigger('onConnectionStatusChange', 'connected', `Connected to Room ${cleanCode} (P2P)`);
+            this.startPingLoop();
+            removeListener();
             resolve(true);
           }
         });
@@ -231,32 +318,25 @@ export class MultiplayerService {
         conn.on('error', (e) => {
           console.warn('Peer connection error', e);
         });
-
-        // Timeout fallback to BroadcastChannel
-        setTimeout(() => {
-          if (!resolved) {
-            // Send join via BroadcastChannel
-            this.sendBroadcastPacket({
-              type: 'PLAYER_JOIN',
-              player: this.localPlayer!
-            });
-            this.events.onConnectionStatusChange?.('connected', `Joined via Broadcast Channel ${cleanCode}`);
-            this.startPingLoop();
-            resolved = true;
-            resolve(true);
-          }
-        }, 2200);
-
       } catch (err) {
-        console.warn('Direct peer connection fallback to local channel', err);
-        this.sendBroadcastPacket({
-          type: 'PLAYER_JOIN',
-          player: this.localPlayer!
-        });
-        this.events.onConnectionStatusChange?.('connected', `Joined Room ${cleanCode}`);
-        this.startPingLoop();
-        resolve(true);
+        console.warn('Direct peer connection fallback to local channel/relay', err);
       }
+
+      // Timeout fallback if already receiving room state or connected
+      setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          removeListener();
+          this.sendPacket({
+            type: 'PLAYER_JOIN',
+            player: this.localPlayer!,
+            roomId: cleanCode
+          });
+          this.trigger('onConnectionStatusChange', 'connected', `Joined Lobby ${cleanCode}`);
+          this.startPingLoop();
+          resolve(true);
+        }
+      }, 3500);
     });
   }
 
@@ -272,6 +352,8 @@ export class MultiplayerService {
           config: {
             iceServers: [
               { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+              { urls: 'stun:stun2.l.google.com:19302' },
               { urls: 'stun:global.stun.twilio.com:3478' }
             ]
           },
@@ -289,7 +371,6 @@ export class MultiplayerService {
 
         this.peer.on('error', (err) => {
           console.warn('PeerJS error:', err.type, err.message);
-          // If ID is already taken, host might already exist or cleanCode collision
           resolve();
         });
       } catch (e) {
@@ -305,7 +386,6 @@ export class MultiplayerService {
 
     conn.on('close', () => {
       this.connections.delete(conn.peer);
-      // Remove corresponding player
       for (const [id] of this.players.entries()) {
         if (conn.peer.includes(id)) {
           this.players.delete(id);
@@ -333,20 +413,30 @@ export class MultiplayerService {
   public sendPacket(packet: NetworkPacket) {
     if (this.isDestroyed) return;
 
-    // Send through all active WebRTC connections
-    const json = packet;
+    const enriched = (this.room && !('roomId' in packet)) ? { ...packet, roomId: this.room.roomId } : packet;
+
+    // 1. Send via WebSocket Relay if connected
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      try {
+        this.ws.send(JSON.stringify(enriched));
+      } catch (e) {
+        console.warn('WS send packet failed', e);
+      }
+    }
+
+    // 2. Send through all active WebRTC connections
     for (const [, conn] of this.connections) {
       if (conn.open) {
         try {
-          conn.send(json);
+          conn.send(enriched);
         } catch (e) {
           console.warn('Failed to send packet to peer', e);
         }
       }
     }
 
-    // Also mirror to local BroadcastChannel for local peers / same-machine tabs
-    this.sendBroadcastPacket(packet);
+    // 3. Mirror to local BroadcastChannel for local peers / same-machine tabs
+    this.sendBroadcastPacket(enriched);
   }
 
   private sendBroadcastPacket(packet: NetworkPacket) {
@@ -382,8 +472,10 @@ export class MultiplayerService {
         this.trigger('onPlayerJoined', packet.player);
 
         if (this.isHost && this.room) {
-          // If in TDM, auto-balance team
-          if (this.room.mode === 'multiplayer_tdm') {
+          if (this.room.mode === 'multiplayer_coop') {
+            packet.player.team = 'alpha';
+            this.players.set(packet.player.id, packet.player);
+          } else if (this.room.mode === 'multiplayer_tdm') {
             const alphaCount = Array.from(this.players.values()).filter((p) => p.team === 'alpha').length;
             const bravoCount = Array.from(this.players.values()).filter((p) => p.team === 'bravo').length;
             packet.player.team = alphaCount <= bravoCount ? 'alpha' : 'bravo';
@@ -571,6 +663,26 @@ export class MultiplayerService {
           }
           this.trigger('onPingUpdate', this.currentPing);
         }
+        break;
+      }
+
+      case 'MULTIPLAYER_ENEMIES_SYNC': {
+        this.trigger('onEnemiesSync', packet.wave, packet.enemies);
+        break;
+      }
+
+      case 'MULTIPLAYER_ENEMY_HIT': {
+        this.trigger('onEnemyHit', packet.shooterId, packet.enemyId, packet.damage, packet.isHeadshot, packet.hitPoint);
+        break;
+      }
+
+      case 'MULTIPLAYER_ENEMY_KILLED': {
+        this.trigger('onEnemyKilled', packet.enemyId, packet.killerId, packet.isHeadshot, packet.rewardScore);
+        break;
+      }
+
+      case 'MULTIPLAYER_WAVE_COMPLETED': {
+        this.trigger('onWaveCompleted', packet.wave, packet.rewardCoins);
         break;
       }
 
@@ -883,6 +995,52 @@ export class MultiplayerService {
     }, 2500);
   }
 
+  public broadcastEnemiesSync(wave: number, enemies: NetworkEnemyState[]) {
+    this.sendPacket({
+      type: 'MULTIPLAYER_ENEMIES_SYNC',
+      wave,
+      enemies
+    });
+  }
+
+  public reportEnemyHit(
+    enemyId: string,
+    damage: number,
+    isHeadshot: boolean,
+    hitPoint: { x: number; y: number; z: number }
+  ) {
+    this.sendPacket({
+      type: 'MULTIPLAYER_ENEMY_HIT',
+      shooterId: this.localPlayerId,
+      enemyId,
+      damage,
+      isHeadshot,
+      hitPoint
+    });
+  }
+
+  public broadcastEnemyKilled(
+    enemyId: string,
+    isHeadshot: boolean,
+    rewardScore: number = 100
+  ) {
+    this.sendPacket({
+      type: 'MULTIPLAYER_ENEMY_KILLED',
+      enemyId,
+      killerId: this.localPlayerId,
+      isHeadshot,
+      rewardScore
+    });
+  }
+
+  public broadcastWaveCompleted(wave: number, rewardCoins: number = 50) {
+    this.sendPacket({
+      type: 'MULTIPLAYER_WAVE_COMPLETED',
+      wave,
+      rewardCoins
+    });
+  }
+
   // --- CLEANUP ---
   public leaveRoom() {
     if (this.room && this.localPlayerId) {
@@ -894,6 +1052,14 @@ export class MultiplayerService {
 
     if (this.pingInterval) clearInterval(this.pingInterval);
     if (this.matchTimerInterval) clearInterval(this.matchTimerInterval);
+
+    if (this.ws) {
+      try {
+        this.ws.close();
+      } catch (_) {}
+      this.ws = null;
+      this.wsConnected = false;
+    }
 
     for (const [, conn] of this.connections) {
       try {
