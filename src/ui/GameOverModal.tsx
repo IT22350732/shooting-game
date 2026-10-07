@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { RotateCcw, Zap, Home, Award, Flame, Skull, Crosshair, Coins, Play, CheckCircle, Trophy, User } from 'lucide-react';
 import { saveManager } from '../game/managers/SaveManager';
 import { userManager } from '../game/managers/UserManager';
@@ -39,9 +39,22 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 }) => {
   const savedData = saveManager.getData();
   const currentUser = userManager.getCurrentUser();
-  const leaderboard = userManager.getLeaderboard('score');
-  const userEntry = leaderboard.find(e => e.userId === currentUser.id);
-  const currentRank = userEntry ? userEntry.rank : 1;
+  const [leaderboard, setLeaderboard] = useState(() => userManager.getLeaderboard('score'));
+
+  useEffect(() => {
+    // Listen for live leaderboard updates
+    const unsubscribe = userManager.onLeaderboardChange((fresh) => {
+      setLeaderboard(fresh);
+    });
+    // Trigger real-time cloud ranking fetch upon game conclusion
+    userManager.refreshCloudLeaderboard();
+    return () => unsubscribe();
+  }, []);
+
+  const userEntry = leaderboard.find(
+    e => e.isCurrentUser || e.username.toLowerCase() === currentUser.username.toLowerCase() || e.userId === currentUser.id
+  );
+  const currentRank = userEntry ? userEntry.rank : leaderboard.length;
   const isHighScore = score >= savedData.highestScore && score > 0;
 
   return (
@@ -171,7 +184,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             <span>•</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: currentRank <= 3 ? '#d97706' : '#0284c7' }}>
               <Trophy size={14} />
-              <span>LEADERBOARD RANK #{currentRank}</span>
+              <span>LEADERBOARD RANK #{currentRank} OF {leaderboard.length}</span>
             </div>
           </div>
         </div>

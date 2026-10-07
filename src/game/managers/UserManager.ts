@@ -4,8 +4,9 @@ import { cloudAuthService } from './CloudAuthService';
 
 const USERS_STORAGE_KEY = 'CYBERSTRIKE_USERS_V2';
 const ACTIVE_USER_ID_KEY = 'CYBERSTRIKE_ACTIVE_USER_ID_V2';
+const CLOUD_CACHE_KEY = 'CYBERSTRIKE_CLOUD_LEADERBOARD_V2';
 
-
+type LeaderboardListener = (entries: LeaderboardEntry[]) => void;
 
 // Simple, fast client-side string hasher
 function hashString(input: string): string {
@@ -23,6 +24,7 @@ export class UserManager {
   private currentUserId: string = '';
 
   private cloudEntries: Omit<LeaderboardEntry, 'rank' | 'isCurrentUser'>[] = [];
+  private leaderboardListeners: Set<LeaderboardListener> = new Set();
 
   constructor() {
     this.loadFromStorage();
@@ -30,17 +32,78 @@ export class UserManager {
     this.refreshCloudLeaderboard();
   }
 
-  public async refreshCloudLeaderboard(): Promise<void> {
+  public onLeaderboardChange(cb: LeaderboardListener): () => void {
+    this.leaderboardListeners.add(cb);
+    return () => this.leaderboardListeners.delete(cb);
+  }
+
+  public notifyLeaderboardChange() {
+    const entries = this.getLeaderboard('score');
+    this.leaderboardListeners.forEach(cb => {
+      try { cb(entries); } catch (e) { console.error('Leaderboard listener error:', e); }
+    });
+  }
+
+  public async refreshCloudLeaderboard(): Promise<Omit<LeaderboardEntry, 'rank' | 'isCurrentUser'>[]> {
     try {
       const entries = await cloudAuthService.getCloudLeaderboard();
       if (entries && entries.length > 0) {
         this.cloudEntries = entries;
+        try {
+          localStorage.setItem(CLOUD_CACHE_KEY, JSON.stringify(entries));
+        } catch {}
+
+        // If the current user has higher stats in cloud than locally, sync local user up
+        const current = this.getCurrentUser();
+        const cloudUserMatch = entries.find(e => e.username.toLowerCase() === current.username.toLowerCase());
+        if (cloudUserMatch) {
+          let modified = false;
+          if (cloudUserMatch.highScore > current.highScore) {
+            current.highScore = cloudUserMatch.highScore;
+            modified = true;
+          }
+          if (cloudUserMatch.highestWave > current.highestWave) {
+            current.highestWave = cloudUserMatch.highestWave;
+            modified = true;
+          }
+          if (cloudUserMatch.totalKills > current.totalKills) {
+            current.totalKills = cloudUserMatch.totalKills;
+            modified = true;
+          }
+          if (cloudUserMatch.headshots > current.headshots) {
+            current.headshots = cloudUserMatch.headshots;
+            modified = true;
+          }
+          if (cloudUserMatch.gamesPlayed > current.gamesPlayed) {
+            current.gamesPlayed = cloudUserMatch.gamesPlayed;
+            modified = true;
+          }
+          if (modified) {
+            current.tier = computeUserTier(current.highScore, current.totalKills);
+            this.saveToStorage();
+          }
+        }
+
+        this.notifyLeaderboardChange();
+        return entries;
       }
-    } catch {}
+    } catch (err) {
+      console.warn('Leaderboard refresh error:', err);
+    }
+    return this.cloudEntries;
   }
 
   private loadFromStorage() {
     try {
+      // Load cached cloud leaderboard entries for immediate sub-millisecond render
+      const cachedCloud = localStorage.getItem(CLOUD_CACHE_KEY);
+      if (cachedCloud) {
+        const parsed: Omit<LeaderboardEntry, 'rank' | 'isCurrentUser'>[] = JSON.parse(cachedCloud);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.cloudEntries = parsed;
+        }
+      }
+
       const rawUsers = localStorage.getItem(USERS_STORAGE_KEY);
       if (rawUsers) {
         const parsed: UserProfile[] = JSON.parse(rawUsers);
@@ -213,6 +276,8 @@ export class UserManager {
 
         // Keep cloud backup updated in background
         cloudAuthService.saveCloudUser(targetUser).catch(() => {});
+        this.notifyLeaderboardChange();
+        this.refreshCloudLeaderboard().catch(() => {});
 
         return {
           success: true,
@@ -229,6 +294,8 @@ export class UserManager {
           this.currentUserId = cloudUser.id;
           this.saveToStorage();
           saveManager.loadFromUserData(cloudUser.saveData);
+          this.notifyLeaderboardChange();
+          this.refreshCloudLeaderboard().catch(() => {});
           return {
             success: true,
             message: `Cloud credentials verified! Welcome back, ${cloudUser.username}!`,
@@ -257,6 +324,8 @@ export class UserManager {
       this.currentUserId = cloudUser.id;
       this.saveToStorage();
       saveManager.loadFromUserData(cloudUser.saveData);
+      this.notifyLeaderboardChange();
+      this.refreshCloudLeaderboard().catch(() => {});
 
       return {
         success: true,
@@ -280,6 +349,8 @@ export class UserManager {
     this.saveToStorage();
 
     saveManager.loadFromUserData(target.saveData);
+    this.notifyLeaderboardChange();
+    this.refreshCloudLeaderboard().catch(() => {});
     return true;
   }
 
@@ -339,8 +410,10 @@ export class UserManager {
 
     // Determine previous rank before update
     const previousLeaderboard = this.getLeaderboard('score');
-    const prevRankEntry = previousLeaderboard.find(e => e.userId === current.id);
-    const previousRank = prevRankEntry ? prevRankEntry.rank : previousLeaderboard.length + 1;
+    const prevRankEntry = previousLeaderboard.find(
+      e => e.isCurrentUser || e.username.toLowerCase() === current.username.toLowerCase() || e.userId === current.id
+    );
+    const previousRank = prevRankEntry ? prevRankEntry.rank : previousLeaderboard.length;
 
     // Apply updates
     current.gamesPlayed++;
@@ -354,16 +427,48 @@ export class UserManager {
       current.highestWave = wave;
     }
     current.tier = computeUserTier(current.highScore, current.totalKills);
+    current.lastLoginAt = Date.now();
 
     this.saveToStorage();
 
-    // Push high score update to cloud edge store
+    // Immediately update local cloudEntries cache so ranking is instant and accurate
+    const currentKey = current.username.trim().toLowerCase();
+    const cloudIdx = this.cloudEntries.findIndex(e => e.username.trim().toLowerCase() === currentKey);
+    const updatedCloudItem: Omit<LeaderboardEntry, 'rank' | 'isCurrentUser'> = {
+      userId: current.id,
+      username: current.username,
+      avatarId: current.avatarId,
+      avatarColor: current.avatarColor,
+      tier: current.tier,
+      highScore: current.highScore,
+      highestWave: current.highestWave,
+      totalKills: current.totalKills,
+      headshots: current.headshots,
+      gamesPlayed: current.gamesPlayed,
+      dateAchieved: Date.now()
+    };
+
+    if (cloudIdx !== -1) {
+      this.cloudEntries[cloudIdx] = updatedCloudItem;
+    } else {
+      this.cloudEntries.push(updatedCloudItem);
+    }
+    try {
+      localStorage.setItem(CLOUD_CACHE_KEY, JSON.stringify(this.cloudEntries));
+    } catch {}
+
+    // Push high score update to cloud edge store in background
     cloudAuthService.saveCloudUser(current).catch(() => {});
+    cloudAuthService.updateCloudLeaderboard(current).catch(() => {});
 
     // Determine new rank
     const newLeaderboard = this.getLeaderboard('score');
-    const newRankEntry = newLeaderboard.find(e => e.userId === current.id);
+    const newRankEntry = newLeaderboard.find(
+      e => e.isCurrentUser || e.username.toLowerCase() === current.username.toLowerCase() || e.userId === current.id
+    );
     const rank = newRankEntry ? newRankEntry.rank : 1;
+
+    this.notifyLeaderboardChange();
 
     return {
       rank,
@@ -454,62 +559,134 @@ export class UserManager {
 
   public getLeaderboard(category: LeaderboardCategory = 'score'): LeaderboardEntry[] {
     const current = this.getCurrentUser();
-    const entries: LeaderboardEntry[] = [];
-    const seenUsernames = new Set<string>();
+    const entryMap = new Map<string, LeaderboardEntry>();
 
-    // 1. Add all registered users
-    for (const u of this.users.values()) {
-      entries.push({
+    // 1. Populate map with real cloud operatives across all deployed devices
+    for (const cr of this.cloudEntries) {
+      const uLower = cr.username.trim().toLowerCase();
+      if (!uLower) continue;
+      const isCurrent = (uLower === current.username.trim().toLowerCase() || cr.userId === current.id);
+      entryMap.set(uLower, {
         rank: 0,
-        userId: u.id,
-        username: u.username,
-        avatarId: u.avatarId,
-        avatarColor: u.avatarColor,
-        tier: u.tier,
-        highScore: u.highScore,
-        highestWave: u.highestWave,
-        totalKills: u.totalKills,
-        headshots: u.headshots,
-        gamesPlayed: u.gamesPlayed,
-        isCurrentUser: u.id === current.id,
+        userId: cr.userId,
+        username: cr.username,
+        avatarId: cr.avatarId || 'soldier_apex',
+        avatarColor: cr.avatarColor || '#0284c7',
+        tier: cr.tier || 'RECRUIT',
+        highScore: cr.highScore || 0,
+        highestWave: cr.highestWave || 1,
+        totalKills: cr.totalKills || 0,
+        headshots: cr.headshots || 0,
+        gamesPlayed: cr.gamesPlayed || 0,
+        isCurrentUser: isCurrent,
         isRival: false,
-        dateAchieved: u.lastLoginAt
+        dateAchieved: cr.dateAchieved || Date.now()
       });
-      seenUsernames.add(u.username.toLowerCase());
     }
 
-    // 2. Add real players from cloud sync
-    for (const cr of this.cloudEntries) {
-      if (!seenUsernames.has(cr.username.toLowerCase())) {
-        entries.push({
-          ...cr,
-          rank: 0,
-          isCurrentUser: false,
-          isRival: false
-        });
-        seenUsernames.add(cr.username.toLowerCase());
+    // 2. Merge local accounts, preserving the highest metrics achieved across local & cloud
+    for (const u of this.users.values()) {
+      const uLower = u.username.trim().toLowerCase();
+      if (!uLower) continue;
+      const isCurrent = (u.id === current.id || uLower === current.username.trim().toLowerCase());
+      const existing = entryMap.get(uLower);
+
+      if (existing) {
+        existing.highScore = Math.max(existing.highScore, u.highScore || 0);
+        existing.highestWave = Math.max(existing.highestWave, u.highestWave || 1);
+        existing.totalKills = Math.max(existing.totalKills, u.totalKills || 0);
+        existing.headshots = Math.max(existing.headshots, u.headshots || 0);
+        existing.gamesPlayed = Math.max(existing.gamesPlayed, u.gamesPlayed || 0);
+        existing.tier = computeUserTier(existing.highScore, existing.totalKills);
+        if (isCurrent) {
+          existing.isCurrentUser = true;
+          // Synchronize local profile if cloud had recorded a higher achievement
+          if (existing.highScore > u.highScore || existing.highestWave > u.highestWave) {
+            u.highScore = existing.highScore;
+            u.highestWave = existing.highestWave;
+            u.totalKills = existing.totalKills;
+            u.headshots = existing.headshots;
+            u.tier = existing.tier;
+            this.saveToStorage();
+          }
+        }
+      } else {
+        // Only include local account if it has real game activity or is the active player
+        if (isCurrent || (u.highScore || 0) > 0 || (u.totalKills || 0) > 0) {
+          entryMap.set(uLower, {
+            rank: 0,
+            userId: u.id,
+            username: u.username,
+            avatarId: u.avatarId || 'soldier_apex',
+            avatarColor: u.avatarColor || '#0284c7',
+            tier: u.tier || 'RECRUIT',
+            highScore: u.highScore || 0,
+            highestWave: u.highestWave || 1,
+            totalKills: u.totalKills || 0,
+            headshots: u.headshots || 0,
+            gamesPlayed: u.gamesPlayed || 0,
+            isCurrentUser: isCurrent,
+            isRival: false,
+            dateAchieved: u.lastLoginAt || Date.now()
+          });
+        }
       }
     }
 
-    // 4. Sort by chosen category
+    // 3. Ensure the current active player is ALWAYS on the board
+    const currentKey = current.username.trim().toLowerCase();
+    if (!entryMap.has(currentKey)) {
+      entryMap.set(currentKey, {
+        rank: 0,
+        userId: current.id,
+        username: current.username,
+        avatarId: current.avatarId,
+        avatarColor: current.avatarColor,
+        tier: current.tier,
+        highScore: current.highScore,
+        highestWave: current.highestWave,
+        totalKills: current.totalKills,
+        headshots: current.headshots,
+        gamesPlayed: current.gamesPlayed,
+        isCurrentUser: true,
+        isRival: false,
+        dateAchieved: current.lastLoginAt || Date.now()
+      });
+    }
+
+    const entries = Array.from(entryMap.values());
+
+    // 4. Sort by chosen category with deterministic tie-breaking
     entries.sort((a, b) => {
       if (category === 'score') {
         if (b.highScore !== a.highScore) return b.highScore - a.highScore;
-        return b.highestWave - a.highestWave;
+        if (b.highestWave !== a.highestWave) return b.highestWave - a.highestWave;
+        if (b.totalKills !== a.totalKills) return b.totalKills - a.totalKills;
+        return (b.dateAchieved || 0) - (a.dateAchieved || 0);
       }
       if (category === 'wave') {
         if (b.highestWave !== a.highestWave) return b.highestWave - a.highestWave;
-        return b.highScore - a.highScore;
+        if (b.highScore !== a.highScore) return b.highScore - a.highScore;
+        if (b.totalKills !== a.totalKills) return b.totalKills - a.totalKills;
+        return (b.dateAchieved || 0) - (a.dateAchieved || 0);
       }
       // 'kills'
       if (b.totalKills !== a.totalKills) return b.totalKills - a.totalKills;
-      return b.highScore - a.highScore;
+      if (b.highScore !== a.highScore) return b.highScore - a.highScore;
+      if (b.highestWave !== a.highestWave) return b.highestWave - a.highestWave;
+      return (b.dateAchieved || 0) - (a.dateAchieved || 0);
     });
 
     // 5. Assign 1-indexed ranks
     entries.forEach((entry, idx) => {
       entry.rank = idx + 1;
     });
+
+    // 6. Designate direct rival (the operative immediately 1 position ahead of the current user)
+    const currentIdx = entries.findIndex(e => e.isCurrentUser);
+    if (currentIdx > 0) {
+      entries[currentIdx - 1].isRival = true;
+    }
 
     return entries;
   }

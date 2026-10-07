@@ -13,7 +13,9 @@ import {
   ShieldCheck,
   Zap,
   Sparkles,
-  Cloud
+  Cloud,
+  RotateCw,
+  Target
 } from 'lucide-react';
 import { userManager } from '../game/managers/UserManager';
 import { LeaderboardCategory, LeaderboardEntry, AVATAR_OPTIONS } from '../types/user';
@@ -27,13 +29,29 @@ interface LeaderboardModalProps {
 export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose, onOpenAuth }) => {
   const [category, setCategory] = useState<LeaderboardCategory>('score');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [, setRefreshCount] = useState(0);
 
   useEffect(() => {
-    userManager.refreshCloudLeaderboard().then(() => {
+    setIsRefreshing(true);
+    userManager.refreshCloudLeaderboard().finally(() => {
+      setIsRefreshing(false);
       setRefreshCount(v => v + 1);
     });
+
+    const unsubscribe = userManager.onLeaderboardChange(() => {
+      setRefreshCount(v => v + 1);
+    });
+    return () => unsubscribe();
   }, []);
+
+  const handleManualRefresh = async () => {
+    soundManager.playClick(0, 1800, 0.2);
+    setIsRefreshing(true);
+    await userManager.refreshCloudLeaderboard();
+    setIsRefreshing(false);
+    setRefreshCount(v => v + 1);
+  };
 
   const currentUser = userManager.getCurrentUser();
   const rawLeaderboard = userManager.getLeaderboard(category);
@@ -120,6 +138,29 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose, onO
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              title="Refresh realtime operative rankings"
+              style={{
+                background: 'rgba(2, 132, 199, 0.1)',
+                border: '1.5px solid rgba(2, 132, 199, 0.4)',
+                borderRadius: 10,
+                padding: '6px 12px',
+                color: '#0284c7',
+                fontFamily: 'var(--font-display)',
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                cursor: isRefreshing ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5
+              }}
+            >
+              <RotateCw size={14} style={{ animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }} />
+              {isRefreshing ? 'SYNCING...' : 'REFRESH'}
+            </button>
+
+            <button
               onClick={() => {
                 onClose();
                 onOpenAuth();
@@ -157,6 +198,53 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose, onO
               <X size={20} />
             </button>
           </div>
+        </div>
+
+        {/* Real-time Cloud Status Bar */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 8,
+            padding: '7px 14px',
+            background: 'linear-gradient(90deg, rgba(2, 132, 199, 0.08), rgba(248, 250, 252, 0.95))',
+            borderRadius: 12,
+            border: '1px solid rgba(2, 132, 199, 0.22)',
+            fontSize: '0.72rem',
+            fontFamily: 'var(--font-sub)',
+            fontWeight: 700
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: '#22c55e',
+                boxShadow: '0 0 8px #22c55e',
+                display: 'inline-block'
+              }}
+            />
+            <span style={{ color: '#0f172a', fontWeight: 800, letterSpacing: '0.04em' }}>
+              REAL-TIME CLOUD NETWORK
+            </span>
+            <span style={{ color: '#94a3b8' }}>•</span>
+            <span style={{ color: '#0284c7', fontWeight: 800 }}>
+              {rawLeaderboard.length} OPERATIVES REGISTERED
+            </span>
+          </div>
+
+          {currentUserEntry && (
+            <div style={{ color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>YOUR LIVE RANK:</span>
+              <strong style={{ color: '#0284c7', fontSize: '0.8rem', fontFamily: 'var(--font-display)' }}>
+                #{currentUserEntry.rank} OF {rawLeaderboard.length}
+              </strong>
+            </div>
+          )}
         </div>
 
         {/* Tab Filter Selectors */}
@@ -329,7 +417,14 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose, onO
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 310, overflowY: 'auto' }}>
           {filteredLeaderboard.length === 0 ? (
             <div style={{ padding: '36px 16px', textAlign: 'center', color: '#64748b', fontSize: '0.85rem', fontFamily: 'var(--font-sub)', fontWeight: 600 }}>
-              No operative records found.
+              {isRefreshing ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#0284c7' }}>
+                  <RotateCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                  <span>Syncing real-time global operative rankings...</span>
+                </div>
+              ) : (
+                'No operative records found.'
+              )}
             </div>
           ) : (
             filteredLeaderboard.map((entry) => {
@@ -400,6 +495,12 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose, onO
                       {isUser && (
                         <span style={{ background: '#0284c7', color: '#ffffff', fontSize: '0.55rem', fontWeight: 900, padding: '1px 5px', borderRadius: 4 }}>
                           YOU
+                        </span>
+                      )}
+                      {entry.isRival && !isUser && (
+                        <span style={{ background: 'rgba(234, 88, 12, 0.15)', color: '#ea580c', border: '1px solid rgba(234, 88, 12, 0.4)', fontSize: '0.52rem', fontWeight: 900, padding: '1px 5px', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                          <Target size={10} />
+                          RIVAL
                         </span>
                       )}
                     </div>
