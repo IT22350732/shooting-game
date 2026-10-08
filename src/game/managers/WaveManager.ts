@@ -20,6 +20,7 @@ export class WaveManager {
   public isIntermission: boolean = false;
   public intermissionTimer: number = 0;
   public isBossAlive: boolean = false;
+  public bossSpawned: boolean = false;
 
   private spawnCooldown: number = 0;
   public timeAttackRemaining: number = 120; // 2 minutes starting
@@ -37,7 +38,8 @@ export class WaveManager {
     this.isIntermission = false;
     this.intermissionTimer = 0;
     this.isBossAlive = false;
-    this.spawnCooldown = 1.0;
+    this.bossSpawned = false;
+    this.spawnCooldown = 0; // Spawn first assault squad immediately
     this.timeAttackRemaining = mission?.timeLimit || 120;
     this.startWave(1);
   }
@@ -45,6 +47,7 @@ export class WaveManager {
   public startWave(waveNumber: number) {
     this.currentWave = waveNumber;
     this.isIntermission = false;
+    this.bossSpawned = false;
 
     if (this.mode === 'free_mode') {
       this.totalEnemiesInWave = 0;
@@ -55,7 +58,7 @@ export class WaveManager {
     }
 
     if (this.mode === 'boss_arena') {
-      this.totalEnemiesInWave = 1;
+      this.totalEnemiesInWave = 0; // Pure 1v1 boss encounter
       this.enemiesRemaining = 1;
       this.enemiesSpawned = 0;
       this.isBossAlive = true;
@@ -77,14 +80,15 @@ export class WaveManager {
       baseCount = Math.max(4, 4 + this.currentWave * 2);
     } else if (effectiveDifficulty === 'hard') {
       baseCount = Math.max(8, 8 + this.currentWave * 5);
+    } else if (this.mode === 'time_attack') {
+      baseCount = Math.max(12, 10 + this.currentWave * 4);
     }
 
     this.totalEnemiesInWave = isBossWave ? Math.round(baseCount * 0.8) : baseCount;
     this.enemiesRemaining = this.totalEnemiesInWave + (isBossWave ? 1 : 0);
     this.enemiesSpawned = 0;
-    this.spawnCooldown = effectiveDifficulty === 'easy' ? 1.5 : (effectiveDifficulty === 'hard' ? 0.4 : 0.8);
-
-    soundManager.playWaveComplete();
+    // Spawn immediately upon wave start so player never waits
+    this.spawnCooldown = 0;
   }
 
   public onEnemyKilled(isBoss: boolean = false) {
@@ -102,7 +106,7 @@ export class WaveManager {
     // Check if wave is completed
     if (this.enemiesRemaining <= 0 && !this.isBossAlive) {
       this.isIntermission = true;
-      this.intermissionTimer = 4.0;
+      this.intermissionTimer = 1.8;
       soundManager.playWaveComplete();
     }
   }
@@ -139,7 +143,12 @@ export class WaveManager {
     return 'basic';
   }
 
-  public update(delta: number, onSpawnSquad: (enemyType: EnemyType) => void, onSpawnBoss: () => void): boolean {
+  public update(
+    delta: number,
+    onSpawnSquad: (enemyType: EnemyType) => void,
+    onSpawnBoss: () => void,
+    aliveEnemiesCount: number = 0
+  ): boolean {
     if (this.mode === 'free_mode') {
       return false;
     }
@@ -161,27 +170,72 @@ export class WaveManager {
     }
 
     // Boss spawn at start of boss wave
-    if (this.isBossAlive && this.enemiesSpawned === 0) {
+    if (this.isBossAlive && !this.bossSpawned) {
+      this.bossSpawned = true;
       onSpawnBoss();
     }
 
-    // Regular enemy squad spawn
+    // Deadlock / Out-of-sync Failsafe:
+    // If all wave enemies have already entered combat, and zero active hostiles remain
+    // on the battlefield (and boss is not alive), the wave is complete!
+    if (this.enemiesSpawned >= this.totalEnemiesInWave && aliveEnemiesCount <= 0 && !this.isBossAlive) {
+      this.enemiesRemaining = 0;
+      this.isIntermission = true;
+      this.intermissionTimer = 1.8;
+      soundManager.playWaveComplete();
+      return false;
+    }
+
+    // Synchronize enemiesRemaining with reality (unspawned + alive on field + boss)
+    const unspawned = Math.max(0, this.totalEnemiesInWave - this.enemiesSpawned);
+    this.enemiesRemaining = unspawned + aliveEnemiesCount + (this.isBossAlive ? 1 : 0);
+
+    // Target active combat density on battlefield
+    let targetDensity = 4;
+    if (this.mode === 'easy') {
+      targetDensity = Math.min(4, Math.max(3, 2 + Math.floor(this.currentWave * 0.3)));
+    } else if (this.mode === 'hard') {
+      targetDensity = Math.min(8, Math.max(4, 4 + Math.floor(this.currentWave * 0.5)));
+    } else if (this.mode === 'time_attack') {
+      targetDensity = Math.min(7, Math.max(5, 4 + Math.floor(this.currentWave * 0.5)));
+    } else {
+      // Medium / Survival / Missions
+      targetDensity = Math.min(6, Math.max(3, 3 + Math.floor(this.currentWave * 0.4)));
+    }
+
+    // If battlefield is empty but more wave enemies remain, spawn next squad instantly!
+    if (aliveEnemiesCount <= 0 && this.enemiesSpawned < this.totalEnemiesInWave) {
+      this.spawnCooldown = Math.min(this.spawnCooldown, 0.15);
+    }
+
+    // Dynamic tactical squad spawning
     this.spawnCooldown -= delta;
     if (this.spawnCooldown <= 0 && this.enemiesSpawned < this.totalEnemiesInWave) {
-      if (this.mode === 'easy') {
-        this.spawnCooldown = Math.max(1.6, 3.0 - this.currentWave * 0.08);
-      } else if (this.mode === 'hard') {
-        this.spawnCooldown = Math.max(0.45, 1.5 - this.currentWave * 0.1);
-      } else {
-        this.spawnCooldown = Math.max(0.8, 2.3 - this.currentWave * 0.1);
-      }
+      const needed = Math.max(1, targetDensity - aliveEnemiesCount);
+      const remainingUnspawned = this.totalEnemiesInWave - this.enemiesSpawned;
+      // Spawn tactical squads of 1 to 3 enemies
+      const count = Math.min(needed, remainingUnspawned, 3);
 
-      // Spawn 1 to 2 enemies per tick
-      const count = Math.min(2, this.totalEnemiesInWave - this.enemiesSpawned);
       for (let i = 0; i < count; i++) {
         const nextType = this.getNextEnemyToSpawn();
         if (nextType) {
           onSpawnSquad(nextType);
+        }
+      }
+
+      // Reinforcement interval: fast if field is underpopulated, steady otherwise
+      const currentActive = aliveEnemiesCount + count;
+      if (currentActive < targetDensity) {
+        this.spawnCooldown = (this.mode === 'hard' || this.mode === 'time_attack') ? 0.5 : 0.8;
+      } else {
+        if (this.mode === 'easy') {
+          this.spawnCooldown = 1.4;
+        } else if (this.mode === 'hard') {
+          this.spawnCooldown = 0.85;
+        } else if (this.mode === 'time_attack') {
+          this.spawnCooldown = 0.75;
+        } else {
+          this.spawnCooldown = 1.1;
         }
       }
     }

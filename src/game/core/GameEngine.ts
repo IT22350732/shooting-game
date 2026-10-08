@@ -53,6 +53,8 @@ export interface HUDStats {
   kills: number;
   enemiesRemaining: number;
   timeRemaining?: number;
+  isIntermission?: boolean;
+  intermissionCountdown?: number;
   activeWeaponId: WeaponId;
   isAiming: boolean;
   isZooming: boolean;
@@ -514,9 +516,14 @@ export class GameEngine {
 
   private handleMultiplayerEnemyKilled(enemy: Enemy, killerId: string, isHeadshot: boolean) {
     enemy.isDead = true;
+    enemy.isKillProcessed = true;
     this.particles.spawnExplosion(enemy.position, 30);
     const reward = isHeadshot ? 150 : 100;
     multiplayerService.broadcastEnemyKilled(enemy.id, isHeadshot, reward);
+
+    if (this.mode === 'multiplayer_coop') {
+      this.waveManager.onEnemyKilled(false);
+    }
 
     if (multiplayerService.room?.mode === 'multiplayer_tdm') {
       const killer = multiplayerService.players.get(killerId);
@@ -1273,6 +1280,7 @@ export class GameEngine {
       if (dist <= 4.0) {
         const res = this.boss.takeDamage(80, false);
         this.triggerHitFeedback(this.boss.position, res.finalDamage, false);
+        if (res.killed) this.handleBossDefeat();
       }
     }
   }
@@ -1313,6 +1321,7 @@ export class GameEngine {
           const dmg = Math.round(200 * factor);
           const res = this.boss.takeDamage(dmg, false);
           this.triggerHitFeedback(this.boss.position, res.finalDamage, false);
+          if (res.killed) this.handleBossDefeat();
         }
       }
     }, 350);
@@ -1705,6 +1714,9 @@ export class GameEngine {
   }
 
   private handleEnemyKill(enemy: Enemy, isHeadshot: boolean) {
+    enemy.isDead = true;
+    enemy.isKillProcessed = true;
+
     // Score & Combos
     this.player.stats.kills++;
     if (isHeadshot) this.player.stats.headshots++;
@@ -1740,6 +1752,23 @@ export class GameEngine {
       if (isHeadshot) {
         this.missionHeadshots++;
       }
+      this.checkMissionObjectives();
+    }
+  }
+
+  private handleEnemySelfDestruct(enemy: Enemy) {
+    if (enemy.isKillProcessed) return;
+    enemy.isDead = true;
+    enemy.isKillProcessed = true;
+
+    this.particles.spawnExplosion(enemy.position, 35);
+    this.player.addTrauma(0.35);
+
+    // Ensure wave manager accounts for this suicide enemy death
+    this.waveManager.onEnemyKilled(false);
+
+    if (this.currentMission) {
+      this.missionKills++;
       this.checkMissionObjectives();
     }
   }
@@ -1948,6 +1977,7 @@ export class GameEngine {
 
     // 4. Wave Manager Update (Singleplayer only)
     if (!this.isMultiplayer) {
+      const aliveEnemiesCount = this.enemies.filter(e => !e.isDead).length;
       const isGameOver = this.waveManager.update(
         delta,
         (type: EnemyType) => {
@@ -1978,7 +2008,8 @@ export class GameEngine {
             this.boss = new Boss(waveMultiplier);
             this.scene.add(this.boss.mesh);
           }
-        }
+        },
+        aliveEnemiesCount
       );
 
       if (isGameOver) {
@@ -2041,6 +2072,7 @@ export class GameEngine {
         const enableBots = multiplayerService.room?.enableBots !== false;
 
         if (isCoop) {
+          const aliveEnemiesCount = this.enemies.filter(e => !e.isDead).length;
           const isGameOver = this.waveManager.update(
             delta,
             (type: EnemyType) => {
@@ -2056,7 +2088,8 @@ export class GameEngine {
                 this.boss = new Boss(waveMultiplier);
                 this.scene.add(this.boss.mesh);
               }
-            }
+            },
+            aliveEnemiesCount
           );
           if (isGameOver) {
             this.triggerGameOver();
@@ -2095,6 +2128,17 @@ export class GameEngine {
     // 5. Enemies Update
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const enemy = this.enemies[i];
+
+      // Failsafe: if enemy is marked dead by any cause without having been processed
+      if (enemy.isDead && !enemy.isKillProcessed) {
+        enemy.isKillProcessed = true;
+        this.waveManager.onEnemyKilled(false);
+        if (this.currentMission) {
+          this.missionKills++;
+          this.checkMissionObjectives();
+        }
+      }
+
       if (enemy.isDead && enemy.mesh.scale.x <= 0.05) {
         this.scene.remove(enemy.mesh);
         enemy.dispose();
@@ -2135,6 +2179,10 @@ export class GameEngine {
             const dead = this.player.takeDamage(damage, enemy.position);
             if (dead) this.triggerGameOver();
           }
+        },
+        // on exploder self-destruct
+        (exploderEnemy) => {
+          this.handleEnemySelfDestruct(exploderEnemy);
         }
       );
     }
@@ -2280,6 +2328,17 @@ export class GameEngine {
             }
           }
         }
+
+        // Player Plasma Projectile hits Boss
+        if (!proj.isDead && this.boss && !this.boss.isDead) {
+          if (this.boss.position.distanceTo(proj.position) < (3.2 + proj.radius)) {
+            const res = this.boss.takeDamage(proj.damage, false);
+            this.particles.spawnExplosion(proj.position, 25);
+            this.triggerHitFeedback(proj.position, res.finalDamage, false);
+            if (res.killed) this.handleBossDefeat();
+            proj.isDead = true;
+          }
+        }
       } else {
         // Enemy Projectile hits player
         if (proj.position.distanceTo(this.player.position) < (0.8 + proj.radius)) {
@@ -2348,6 +2407,8 @@ export class GameEngine {
       kills: this.player.stats.kills,
       enemiesRemaining: this.mode === 'free_mode' ? this.practiceTargets.length : this.waveManager.enemiesRemaining,
       timeRemaining: (this.mode === 'time_attack' || (this.mode === 'mission' && this.currentMission?.timeLimit)) ? Math.max(0, Math.round(this.waveManager.timeAttackRemaining)) : undefined,
+      isIntermission: this.waveManager.isIntermission,
+      intermissionCountdown: Math.ceil(this.waveManager.intermissionTimer),
       activeWeaponId: this.currentWeaponId,
       isAiming: this.isZoomingActive(),
       isZooming: this.isZoomingActive(),

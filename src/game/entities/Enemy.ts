@@ -136,6 +136,7 @@ export class Enemy {
   public scoreValue: number;
   public coinValue: number;
   public isDead: boolean = false;
+  public isKillProcessed: boolean = false;
 
   // AI & Attack state
   private attackRange: number;
@@ -748,7 +749,8 @@ export class Enemy {
     playerPos: THREE.Vector3,
     obstacles: ArenaObstacle[],
     onShoot?: (event: EnemyShootEvent) => void,
-    onPlayerHit?: (damage: number) => void
+    onPlayerHit?: (damage: number) => void,
+    onExplode?: (enemy: Enemy) => void
   ) {
     // 1. Human Death Animation (ragdoll collapse backward onto the floor, then sinks away)
     if (this.isDead) {
@@ -809,6 +811,9 @@ export class Enemy {
           if (distToPlayer < 6.5 && onPlayerHit) {
             const factor = 1 - (distToPlayer / 6.5);
             onPlayerHit(Math.round(this.damage * factor));
+          }
+          if (onExplode) {
+            onExplode(this);
           }
           return;
         }
@@ -1012,15 +1017,23 @@ export class Enemy {
 
       for (const obs of obstacles) {
         if (obs.box.distanceToPoint(nextPos) < 1.0) {
-          moveDir.reflect(new THREE.Vector3(1, 0, 0)).normalize();
-          nextPos.copy(this.position).addScaledVector(moveDir, this.speed * 0.5 * delta);
+          const obsCenter = obs.box.getCenter(new THREE.Vector3());
+          const toObs = new THREE.Vector3().subVectors(nextPos, obsCenter);
+          toObs.y = 0;
+          if (toObs.lengthSq() > 0.001) {
+            toObs.normalize();
+            const tangent = new THREE.Vector3(-toObs.z, 0, toObs.x);
+            const dot = tangent.dot(moveDir);
+            moveDir.copy(tangent).multiplyScalar(dot >= 0 ? 1 : -1).normalize();
+            nextPos.copy(this.position).addScaledVector(moveDir, this.speed * 0.7 * delta);
+          }
           break;
         }
       }
 
-      this.position.x = nextPos.x;
+      this.position.x = THREE.MathUtils.clamp(nextPos.x, -37.5, 37.5);
       this.position.y = 0; // Firmly lock to ground level
-      this.position.z = nextPos.z;
+      this.position.z = THREE.MathUtils.clamp(nextPos.z, -37.5, 37.5);
       this.mesh.position.copy(this.position);
     }
   }

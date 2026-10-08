@@ -69,6 +69,8 @@ export const App: React.FC = () => {
     kills: 0,
     enemiesRemaining: 0,
     timeRemaining: undefined,
+    isIntermission: false,
+    intermissionCountdown: 0,
     activeWeaponId: 'assault_rifle',
     isAiming: false,
     isZooming: false,

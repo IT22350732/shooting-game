@@ -55,6 +55,8 @@ interface HUDProps {
     kills?: number;
     enemiesRemaining: number;
     timeRemaining?: number;
+    isIntermission?: boolean;
+    intermissionCountdown?: number;
     activeWeaponId: WeaponId;
     isAiming?: boolean;
     isZooming?: boolean;
@@ -846,9 +848,9 @@ export const HUD: React.FC<HUDProps> = ({
                 </div>
                 <div style={{ width: 1, height: isMobileView ? 10 : 16, background: 'rgba(255, 255, 255, 0.2)' }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: isMobileView ? 3 : 6 }}>
-                  <Skull size={isMobileView ? 12 : 16} color="#f43f5e" />
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: isMobileView ? '0.78rem' : '1.1rem', fontWeight: 900, color: '#f43f5e' }}>
-                    HOSTILES: {stats.enemiesRemaining ?? 0}
+                  <Skull size={isMobileView ? 12 : 16} color={stats.isIntermission ? '#10b981' : '#f43f5e'} />
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: isMobileView ? '0.78rem' : '1.1rem', fontWeight: 900, color: stats.isIntermission ? '#10b981' : '#f43f5e' }}>
+                    {stats.isIntermission ? `NEXT WAVE: ${stats.intermissionCountdown || 1}s` : `HOSTILES: ${stats.enemiesRemaining ?? 0}`}
                   </span>
                 </div>
               </div>
@@ -1045,9 +1047,9 @@ export const HUD: React.FC<HUDProps> = ({
             <div style={{ width: 1.5, height: 24, background: 'rgba(15, 23, 42, 0.15)' }} />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748b', fontFamily: 'var(--font-sub)' }}>
-              <span>ENEMIES LEFT:</span>
-              <span style={{ color: '#0284c7', fontWeight: 900, fontSize: '1.25rem', fontFamily: "'Rajdhani', var(--font-display), sans-serif" }}>
-                {stats.enemiesRemaining}
+              <span>{stats.isIntermission ? 'NEXT WAVE IN:' : 'ENEMIES LEFT:'}</span>
+              <span style={{ color: stats.isIntermission ? '#10b981' : '#0284c7', fontWeight: 900, fontSize: '1.25rem', fontFamily: "'Rajdhani', var(--font-display), sans-serif" }}>
+                {stats.isIntermission ? `${stats.intermissionCountdown || 1}s` : stats.enemiesRemaining}
               </span>
             </div>
 
