@@ -30,6 +30,7 @@ import { saveManager } from '../game/managers/SaveManager';
 import { userManager } from '../game/managers/UserManager';
 import { AVATAR_OPTIONS } from '../types/user';
 import { useFullscreen } from '../utils/fullscreen';
+import { soundManager } from '../audio/SoundManager';
 
 interface MainMenuProps {
   onStartGame: (mode: GameMode, arena: ArenaId, mission?: MissionConfig) => void;
@@ -65,6 +66,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
 
   const handleModeChange = (mode: GameMode) => {
+    soundManager.playTabSwitch();
     setSelectedMission(null);
     setSelectedMode(mode);
     if (mode === 'easy' || mode === 'medium' || mode === 'hard') {
@@ -142,6 +144,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   const currentArenaInfo = ARENAS.find((a) => a.id === selectedArena) || ARENAS[0];
 
   const handleSelectArena = (arenaId: ArenaId) => {
+    soundManager.playTabSwitch();
     setSelectedArena(arenaId);
     if (onPreviewArena) {
       onPreviewArena(arenaId);
@@ -493,6 +496,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         <div className="menu-bottom-dock">
           <button
             onClick={() => {
+              soundManager.playTabSwitch();
               setActiveTab('missions');
               setShowMissionSelect(true);
             }}
@@ -796,7 +800,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               </div>
 
               <button
-                onClick={() => setShowMissionSelect(false)}
+                onClick={() => {
+                  soundManager.playModalClose();
+                  setShowMissionSelect(false);
+                }}
                 style={{
                   width: 36,
                   height: 36,
@@ -817,7 +824,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             {/* Tab Switches: Missions vs Survival Mode vs Arena */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
               <button
-                onClick={() => setActiveTab('missions')}
+                onClick={() => {
+                  soundManager.playTabSwitch();
+                  setActiveTab('missions');
+                }}
                 style={{
                   flex: 1.2,
                   padding: '10px 10px',
@@ -840,7 +850,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               </button>
 
               <button
-                onClick={() => setActiveTab('mode')}
+                onClick={() => {
+                  soundManager.playTabSwitch();
+                  setActiveTab('mode');
+                }}
                 style={{
                   flex: 1,
                   padding: '10px 10px',
@@ -863,7 +876,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               </button>
 
               <button
-                onClick={() => setActiveTab('arena')}
+                onClick={() => {
+                  soundManager.playTabSwitch();
+                  setActiveTab('arena');
+                }}
                 style={{
                   flex: 1,
                   padding: '10px 10px',
@@ -899,6 +915,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                       key={mission.id}
                       onClick={() => {
                         if (isUnlocked) {
+                          soundManager.playTabSwitch();
                           setSelectedMission(mission);
                           setSelectedArena(mission.arena);
                           if (onPreviewArena) onPreviewArena(mission.arena);

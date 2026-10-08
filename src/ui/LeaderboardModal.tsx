@@ -64,7 +64,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose, onO
   const currentUserEntry = rawLeaderboard.find(e => e.isCurrentUser);
 
   const handleTabChange = (cat: LeaderboardCategory) => {
-    soundManager.playClick(0, 1800, 0.2);
+    soundManager.playTabSwitch();
     setCategory(cat);
   };
 

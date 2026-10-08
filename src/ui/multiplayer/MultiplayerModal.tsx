@@ -420,7 +420,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
               {/* Tab Navigation */}
               <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: 12 }}>
                 <button
-                  onClick={() => { setActiveTab('quick'); soundManager.playClick(); }}
+                  onClick={() => { setActiveTab('quick'); soundManager.playTabSwitch(); }}
                   className={`btn-cyber ${activeTab === 'quick' ? 'btn-cyber-primary' : ''}`}
                   style={{
                     padding: '8px 18px',
@@ -436,7 +436,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                 </button>
 
                 <button
-                  onClick={() => { setActiveTab('create'); soundManager.playClick(); }}
+                  onClick={() => { setActiveTab('create'); soundManager.playTabSwitch(); }}
                   className={`btn-cyber ${activeTab === 'create' ? 'btn-cyber-primary' : ''}`}
                   style={{
                     padding: '8px 18px',
@@ -452,7 +452,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                 </button>
 
                 <button
-                  onClick={() => { setActiveTab('join'); soundManager.playClick(); }}
+                  onClick={() => { setActiveTab('join'); soundManager.playTabSwitch(); }}
                   className={`btn-cyber ${activeTab === 'join' ? 'btn-cyber-primary' : ''}`}
                   style={{
                     padding: '8px 18px',
@@ -468,7 +468,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                 </button>
 
                 <button
-                  onClick={() => { setActiveTab('info'); soundManager.playClick(); }}
+                  onClick={() => { setActiveTab('info'); soundManager.playTabSwitch(); }}
                   className={`btn-cyber ${activeTab === 'info' ? 'btn-cyber-primary' : ''}`}
                   style={{
                     padding: '8px 18px',

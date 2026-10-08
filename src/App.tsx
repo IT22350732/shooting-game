@@ -25,6 +25,7 @@ import { MobileControls } from './ui/MobileControls';
 import { IOSFullscreenModal } from './ui/IOSFullscreenModal';
 import { OPEN_IOS_GUIDE_EVENT } from './utils/fullscreen';
 import { userManager } from './game/managers/UserManager';
+import { soundManager } from './audio/SoundManager';
 import { AuthModal } from './ui/AuthModal';
 import { LeaderboardModal } from './ui/LeaderboardModal';
 import { MultiplayerModal } from './ui/multiplayer/MultiplayerModal';
@@ -132,7 +133,15 @@ export const App: React.FC = () => {
       onPowerupChange: (p) => setPowerups(p),
       onGameStateChange: (newState) => {
         setGameState(newState);
-        if (newState === 'GAME_OVER' || newState === 'VICTORY') {
+        if (newState === 'MENU') {
+          soundManager.stopAllGameplaySounds();
+          soundManager.playMusic('menu');
+        } else if (newState === 'PLAYING') {
+          soundManager.playMusic('combat');
+        } else if (newState === 'PAUSED') {
+          soundManager.pauseMusic();
+        } else if (newState === 'GAME_OVER' || newState === 'VICTORY') {
+          soundManager.stopMusic();
           const currentP = engine.player.stats;
           userManager.recordGameResult(
             currentP.score,
@@ -157,11 +166,29 @@ export const App: React.FC = () => {
     setEngineInstance(engine);
 
     return () => {
+      soundManager.stopAllGameplaySounds();
       engine.destroy();
     };
   }, []);
 
+  // Ambient menu music kickoff on initial user gesture (compliant with browser autoplay policies)
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      if (gameState === 'MENU') {
+        soundManager.startMenuMusic();
+      }
+    };
+    window.addEventListener('pointerdown', handleFirstInteraction, { once: true });
+    window.addEventListener('keydown', handleFirstInteraction, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', handleFirstInteraction);
+      window.removeEventListener('keydown', handleFirstInteraction);
+    };
+  }, [gameState]);
+
   const handleStartGame = (mode: GameMode, arena: ArenaId, mission?: MissionConfig) => {
+    soundManager.playDeployStart();
+    soundManager.playMusic('combat');
     if (engineRef.current) {
       if (mode === 'mission' && mission) {
         engineRef.current.startMission(mission);
@@ -185,6 +212,8 @@ export const App: React.FC = () => {
 
   const handleNextMission = () => {
     if (nextMission && engineRef.current) {
+      soundManager.playDeployStart();
+      soundManager.playMusic('combat');
       engineRef.current.startMission(nextMission);
     }
   };
@@ -227,14 +256,38 @@ export const App: React.FC = () => {
       {gameState === 'MENU' && (
         <MainMenu
           onStartGame={handleStartGame}
-          onPreviewArena={(arena) => engineRef.current?.previewArena(arena)}
-          onOpenArmory={() => setShowArmory(true)}
-          onOpenUpgrades={() => setShowUpgrades(true)}
-          onOpenSettings={() => setShowSettings(true)}
-          onOpenTutorial={() => setShowTutorial(true)}
-          onOpenAuth={() => setShowAuth(true)}
-          onOpenLeaderboard={() => setShowLeaderboard(true)}
-          onOpenMultiplayer={() => setShowMultiplayer(true)}
+          onPreviewArena={(arena) => {
+            soundManager.playTabSwitch();
+            engineRef.current?.previewArena(arena);
+          }}
+          onOpenArmory={() => {
+            soundManager.playPageOpen('armory');
+            setShowArmory(true);
+          }}
+          onOpenUpgrades={() => {
+            soundManager.playPageOpen('upgrades');
+            setShowUpgrades(true);
+          }}
+          onOpenSettings={() => {
+            soundManager.playPageOpen('settings');
+            setShowSettings(true);
+          }}
+          onOpenTutorial={() => {
+            soundManager.playPageOpen('tutorial');
+            setShowTutorial(true);
+          }}
+          onOpenAuth={() => {
+            soundManager.playPageOpen('auth');
+            setShowAuth(true);
+          }}
+          onOpenLeaderboard={() => {
+            soundManager.playPageOpen('leaderboard');
+            setShowLeaderboard(true);
+          }}
+          onOpenMultiplayer={() => {
+            soundManager.playPageOpen('multiplayer');
+            setShowMultiplayer(true);
+          }}
           coins={coins}
         />
       )}
@@ -242,8 +295,13 @@ export const App: React.FC = () => {
       {/* PAUSE MODAL */}
       {gameState === 'PAUSED' && (
         <PauseModal
-          onResume={() => engineRef.current?.resumeGame()}
+          onResume={() => {
+            soundManager.playClick();
+            engineRef.current?.resumeGame();
+          }}
           onRestart={() => {
+            soundManager.playDeployStart();
+            soundManager.playMusic('combat');
             if (engineRef.current) {
               if (activeMission) {
                 engineRef.current.startMission(activeMission);
@@ -252,9 +310,18 @@ export const App: React.FC = () => {
               }
             }
           }}
-          onOpenSettings={() => setShowSettings(true)}
-          onOpenTutorial={() => setShowTutorial(true)}
+          onOpenSettings={() => {
+            soundManager.playPageOpen('settings');
+            setShowSettings(true);
+          }}
+          onOpenTutorial={() => {
+            soundManager.playPageOpen('tutorial');
+            setShowTutorial(true);
+          }}
           onMainMenu={() => {
+            soundManager.stopAllGameplaySounds();
+            soundManager.playPageOpen('menu');
+            soundManager.playMusic('menu');
             setGameState('MENU');
             setShowAuth(false);
             engineRef.current?.showMenu();
@@ -276,6 +343,8 @@ export const App: React.FC = () => {
           hasNextMission={Boolean(nextMission)}
           onNextMission={handleNextMission}
           onRestart={() => {
+            soundManager.playDeployStart();
+            soundManager.playMusic('combat');
             if (engineRef.current) {
               if (activeMission) {
                 engineRef.current.startMission(activeMission);
@@ -284,9 +353,18 @@ export const App: React.FC = () => {
               }
             }
           }}
-          onOpenUpgrades={() => setShowUpgrades(true)}
-          onOpenLeaderboard={() => setShowLeaderboard(true)}
+          onOpenUpgrades={() => {
+            soundManager.playPageOpen('upgrades');
+            setShowUpgrades(true);
+          }}
+          onOpenLeaderboard={() => {
+            soundManager.playPageOpen('leaderboard');
+            setShowLeaderboard(true);
+          }}
           onMainMenu={() => {
+            soundManager.stopAllGameplaySounds();
+            soundManager.playPageOpen('menu');
+            soundManager.playMusic('menu');
             setGameState('MENU');
             setShowAuth(false);
             engineRef.current?.showMenu();
@@ -297,7 +375,10 @@ export const App: React.FC = () => {
       {/* MODALS */}
       {showArmory && (
         <ArmoryMenu
-          onClose={() => setShowArmory(false)}
+          onClose={() => {
+            soundManager.playModalClose();
+            setShowArmory(false);
+          }}
           coins={coins}
           onRefreshCoins={refreshCoins}
         />
@@ -305,7 +386,10 @@ export const App: React.FC = () => {
 
       {showUpgrades && (
         <UpgradesMenu
-          onClose={() => setShowUpgrades(false)}
+          onClose={() => {
+            soundManager.playModalClose();
+            setShowUpgrades(false);
+          }}
           coins={coins}
           onRefreshCoins={refreshCoins}
         />
@@ -313,7 +397,10 @@ export const App: React.FC = () => {
 
       {showSettings && (
         <SettingsModal
-          onClose={() => setShowSettings(false)}
+          onClose={() => {
+            soundManager.playModalClose();
+            setShowSettings(false);
+          }}
           onSettingsChanged={(newSettings) => {
             setSettings(newSettings);
             engineRef.current?.updateSettings(newSettings);
@@ -323,14 +410,20 @@ export const App: React.FC = () => {
 
       {showTutorial && (
         <TutorialModal
-          onClose={() => setShowTutorial(false)}
+          onClose={() => {
+            soundManager.playModalClose();
+            setShowTutorial(false);
+          }}
         />
       )}
 
       {/* IPHONE FULLSCREEN IMMERSIVE GUIDE MODAL */}
       {showIOSGuide && (
         <IOSFullscreenModal
-          onClose={() => setShowIOSGuide(false)}
+          onClose={() => {
+            soundManager.playModalClose();
+            setShowIOSGuide(false);
+          }}
         />
       )}
 
@@ -338,7 +431,10 @@ export const App: React.FC = () => {
       {showAuth && (
         <AuthModal
           initialTab="login"
-          onClose={() => setShowAuth(false)}
+          onClose={() => {
+            soundManager.playModalClose();
+            setShowAuth(false);
+          }}
           onUserChanged={() => {
             refreshCoins();
             setSettings(saveManager.getData().settings);
@@ -349,8 +445,12 @@ export const App: React.FC = () => {
       {/* LEADERBOARD & OPERATIVE RANKINGS MODAL */}
       {showLeaderboard && (
         <LeaderboardModal
-          onClose={() => setShowLeaderboard(false)}
+          onClose={() => {
+            soundManager.playModalClose();
+            setShowLeaderboard(false);
+          }}
           onOpenAuth={() => {
+            soundManager.playPageOpen('auth');
             setShowLeaderboard(false);
             setShowAuth(true);
           }}
@@ -361,8 +461,13 @@ export const App: React.FC = () => {
       {showMultiplayer && (
         <MultiplayerModal
           isOpen={showMultiplayer}
-          onClose={() => setShowMultiplayer(false)}
+          onClose={() => {
+            soundManager.playModalClose();
+            setShowMultiplayer(false);
+          }}
           onLaunchMatch={(arena, mode) => {
+            soundManager.playDeployStart();
+            soundManager.playMusic('combat');
             setShowMultiplayer(false);
             if (engineRef.current) {
               engineRef.current.startMultiplayerGame(arena, mode);

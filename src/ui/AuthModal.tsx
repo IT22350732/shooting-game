@@ -60,7 +60,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
   };
 
   const handleTabChange = (tab: 'switch' | 'login' | 'register' | 'sync') => {
-    soundManager.playClick(0, 1600, 0.2);
+    soundManager.playTabSwitch();
     clearMessages();
     setActiveTab(tab);
     setUsersList(userManager.getAllUsers());

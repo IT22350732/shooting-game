@@ -14,6 +14,7 @@ export class SoundManager {
   private musicInterval: number | null = null;
   private musicStep: number = 0;
   private isMusicPlaying: boolean = false;
+  public currentTrack: 'none' | 'menu' | 'combat' = 'none';
 
   constructor() {
     // AudioContext will be initialized on first user interaction
@@ -706,14 +707,329 @@ export class SoundManager {
     osc.stop(now + 0.42);
   }
 
-  // --- DYNAMIC BACKGROUND SYNTH MUSIC ---
-  public startMusic() {
-    if (this.isMusicPlaying) return;
+  // --- PAGE-TO-PAGE & NAVIGATION AUDIO SUITE ---
+  public playPageOpen(page: 'armory' | 'upgrades' | 'settings' | 'leaderboard' | 'multiplayer' | 'tutorial' | 'auth' | 'menu') {
     this.initContext();
+    if (!this.ctx || !this.sfxGain || this.isMuted) return;
+    const ctx = this.ctx;
+    const sfxGain = this.sfxGain;
+    const now = ctx.currentTime;
+
+    switch (page) {
+      case 'armory': {
+        // High-tech weapon slide / bolt lock + optical ping
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'triangle';
+        osc1.frequency.setValueAtTime(140, now);
+        osc1.frequency.exponentialRampToValueAtTime(420, now + 0.08);
+        gain1.gain.setValueAtTime(0.2, now);
+        gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
+        osc1.connect(gain1);
+        gain1.connect(sfxGain);
+        osc1.start(now);
+        osc1.stop(now + 0.1);
+
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(1600, now + 0.06);
+        osc2.frequency.exponentialRampToValueAtTime(2400, now + 0.16);
+        gain2.gain.setValueAtTime(0.18, now + 0.06);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        osc2.connect(gain2);
+        gain2.connect(sfxGain);
+        osc2.start(now + 0.06);
+        osc2.stop(now + 0.24);
+        break;
+      }
+      case 'upgrades': {
+        // Cybernetic power surge / neon circuit charge chime
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(1280, now + 0.18);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+        osc.connect(gain);
+        gain.connect(sfxGain);
+        osc.start(now);
+        osc.stop(now + 0.25);
+        break;
+      }
+      case 'leaderboard': {
+        // Holographic data-sync scan / satellite uplink double-ping
+        [1560, 2080].forEach((freq, idx) => {
+          const t = now + idx * 0.07;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.16, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+          osc.connect(gain);
+          gain.connect(sfxGain);
+          osc.start(t);
+          osc.stop(t + 0.14);
+        });
+        break;
+      }
+      case 'multiplayer': {
+        // Tactical radio frequency chirp / comms connect sound
+        this.playRadioBeep('on');
+        break;
+      }
+      case 'settings': {
+        // Precision interface dial calibration tick
+        this.playClick(now, 1600, 0.22);
+        break;
+      }
+      case 'tutorial': {
+        // Tactical mission briefing tri-tone chime
+        [523.25, 659.25, 783.99].forEach((freq, idx) => {
+          const t = now + idx * 0.05;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.14, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+          osc.connect(gain);
+          gain.connect(sfxGain);
+          osc.start(t);
+          osc.stop(t + 0.12);
+        });
+        break;
+      }
+      case 'auth': {
+        // Biometric access granted cyber tone
+        [880, 1320, 1760].forEach((freq, idx) => {
+          const t = now + idx * 0.04;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.12, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+          osc.connect(gain);
+          gain.connect(sfxGain);
+          osc.start(t);
+          osc.stop(t + 0.12);
+        });
+        break;
+      }
+      case 'menu':
+      default: {
+        // Return to home base smooth cyber sweep
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(440, now + 0.14);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.connect(gain);
+        gain.connect(sfxGain);
+        osc.start(now);
+        osc.stop(now + 0.18);
+        break;
+      }
+    }
+  }
+
+  public playModalClose() {
+    this.initContext();
+    if (!this.ctx || !this.sfxGain || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1400, now);
+    osc.frequency.exponentialRampToValueAtTime(520, now + 0.09);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.095);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  }
+
+  public playTabSwitch() {
+    this.initContext();
+    if (!this.ctx || !this.sfxGain || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1800, now);
+    osc.frequency.exponentialRampToValueAtTime(900, now + 0.04);
+    gain.gain.setValueAtTime(0.14, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.05);
+  }
+
+  public playDeployStart() {
+    this.initContext();
+    if (!this.ctx || !this.sfxGain || this.isMuted) return;
+    const now = this.ctx.currentTime;
+    // Low dramatic sub-drop + high frequency charge
+    const subOsc = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(160, now);
+    subOsc.frequency.exponentialRampToValueAtTime(40, now + 0.35);
+    subGain.gain.setValueAtTime(0.35, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    subOsc.connect(subGain);
+    subGain.connect(this.sfxGain);
+    subOsc.start(now);
+    subOsc.stop(now + 0.36);
+
+    const chargeOsc = this.ctx.createOscillator();
+    const chargeGain = this.ctx.createGain();
+    chargeOsc.type = 'sawtooth';
+    chargeOsc.frequency.setValueAtTime(440, now);
+    chargeOsc.frequency.exponentialRampToValueAtTime(1760, now + 0.28);
+    chargeGain.gain.setValueAtTime(0.18, now);
+    chargeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    chargeOsc.connect(chargeGain);
+    chargeGain.connect(this.sfxGain);
+    chargeOsc.start(now);
+    chargeOsc.stop(now + 0.32);
+  }
+
+  // --- DYNAMIC MUSIC MANAGEMENT ---
+  public playMusic(track: 'menu' | 'combat' | 'none') {
+    if (this.currentTrack === track && this.isMusicPlaying) return;
+
+    this.stopMusic();
+
+    if (track === 'none') {
+      this.currentTrack = 'none';
+      return;
+    }
+
+    this.initContext();
+    this.currentTrack = track;
     this.isMusicPlaying = true;
     this.musicStep = 0;
 
-    // Synthwave bassline notes (Dm, Bb, F, C progression)
+    if (track === 'menu') {
+      this.startMenuMusicLoop();
+    } else if (track === 'combat') {
+      this.startCombatMusicLoop();
+    }
+  }
+
+  public startMusic() {
+    this.playMusic('combat');
+  }
+
+  public startCombatMusic() {
+    this.playMusic('combat');
+  }
+
+  public startMenuMusic() {
+    this.playMusic('menu');
+  }
+
+  public pauseMusic() {
+    if (this.ctx && this.musicGain) {
+      const now = this.ctx.currentTime;
+      this.musicGain.gain.setValueAtTime(this.musicGain.gain.value, now);
+      this.musicGain.gain.linearRampToValueAtTime(0, now + 0.15);
+    }
+  }
+
+  public resumeMusic() {
+    if (this.ctx && this.musicGain && !this.isMuted) {
+      const now = this.ctx.currentTime;
+      this.musicGain.gain.setValueAtTime(0, now);
+      this.musicGain.gain.linearRampToValueAtTime(this.musicVolume, now + 0.2);
+    }
+  }
+
+  public stopMusic() {
+    if (this.musicInterval) {
+      clearInterval(this.musicInterval);
+      this.musicInterval = null;
+    }
+    this.isMusicPlaying = false;
+    this.currentTrack = 'none';
+    if (this.ctx && this.musicGain) {
+      const now = this.ctx.currentTime;
+      this.musicGain.gain.setValueAtTime(0, now);
+      this.musicGain.gain.setValueAtTime(this.isMuted ? 0 : this.musicVolume, now + 0.05);
+    }
+  }
+
+  public stopAllGameplaySounds() {
+    this.stopMusic();
+    if (this.ctx && this.sfxGain) {
+      const now = this.ctx.currentTime;
+      this.sfxGain.gain.cancelScheduledValues(now);
+      this.sfxGain.gain.setValueAtTime(0, now);
+      this.sfxGain.gain.setValueAtTime(this.isMuted ? 0 : this.sfxVolume, now + 0.05);
+    }
+  }
+
+  // --- MENU CHILL AMBIENT SYNTH MUSIC LOOP ---
+  private startMenuMusicLoop() {
+    const chords = [
+      { root: 73.42, notes: [293.66, 349.23, 440.0, 523.25] }, // Dm9
+      { root: 58.27, notes: [233.08, 293.66, 349.23, 440.0] }, // Bbmaj7
+      { root: 87.31, notes: [349.23, 440.0, 523.25, 659.25] }, // Fmaj7
+      { root: 65.41, notes: [261.63, 329.63, 392.0, 493.88] }  // C9
+    ];
+
+    const stepDuration = 320; // Relaxed 94 BPM 8th notes
+    let stepCount = 0;
+
+    this.musicInterval = window.setInterval(() => {
+      if (!this.ctx || !this.musicGain || this.isMuted) return;
+      const now = this.ctx.currentTime;
+      const chordIdx = Math.floor(stepCount / 8) % chords.length;
+      const chord = chords[chordIdx];
+      const noteIdx = stepCount % chord.notes.length;
+
+      // Warm sub-bass drone on chord change (every 8 steps)
+      if (stepCount % 8 === 0) {
+        const bassOsc = this.ctx.createOscillator();
+        const bassGain = this.ctx.createGain();
+        bassOsc.type = 'triangle';
+        bassOsc.frequency.setValueAtTime(chord.root, now);
+        bassGain.gain.setValueAtTime(0.12, now);
+        bassGain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
+        bassOsc.connect(bassGain);
+        bassGain.connect(this.musicGain);
+        bassOsc.start(now);
+        bassOsc.stop(now + 2.3);
+      }
+
+      // Soft sparkling sine arpeggio note
+      const arpOsc = this.ctx.createOscillator();
+      const arpGain = this.ctx.createGain();
+      arpOsc.type = 'sine';
+      arpOsc.frequency.setValueAtTime(chord.notes[noteIdx], now);
+      arpGain.gain.setValueAtTime(0.001, now);
+      arpGain.gain.linearRampToValueAtTime(0.045, now + 0.04);
+      arpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+
+      arpOsc.connect(arpGain);
+      arpGain.connect(this.musicGain);
+      arpOsc.start(now);
+      arpOsc.stop(now + 0.4);
+
+      stepCount++;
+    }, stepDuration);
+  }
+
+  // --- COMBAT SYNTHWAVE ACTION MUSIC LOOP ---
+  private startCombatMusicLoop() {
     const bassline = [
       146.83, 146.83, 146.83, 146.83, // D3
       116.54, 116.54, 116.54, 116.54, // Bb2
@@ -763,14 +1079,6 @@ export class SoundManager {
 
       this.musicStep++;
     }, stepDuration);
-  }
-
-  public stopMusic() {
-    if (this.musicInterval) {
-      clearInterval(this.musicInterval);
-      this.musicInterval = null;
-    }
-    this.isMusicPlaying = false;
   }
 }
 

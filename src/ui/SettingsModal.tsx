@@ -30,6 +30,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onSetting
 
     if (key === 'soundVolume' || key === 'musicVolume') {
       soundManager.setVolumes(updated.soundVolume / 100, updated.musicVolume / 100);
+    } else if (key !== 'mouseSensitivity') {
+      soundManager.playClick();
     }
   };
 

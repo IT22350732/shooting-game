@@ -884,6 +884,7 @@ export class GameEngine {
       this.isRightMouseDown = false;
       this.isQDown = false;
       this.exitPointerLock();
+      soundManager.pauseMusic();
       this.callbacks.onGameStateChange('PAUSED');
     }
   }
@@ -894,6 +895,7 @@ export class GameEngine {
       if (!this.isTouchDevice) {
         this.requestPointerLock();
       }
+      soundManager.resumeMusic();
       this.callbacks.onGameStateChange('PLAYING');
     }
   }
@@ -1431,6 +1433,8 @@ export class GameEngine {
     }
     this.clearAllEntities();
     this.exitPointerLock();
+    soundManager.stopAllGameplaySounds();
+    soundManager.playMusic('menu');
     this.callbacks.onGameStateChange('MENU');
   }
 
@@ -2579,6 +2583,7 @@ export class GameEngine {
       window.visualViewport.removeEventListener('resize', this.onWindowResize);
     }
     multiplayerService.destroy();
+    soundManager.stopAllGameplaySounds();
     this.clearAllEntities();
     this.particles.dispose();
     this.renderer.dispose();

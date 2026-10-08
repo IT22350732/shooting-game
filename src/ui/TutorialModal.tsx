@@ -21,6 +21,7 @@ import {
   Volume2,
   VolumeX
 } from 'lucide-react';
+import { soundManager } from '../audio/SoundManager';
 
 interface TutorialModalProps {
   onClose: () => void;
@@ -133,19 +134,28 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
         <div style={{ display: 'flex', gap: 8, padding: '12px 20px 0 20px', borderBottom: '1px solid rgba(15, 23, 42, 0.08)' }}>
           <TabButton
             active={activeTab === 'keyboard'}
-            onClick={() => setActiveTab('keyboard')}
+            onClick={() => {
+              soundManager.playTabSwitch();
+              setActiveTab('keyboard');
+            }}
             icon={<Keyboard size={17} />}
             label="KEYBOARD & MOUSE (PC)"
           />
           <TabButton
             active={activeTab === 'mobile'}
-            onClick={() => setActiveTab('mobile')}
+            onClick={() => {
+              soundManager.playTabSwitch();
+              setActiveTab('mobile');
+            }}
             icon={<Smartphone size={17} />}
             label="MOBILE TOUCH"
           />
           <TabButton
             active={activeTab === 'mechanics'}
-            onClick={() => setActiveTab('mechanics')}
+            onClick={() => {
+              soundManager.playTabSwitch();
+              setActiveTab('mechanics');
+            }}
             icon={<Compass size={17} />}
             label="COMBAT TIPS & RULES"
           />

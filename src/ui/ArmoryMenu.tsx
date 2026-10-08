@@ -110,7 +110,10 @@ export const ArmoryMenu: React.FC<ArmoryMenuProps> = ({ onClose, coins, onRefres
               return (
                 <div
                   key={wId}
-                  onClick={() => setSelectedWeaponId(wId)}
+                  onClick={() => {
+                    soundManager.playTabSwitch();
+                    setSelectedWeaponId(wId);
+                  }}
                   className="glass-panel armory-weapon-item"
                   style={{
                     padding: '12px 14px',
