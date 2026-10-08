@@ -103,47 +103,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onSetting
                   GRAPHICS QUALITY
                 </span>
               </div>
-              <span
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '0.74rem',
-                  fontWeight: 900,
-                  letterSpacing: '0.06em',
-                  padding: '3px 10px',
-                  borderRadius: 6,
-                  background:
-                    (settings.graphicsQuality || 'high') === 'normal'
-                      ? 'rgba(16, 185, 129, 0.15)'
-                      : (settings.graphicsQuality || 'high') === 'ultra'
-                      ? 'rgba(139, 92, 246, 0.15)'
-                      : 'rgba(2, 132, 199, 0.15)',
-                  color:
-                    (settings.graphicsQuality || 'high') === 'normal'
-                      ? '#10b981'
-                      : (settings.graphicsQuality || 'high') === 'ultra'
-                      ? '#8b5cf6'
-                      : '#0284c7',
-                  border: `1px solid ${
-                    (settings.graphicsQuality || 'high') === 'normal'
-                      ? 'rgba(16, 185, 129, 0.3)'
-                      : (settings.graphicsQuality || 'high') === 'ultra'
-                      ? 'rgba(139, 92, 246, 0.3)'
-                      : 'rgba(2, 132, 199, 0.3)'
-                  }`,
-                  textTransform: 'uppercase'
-                }}
-              >
-                {settings.graphicsQuality || 'high'}
-              </span>
+              {(() => {
+                const q = settings.graphicsQuality || 'high';
+                const isLow = q === 'low' || q === 'normal';
+                const isUltra = q === 'ultra';
+                return (
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '0.74rem',
+                      fontWeight: 900,
+                      letterSpacing: '0.06em',
+                      padding: '3px 10px',
+                      borderRadius: 6,
+                      background: isLow
+                        ? 'rgba(16, 185, 129, 0.15)'
+                        : isUltra
+                        ? 'rgba(139, 92, 246, 0.15)'
+                        : 'rgba(2, 132, 199, 0.15)',
+                      color: isLow ? '#10b981' : isUltra ? '#8b5cf6' : '#0284c7',
+                      border: `1px solid ${
+                        isLow
+                          ? 'rgba(16, 185, 129, 0.3)'
+                          : isUltra
+                          ? 'rgba(139, 92, 246, 0.3)'
+                          : 'rgba(2, 132, 199, 0.3)'
+                      }`,
+                      textTransform: 'uppercase'
+                    }}
+                  >
+                    {isLow ? 'LOW' : isUltra ? 'ULTRA' : 'HIGH'}
+                  </span>
+                );
+              })()}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               {[
                 {
-                  id: 'normal' as GraphicsQuality,
-                  label: 'NORMAL',
-                  tag: 'ANTI-LAG',
-                  desc: '1.0x DPR, Shadows Off, Optimized FX. Recommended for lagging PCs',
+                  id: 'low' as GraphicsQuality,
+                  label: 'LOW',
+                  tag: 'MAX PERFORMANCE',
+                  desc: '0.65x DPR, Shadows & FX Off, Fast Shaders. Eliminates lag on all laptops',
                   icon: <Zap size={16} />,
                   color: '#10b981',
                   activeBg: 'rgba(16, 185, 129, 0.14)',
@@ -170,7 +171,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onSetting
                   activeBorder: '#8b5cf6'
                 }
               ].map((opt) => {
-                const isSelected = (settings.graphicsQuality || 'high') === opt.id;
+                const currentQuality = settings.graphicsQuality || 'high';
+                const isSelected = currentQuality === opt.id || (opt.id === 'low' && currentQuality === 'normal');
                 return (
                   <button
                     key={opt.id}

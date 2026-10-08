@@ -11,9 +11,12 @@ export class Powerup {
   private lifeTime: number = 28; // Despawn after 28s
   private bobTime: number = Math.random() * Math.PI * 2;
 
-  constructor(id: string, type: PowerupType, position: THREE.Vector3) {
+  private enableLight: boolean;
+
+  constructor(id: string, type: PowerupType, position: THREE.Vector3, enableLight: boolean = true) {
     this.id = id;
     this.type = type;
+    this.enableLight = enableLight;
     this.position = position.clone();
     this.position.y = 0.8;
     this.mesh = new THREE.Group();
@@ -86,10 +89,12 @@ export class Powerup {
       beacon.position.y = -0.75;
       this.mesh.add(beacon);
 
-      // Glowing Point Light illuminating floor
-      const light = new THREE.PointLight(0x22c55e, 1.6, 6.0);
-      light.position.y = 0.2;
-      this.mesh.add(light);
+      // Glowing Point Light illuminating floor (disabled in low graphics)
+      if (this.enableLight) {
+        const light = new THREE.PointLight(0x22c55e, 1.6, 6.0);
+        light.position.y = 0.2;
+        this.mesh.add(light);
+      }
       return;
     }
 

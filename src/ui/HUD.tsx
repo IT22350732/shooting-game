@@ -749,22 +749,24 @@ export const HUD: React.FC<HUDProps> = ({
           {!isMobileView && (
             <>
               <span style={{ color: 'rgba(15, 23, 42, 0.2)' }}>•</span>
-              <span
-                style={{
-                  fontSize: '0.68rem',
-                  color:
-                    (settings?.graphicsQuality || 'high') === 'normal'
-                      ? '#16a34a'
-                      : (settings?.graphicsQuality || 'high') === 'ultra'
-                      ? '#8b5cf6'
-                      : '#0284c7',
-                  textTransform: 'uppercase',
-                  fontWeight: 900,
-                  letterSpacing: '0.04em'
-                }}
-              >
-                {settings?.graphicsQuality || 'HIGH'}
-              </span>
+              {(() => {
+                const q = settings?.graphicsQuality || 'high';
+                const isLow = q === 'low' || q === 'normal';
+                const isUltra = q === 'ultra';
+                return (
+                  <span
+                    style={{
+                      fontSize: '0.68rem',
+                      color: isLow ? '#16a34a' : isUltra ? '#8b5cf6' : '#0284c7',
+                      textTransform: 'uppercase',
+                      fontWeight: 900,
+                      letterSpacing: '0.04em'
+                    }}
+                  >
+                    {isLow ? 'LOW' : isUltra ? 'ULTRA' : 'HIGH'}
+                  </span>
+                );
+              })()}
             </>
           )}
         </div>

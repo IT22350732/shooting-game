@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { WeaponConfig, WeaponId, UpgradeLevels } from '../../types/game';
+import { WeaponConfig, WeaponId, UpgradeLevels, GraphicsQuality } from '../../types/game';
 import { soundManager } from '../../audio/SoundManager';
 import { TextureGenerator } from '../world/TextureGenerator';
 
@@ -118,6 +118,17 @@ export class WeaponInstance {
   private muzzleFlashMesh: THREE.Mesh | null = null;
   private muzzleFlashLight: THREE.PointLight | null = null;
   private muzzleFlashTimer: number = 0;
+  private enableFlashLight: boolean = true;
+
+  public setGraphicsQuality(quality: GraphicsQuality) {
+    this.enableFlashLight = quality !== 'low' && quality !== 'normal';
+    if (!this.enableFlashLight && this.muzzleFlashLight) {
+      this.muzzleFlashLight.intensity = 0;
+      this.muzzleFlashLight.visible = false;
+    } else if (this.muzzleFlashLight) {
+      this.muzzleFlashLight.visible = true;
+    }
+  }
 
   // On-weapon holographic digital ammo display
   private ammoScreenMesh: THREE.Mesh | null = null;
@@ -419,7 +430,7 @@ export class WeaponInstance {
     // Trigger bright muzzle flash
     this.muzzleFlashTimer = 0.05;
     if (this.muzzleFlashMesh) (this.muzzleFlashMesh.material as THREE.MeshBasicMaterial).opacity = 0.95;
-    if (this.muzzleFlashLight) this.muzzleFlashLight.intensity = 3.5;
+    if (this.muzzleFlashLight && this.enableFlashLight) this.muzzleFlashLight.intensity = 3.5;
 
     // Play procedural sound
     soundManager.playGunshot(this.config.soundType);

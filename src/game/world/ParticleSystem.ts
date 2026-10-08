@@ -99,9 +99,9 @@ export class ParticleSystem {
 
   public setQuality(quality: GraphicsQuality) {
     this.quality = quality;
-    if (quality === 'normal') {
-      this.qualityScale = 0.35;
-      this.ambientCount = 80;
+    if (quality === 'low' || quality === 'normal') {
+      this.qualityScale = 0.12;
+      this.ambientCount = 0; // Disable atmosphere particles completely on low-end hardware
     } else if (quality === 'high') {
       this.qualityScale = 0.75;
       this.ambientCount = 200;
@@ -111,6 +111,13 @@ export class ParticleSystem {
     }
 
     if (this.ambientMesh) {
+      this.scene.remove(this.ambientMesh);
+      this.ambientMesh.geometry.dispose();
+      (this.ambientMesh.material as THREE.Material).dispose();
+      this.ambientMesh = null;
+    }
+
+    if (this.ambientCount > 0) {
       this.initAtmosphere(this.currentArenaType);
     }
   }
@@ -122,6 +129,10 @@ export class ParticleSystem {
       this.ambientMesh.geometry.dispose();
       (this.ambientMesh.material as THREE.Material).dispose();
       this.ambientMesh = null;
+    }
+
+    if (this.ambientCount <= 0) {
+      return;
     }
 
     const geo = new THREE.BufferGeometry();
@@ -172,7 +183,8 @@ export class ParticleSystem {
   }
 
   public spawnSparks(origin: THREE.Vector3, normal: THREE.Vector3, colorHex: number = 0xf59e0b, count: number = 14) {
-    const effectiveCount = Math.max(3, Math.round(count * this.qualityScale));
+    const isLow = this.quality === 'low' || this.quality === 'normal';
+    const effectiveCount = isLow ? Math.min(3, Math.max(1, Math.round(count * this.qualityScale))) : Math.max(3, Math.round(count * this.qualityScale));
     const col = new THREE.Color(colorHex);
     for (let i = 0; i < effectiveCount; i++) {
       if (this.particleList.length >= this.maxParticles) break;
@@ -196,7 +208,8 @@ export class ParticleSystem {
   }
 
   public spawnExplosion(center: THREE.Vector3, count: number = 60) {
-    const effectiveCount = Math.max(12, Math.round(count * this.qualityScale));
+    const isLow = this.quality === 'low' || this.quality === 'normal';
+    const effectiveCount = isLow ? Math.min(8, Math.max(3, Math.round(count * this.qualityScale))) : Math.max(12, Math.round(count * this.qualityScale));
     const fireColors = [0xef4444, 0xf97316, 0xfacc15, 0xffffff];
     for (let i = 0; i < effectiveCount; i++) {
       if (this.particleList.length >= this.maxParticles) break;

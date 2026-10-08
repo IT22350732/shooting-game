@@ -17,6 +17,7 @@ export class RemotePlayer {
   public leftArm: THREE.Group;
   public rightArm: THREE.Group;
   public leftLeg: THREE.Group;
+  public static isLowGraphics: boolean = false;
   public rightLeg: THREE.Group;
   public weaponMeshGroup: THREE.Group;
   public shieldMesh: THREE.Mesh;
@@ -90,8 +91,8 @@ export class RemotePlayer {
       metalness: 0.2
     });
     const torsoMesh = new THREE.Mesh(torsoGeo, torsoMat);
-    torsoMesh.castShadow = true;
-    torsoMesh.receiveShadow = true;
+    torsoMesh.castShadow = !RemotePlayer.isLowGraphics;
+    torsoMesh.receiveShadow = !RemotePlayer.isLowGraphics;
     this.torsoGroup.add(torsoMesh);
     this.registerMaterial(torsoMat);
 
@@ -119,7 +120,7 @@ export class RemotePlayer {
       roughness: 0.8
     });
     this.headMesh = new THREE.Mesh(headGeo, headMat);
-    this.headMesh.castShadow = true;
+    this.headMesh.castShadow = !RemotePlayer.isLowGraphics;
     headGroup.add(this.headMesh);
     this.registerMaterial(headMat);
 
@@ -282,7 +283,7 @@ export class RemotePlayer {
     });
     const legMesh = new THREE.Mesh(legGeo, legMat);
     legMesh.position.set(0, -0.375, 0);
-    legMesh.castShadow = true;
+    legMesh.castShadow = !RemotePlayer.isLowGraphics;
     legGroup.add(legMesh);
     this.registerMaterial(legMat);
 

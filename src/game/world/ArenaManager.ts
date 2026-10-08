@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ArenaId } from '../../types/game';
+import { ArenaId, GraphicsQuality } from '../../types/game';
 import { TextureGenerator } from './TextureGenerator';
 
 export interface ArenaObstacle {
@@ -27,6 +27,7 @@ export class ArenaManager {
   public spawnPoints: SpawnPoint[] = [];
   public explosiveBarrels: ExplosiveBarrel[] = [];
   public arenaSize = 80; // 80x80m realistic neighborhood / city block
+  public graphicsQuality: GraphicsQuality = 'high';
 
   private arenaGroup: THREE.Group;
 
@@ -36,7 +37,12 @@ export class ArenaManager {
     this.scene.add(this.arenaGroup);
   }
 
-  public loadArena(arenaId: ArenaId) {
+  public setQuality(quality: GraphicsQuality) {
+    this.graphicsQuality = quality;
+  }
+
+  public loadArena(arenaId: ArenaId, quality?: GraphicsQuality) {
+    if (quality) this.graphicsQuality = quality;
     // Clear existing arena objects
     while (this.arenaGroup.children.length > 0) {
       const obj = this.arenaGroup.children[0];
@@ -76,21 +82,25 @@ export class ArenaManager {
     const hemiLight = new THREE.HemisphereLight(0xbae6fd, 0xdcfce7, 0.85);
     this.arenaGroup.add(hemiLight);
 
+    const isLow = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
     const sun = new THREE.DirectionalLight(0xfffbeb, 1.75);
     sun.position.set(38, 55, 28);
-    sun.castShadow = true;
-    sun.shadow.mapSize.width = 2048;
-    sun.shadow.mapSize.height = 2048;
-    sun.shadow.camera.near = 0.5;
-    sun.shadow.camera.far = 140;
-    const d = 48;
-    sun.shadow.camera.left = -d;
-    sun.shadow.camera.right = d;
-    sun.shadow.camera.top = d;
-    sun.shadow.camera.bottom = -d;
-    sun.shadow.bias = -0.00008;
-    sun.shadow.normalBias = 0.04;
-    sun.shadow.radius = 1.5;
+    sun.castShadow = !isLow;
+    if (!isLow) {
+      const mapSize = this.graphicsQuality === 'ultra' ? 2048 : 1024;
+      sun.shadow.mapSize.width = mapSize;
+      sun.shadow.mapSize.height = mapSize;
+      sun.shadow.camera.near = 0.5;
+      sun.shadow.camera.far = 140;
+      const d = 48;
+      sun.shadow.camera.left = -d;
+      sun.shadow.camera.right = d;
+      sun.shadow.camera.top = d;
+      sun.shadow.camera.bottom = -d;
+      sun.shadow.bias = -0.00008;
+      sun.shadow.normalBias = 0.04;
+      sun.shadow.radius = 1.5;
+    }
     this.arenaGroup.add(sun);
 
     // Green Grass Lawn Ground Base
@@ -170,19 +180,23 @@ export class ArenaManager {
     const hemi = new THREE.HemisphereLight(0x60a5fa, 0xf1f5f9, 0.85);
     this.arenaGroup.add(hemi);
 
+    const isLowCity = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
     const sun = new THREE.DirectionalLight(0xffffff, 1.8);
     sun.position.set(-32, 58, 25);
-    sun.castShadow = true;
-    sun.shadow.mapSize.width = 2048;
-    sun.shadow.mapSize.height = 2048;
-    const d = 48;
-    sun.shadow.camera.left = -d;
-    sun.shadow.camera.right = d;
-    sun.shadow.camera.top = d;
-    sun.shadow.camera.bottom = -d;
-    sun.shadow.bias = -0.00008;
-    sun.shadow.normalBias = 0.04;
-    sun.shadow.radius = 1.5;
+    sun.castShadow = !isLowCity;
+    if (!isLowCity) {
+      const mapSize = this.graphicsQuality === 'ultra' ? 2048 : 1024;
+      sun.shadow.mapSize.width = mapSize;
+      sun.shadow.mapSize.height = mapSize;
+      const d = 48;
+      sun.shadow.camera.left = -d;
+      sun.shadow.camera.right = d;
+      sun.shadow.camera.top = d;
+      sun.shadow.camera.bottom = -d;
+      sun.shadow.bias = -0.00008;
+      sun.shadow.normalBias = 0.04;
+      sun.shadow.radius = 1.5;
+    }
     this.arenaGroup.add(sun);
 
     // Urban Concrete Plaza & Sidewalk Ground
@@ -253,19 +267,23 @@ export class ArenaManager {
     const hemi = new THREE.HemisphereLight(0xfef08a, 0xfde68a, 0.9);
     this.arenaGroup.add(hemi);
 
+    const isLowDesert = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
     const sun = new THREE.DirectionalLight(0xfffbeb, 1.85);
     sun.position.set(42, 60, 22);
-    sun.castShadow = true;
-    sun.shadow.mapSize.width = 2048;
-    sun.shadow.mapSize.height = 2048;
-    const d = 48;
-    sun.shadow.camera.left = -d;
-    sun.shadow.camera.right = d;
-    sun.shadow.camera.top = d;
-    sun.shadow.camera.bottom = -d;
-    sun.shadow.bias = -0.00008;
-    sun.shadow.normalBias = 0.04;
-    sun.shadow.radius = 1.5;
+    sun.castShadow = !isLowDesert;
+    if (!isLowDesert) {
+      const mapSize = this.graphicsQuality === 'ultra' ? 2048 : 1024;
+      sun.shadow.mapSize.width = mapSize;
+      sun.shadow.mapSize.height = mapSize;
+      const d = 48;
+      sun.shadow.camera.left = -d;
+      sun.shadow.camera.right = d;
+      sun.shadow.camera.top = d;
+      sun.shadow.camera.bottom = -d;
+      sun.shadow.bias = -0.00008;
+      sun.shadow.normalBias = 0.04;
+      sun.shadow.radius = 1.5;
+    }
     this.arenaGroup.add(sun);
 
     // Warm Desert Sandstone Ground
@@ -329,19 +347,23 @@ export class ArenaManager {
     const hemi = new THREE.HemisphereLight(0x94a3b8, 0xffffff, 0.85);
     this.arenaGroup.add(hemi);
 
+    const isLowIndustrial = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
     const sun = new THREE.DirectionalLight(0xffffff, 1.8);
     sun.position.set(-30, 55, 30);
-    sun.castShadow = true;
-    sun.shadow.mapSize.width = 2048;
-    sun.shadow.mapSize.height = 2048;
-    const d = 48;
-    sun.shadow.camera.left = -d;
-    sun.shadow.camera.right = d;
-    sun.shadow.camera.top = d;
-    sun.shadow.camera.bottom = -d;
-    sun.shadow.bias = -0.00008;
-    sun.shadow.normalBias = 0.04;
-    sun.shadow.radius = 1.5;
+    sun.castShadow = !isLowIndustrial;
+    if (!isLowIndustrial) {
+      const mapSize = this.graphicsQuality === 'ultra' ? 2048 : 1024;
+      sun.shadow.mapSize.width = mapSize;
+      sun.shadow.mapSize.height = mapSize;
+      const d = 48;
+      sun.shadow.camera.left = -d;
+      sun.shadow.camera.right = d;
+      sun.shadow.camera.top = d;
+      sun.shadow.camera.bottom = -d;
+      sun.shadow.bias = -0.00008;
+      sun.shadow.normalBias = 0.04;
+      sun.shadow.radius = 1.5;
+    }
     this.arenaGroup.add(sun);
 
     // Paved Concrete Industrial Depot Floor

@@ -26,7 +26,8 @@ export class Projectile {
     speed: number,
     damage: number,
     isPlayer: boolean,
-    isPlasma: boolean = false
+    isPlasma: boolean = false,
+    enableLight: boolean = true
   ) {
     this.position = origin.clone();
     this.velocity = direction.clone().normalize().multiplyScalar(speed);
@@ -43,9 +44,11 @@ export class Projectile {
     this.mesh = new THREE.Mesh(geo, mat);
     this.mesh.position.copy(this.position);
 
-    // Glowing point light
-    this.light = new THREE.PointLight(color, 1.2, 5);
-    this.mesh.add(this.light);
+    // Glowing point light (disabled in low graphics mode to avoid fragment shader multi-light overhead)
+    if (enableLight) {
+      this.light = new THREE.PointLight(color, 1.2, 5);
+      this.mesh.add(this.light);
+    }
   }
 
   public update(delta: number): boolean {

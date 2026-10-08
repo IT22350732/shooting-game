@@ -311,10 +311,12 @@ export class Enemy {
     }
   }
 
+  public static isLowGraphics: boolean = false;
+
   private registerMesh(mesh: THREE.Mesh, mat: THREE.Material) {
     this.originalMaterials.set(mesh, mat);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
+    mesh.castShadow = !Enemy.isLowGraphics;
+    mesh.receiveShadow = !Enemy.isLowGraphics;
   }
 
   private buildHumanModel() {

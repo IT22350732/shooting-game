@@ -99,7 +99,11 @@ export class SaveManager {
           ...parsed,
           unlockedWeapons,
           upgrades: { ...DEFAULT_SAVE.upgrades, ...(parsed.upgrades || {}) },
-          settings: { ...DEFAULT_SAVE.settings, ...(parsed.settings || {}) },
+          settings: {
+            ...DEFAULT_SAVE.settings,
+            ...(parsed.settings || {}),
+            graphicsQuality: parsed.settings?.graphicsQuality === 'normal' ? 'low' : (parsed.settings?.graphicsQuality || DEFAULT_SAVE.settings.graphicsQuality)
+          },
           stats: { ...DEFAULT_SAVE.stats, ...(parsed.stats || {}) }
         };
       }

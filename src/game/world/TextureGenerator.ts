@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GraphicsQuality } from '../../types/game';
 
 /**
  * Generates procedural high-resolution canvas textures on the fly.
@@ -6,6 +7,22 @@ import * as THREE from 'three';
  */
 export class TextureGenerator {
   private static cache: Map<string, THREE.CanvasTexture> = new Map();
+  public static currentAnisotropy: number = 4;
+
+  public static setQuality(quality: GraphicsQuality) {
+    if (quality === 'low' || quality === 'normal') {
+      this.currentAnisotropy = 1;
+    } else if (quality === 'ultra') {
+      this.currentAnisotropy = 16;
+    } else {
+      this.currentAnisotropy = 4;
+    }
+
+    this.cache.forEach((tex) => {
+      tex.anisotropy = this.currentAnisotropy;
+      tex.needsUpdate = true;
+    });
+  }
 
   private static finalizeTexture(
     texture: THREE.CanvasTexture,
@@ -18,7 +35,7 @@ export class TextureGenerator {
       texture.wrapT = THREE.RepeatWrapping;
       texture.repeat.set(repeatX, repeatY);
     }
-    texture.anisotropy = 16;
+    texture.anisotropy = this.currentAnisotropy;
     texture.generateMipmaps = true;
     texture.minFilter = THREE.LinearMipmapLinearFilter;
     texture.magFilter = THREE.LinearFilter;

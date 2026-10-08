@@ -26,6 +26,7 @@ import { Powerup } from '../entities/Powerup';
 import { PracticeTarget } from '../entities/PracticeTarget';
 import { ArenaManager } from '../world/ArenaManager';
 import { ParticleSystem } from '../world/ParticleSystem';
+import { TextureGenerator } from '../world/TextureGenerator';
 import { WaveManager } from '../managers/WaveManager';
 import { saveManager } from '../managers/SaveManager';
 import { soundManager } from '../../audio/SoundManager';
@@ -171,6 +172,7 @@ export class GameEngine {
   private calculatedFps: number = 60;
   private fpsFrameCount: number = 0;
   private lastFpsSampleTime: number = 0;
+  private statsUpdateTimer: number = 0;
 
   // Raycaster
   private raycaster = new THREE.Raycaster();
@@ -198,7 +200,6 @@ export class GameEngine {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.1;
-    this.applyGraphicsQuality(this.graphicsQuality, false);
     this.container.appendChild(this.renderer.domElement);
 
     this.player = new Player(this.camera, savedData.upgrades);
@@ -208,8 +209,9 @@ export class GameEngine {
     this.waveManager = new WaveManager(this.mode);
 
     // Load default arena immediately so it's visible in 3D in the menu!
-    this.arena.loadArena(this.currentArenaId);
+    this.arena.loadArena(this.currentArenaId, this.graphicsQuality);
     this.particles.initAtmosphere(this.currentArenaId);
+    this.applyGraphicsQuality(this.graphicsQuality, false);
 
     // Initialize Unlocked Weapons
     this.initWeapons();
@@ -278,8 +280,9 @@ export class GameEngine {
     this.clearAllEntities();
 
     // Load arena
-    this.arena.loadArena(arenaId);
+    this.arena.loadArena(arenaId, this.graphicsQuality);
     this.particles.initAtmosphere(arenaId);
+    this.applyGraphicsQuality(this.graphicsQuality, false);
 
     // Spawn player at valid team spawn point with proper ground eye-height
     let spawn: THREE.Vector3;
@@ -572,8 +575,9 @@ export class GameEngine {
     this.clearAllEntities();
 
     // Load Arena & Weather
-    this.arena.loadArena(arenaId);
+    this.arena.loadArena(arenaId, this.graphicsQuality);
     this.particles.initAtmosphere(arenaId);
+    this.applyGraphicsQuality(this.graphicsQuality, false);
 
     // Wave Manager
     this.waveManager.reset(mode, this.currentMission);
@@ -895,8 +899,9 @@ export class GameEngine {
   }
 
   public getTargetPixelRatio(): number {
-    if (this.graphicsQuality === 'normal') {
-      return Math.min(window.devicePixelRatio, 1.0);
+    if (this.graphicsQuality === 'low' || this.graphicsQuality === 'normal') {
+      // Dynamic downscale to ~65% DPR, capped at 0.72. Cuts pixel fillrate by 50-68% on Windows laptops
+      return Math.max(0.55, Math.min(window.devicePixelRatio * 0.65, 0.72));
     } else if (this.graphicsQuality === 'high') {
       return Math.min(window.devicePixelRatio, 1.25);
     } else {
@@ -906,54 +911,100 @@ export class GameEngine {
 
   public applyGraphicsQuality(quality: GraphicsQuality, updateMaterials: boolean = true) {
     this.graphicsQuality = quality;
+    const isLow = quality === 'low' || quality === 'normal';
+
+    // 1. Pixel Ratio & Canvas Scaling
     const dpr = this.getTargetPixelRatio();
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
 
-    if (quality === 'normal') {
-      this.renderer.shadowMap.enabled = false;
-    } else if (quality === 'high') {
-      this.renderer.shadowMap.enabled = true;
-      this.renderer.shadowMap.type = THREE.PCFShadowMap;
-    } else {
-      this.renderer.shadowMap.enabled = true;
-      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // 2. Shadows (completely turned off in low mode)
+    this.renderer.shadowMap.enabled = !isLow;
+    if (!isLow) {
+      this.renderer.shadowMap.type = quality === 'ultra' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
     }
     this.renderer.shadowMap.needsUpdate = true;
 
+    // 3. Tone Mapping (NoToneMapping eliminates expensive ACES curve arithmetic on every fragment in low mode)
+    this.renderer.toneMapping = isLow ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
+
+    // 4. Camera Clipping Plane (in low mode, far plane clamped to 135 to cull distant objects across 80x80 arena)
+    if (this.camera) {
+      this.camera.far = isLow ? 135 : 300;
+      this.camera.updateProjectionMatrix();
+    }
+
+    // 5. CSS body class to disable expensive backdrop-filter blur across all UI in low mode
+    if (typeof document !== 'undefined' && document.body) {
+      if (isLow) {
+        document.body.classList.add('low-graphics');
+      } else {
+        document.body.classList.remove('low-graphics');
+      }
+    }
+
+    // 6. Static entity flags for zero-shadow mesh initialization
+    Enemy.isLowGraphics = isLow;
+    RemotePlayer.isLowGraphics = isLow;
+    Boss.isLowGraphics = isLow;
+    TextureGenerator.setQuality(quality);
+
+    // 7. Arena Manager, Particles & Weapons
+    if (this.arena) {
+      this.arena.setQuality(quality);
+    }
     if (this.particles) {
       this.particles.setQuality(quality);
     }
+    if (this.weapons) {
+      this.weapons.forEach((w) => w.setGraphicsQuality(quality));
+    }
 
+    // 8. Traverse Scene for existing lights, shadows & materials
     if (this.scene) {
       this.scene.traverse((obj) => {
         if (obj instanceof THREE.DirectionalLight) {
-          if (quality === 'normal') {
+          if (isLow) {
             obj.castShadow = false;
-          } else if (quality === 'high') {
-            obj.castShadow = true;
-            obj.shadow.mapSize.set(1024, 1024);
-            if (obj.shadow.map) {
+            if (obj.shadow?.map) {
               obj.shadow.map.dispose();
               obj.shadow.map = null as any;
             }
           } else {
             obj.castShadow = true;
-            obj.shadow.mapSize.set(2048, 2048);
+            const size = quality === 'ultra' ? 2048 : 1024;
+            obj.shadow.mapSize.set(size, size);
             if (obj.shadow.map) {
               obj.shadow.map.dispose();
               obj.shadow.map = null as any;
             }
           }
+        } else if (obj instanceof THREE.PointLight) {
+          if (isLow) {
+            obj.visible = false;
+            obj.intensity = 0;
+          } else {
+            obj.visible = true;
+          }
         }
-        if (updateMaterials && (obj as THREE.Mesh).isMesh) {
+
+        if ((obj as THREE.Mesh).isMesh) {
           const mesh = obj as THREE.Mesh;
+          if (isLow) {
+            mesh.castShadow = false;
+            mesh.receiveShadow = false;
+          }
+
           if (mesh.material) {
-            if (Array.isArray(mesh.material)) {
-              mesh.material.forEach((m) => (m.needsUpdate = true));
-            } else {
-              mesh.material.needsUpdate = true;
-            }
+            const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+            mats.forEach((m) => {
+              if ((m as THREE.MeshStandardMaterial).map) {
+                (m as THREE.MeshStandardMaterial).map!.anisotropy = isLow ? 1 : (quality === 'ultra' ? 16 : 4);
+              }
+              if (updateMaterials) {
+                m.needsUpdate = true;
+              }
+            });
           }
         }
       });
@@ -1365,8 +1416,9 @@ export class GameEngine {
   public previewArena(arenaId: ArenaId) {
     if (this.currentArenaId === arenaId) return;
     this.currentArenaId = arenaId;
-    this.arena.loadArena(arenaId);
+    this.arena.loadArena(arenaId, this.graphicsQuality);
     this.particles.initAtmosphere(arenaId);
+    this.applyGraphicsQuality(this.graphicsQuality, false);
   }
 
   public showMenu() {
@@ -1435,13 +1487,15 @@ export class GameEngine {
 
       if (this.currentWeapon.config.id === 'plasma_rifle') {
         // Spawn Plasma Projectile
+        const isLow = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
         const proj = new Projectile(
           shootData.origin,
           shootData.direction,
           this.currentWeapon.config.bulletSpeed,
           this.currentWeapon.config.damage * (hasDamageBoost ? 2.0 : 1.0),
           true,
-          true
+          true,
+          !isLow
         );
         this.projectiles.push(proj);
         this.scene.add(proj.mesh);
@@ -1866,7 +1920,8 @@ export class GameEngine {
   }
 
   public spawnHealthPack(pos: THREE.Vector3) {
-    const p = new Powerup(Math.random().toString(), 'health', pos.clone());
+    const isLow = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
+    const p = new Powerup(Math.random().toString(), 'health', pos.clone(), !isLow);
     this.powerups.push(p);
     this.scene.add(p.mesh);
     // Green sparkle beacon effect on spawn
@@ -1876,7 +1931,8 @@ export class GameEngine {
   private spawnRandomPowerup(pos: THREE.Vector3) {
     const types: PowerupType[] = ['health', 'armor', 'rapid_fire', 'infinite_ammo', 'damage_boost', 'slow_motion', 'shield'];
     const selected = types[Math.floor(Math.random() * types.length)];
-    const p = new Powerup(Math.random().toString(), selected, pos);
+    const isLow = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
+    const p = new Powerup(Math.random().toString(), selected, pos, !isLow);
     this.powerups.push(p);
     this.scene.add(p.mesh);
   }
@@ -2163,7 +2219,8 @@ export class GameEngine {
           ));
           const dir = new THREE.Vector3().subVectors(targetWithSpread, evt.origin).normalize();
           const speed = evt.speed ?? 26;
-          const proj = new Projectile(evt.origin, dir, speed, evt.damage, false, evt.isPlasma);
+          const isLow = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
+          const proj = new Projectile(evt.origin, dir, speed, evt.damage, false, evt.isPlasma, !isLow);
           this.projectiles.push(proj);
           this.scene.add(proj.mesh);
 
@@ -2223,7 +2280,8 @@ export class GameEngine {
             } else {
               // Rocket Projectile
               const dir = new THREE.Vector3().subVectors(evt.target, evt.origin).normalize();
-              const proj = new Projectile(evt.origin, dir, 18, evt.damage, false);
+              const isLow = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
+              const proj = new Projectile(evt.origin, dir, 18, evt.damage, false, false, !isLow);
               this.projectiles.push(proj);
               this.scene.add(proj.mesh);
             }
@@ -2389,49 +2447,54 @@ export class GameEngine {
     // 9. Particle System Update
     this.particles.update(delta);
 
-    // 10. Update UI Callbacks
-    this.callbacks.onStatsUpdate({
-      health: this.player.stats.health,
-      maxHealth: this.player.stats.maxHealth,
-      armor: this.player.stats.armor,
-      maxArmor: this.player.stats.maxArmor,
-      ammo: this.currentWeapon.currentAmmo,
-      maxAmmo: this.currentWeapon.maxAmmo,
-      isReloading: this.currentWeapon.isReloading,
-      reloadProgress: this.currentWeapon.reloadProgress,
-      score: this.player.stats.score,
-      combo: this.player.stats.combo,
-      comboTimer: this.player.stats.comboTimer,
-      coins: this.player.stats.coins,
-      wave: this.waveManager.currentWave,
-      kills: this.player.stats.kills,
-      enemiesRemaining: this.mode === 'free_mode' ? this.practiceTargets.length : this.waveManager.enemiesRemaining,
-      timeRemaining: (this.mode === 'time_attack' || (this.mode === 'mission' && this.currentMission?.timeLimit)) ? Math.max(0, Math.round(this.waveManager.timeAttackRemaining)) : undefined,
-      isIntermission: this.waveManager.isIntermission,
-      intermissionCountdown: Math.ceil(this.waveManager.intermissionTimer),
-      activeWeaponId: this.currentWeaponId,
-      isAiming: this.isZoomingActive(),
-      isZooming: this.isZoomingActive(),
-      zoomLevel: this.zoomLevel,
-      zoomMagnification: this.getZoomMagnification(),
-      targetLock: this.targetLock,
-      mode: this.mode,
-      missionObjective: this.getMissionObjectiveInfo(),
-      activeMission: this.currentMission,
-      isMultiplayer: this.isMultiplayer,
-      isRespawning: this.isRespawning,
-      respawnCountdown: Math.ceil(this.respawnCountdown),
-      killerName: this.killerName,
-      multiplayerAlphaScore: multiplayerService.room?.teamAlphaScore,
-      multiplayerBravoScore: multiplayerService.room?.teamBravoScore,
-      multiplayerScoreLimit: multiplayerService.room?.scoreLimit,
-      multiplayerPing: multiplayerService.currentPing,
-      fps: this.calculatedFps,
-      graphicsQuality: this.graphicsQuality,
-      radarPings: this.getRadarPings(),
-      playerPos: { x: this.player.position.x, y: this.player.position.y, z: this.player.position.z },
-      playerYaw: this.player.yaw
-    });
+    // 10. Update UI Callbacks (throttled to ~30Hz on low graphics to save CPU cycles on low-end laptops)
+    this.statsUpdateTimer += delta;
+    const isLow = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
+    if (!isLow || this.statsUpdateTimer >= 0.033) {
+      this.statsUpdateTimer = 0;
+      this.callbacks.onStatsUpdate({
+        health: this.player.stats.health,
+        maxHealth: this.player.stats.maxHealth,
+        armor: this.player.stats.armor,
+        maxArmor: this.player.stats.maxArmor,
+        ammo: this.currentWeapon.currentAmmo,
+        maxAmmo: this.currentWeapon.maxAmmo,
+        isReloading: this.currentWeapon.isReloading,
+        reloadProgress: this.currentWeapon.reloadProgress,
+        score: this.player.stats.score,
+        combo: this.player.stats.combo,
+        comboTimer: this.player.stats.comboTimer,
+        coins: this.player.stats.coins,
+        wave: this.waveManager.currentWave,
+        kills: this.player.stats.kills,
+        enemiesRemaining: this.mode === 'free_mode' ? this.practiceTargets.length : this.waveManager.enemiesRemaining,
+        timeRemaining: (this.mode === 'time_attack' || (this.mode === 'mission' && this.currentMission?.timeLimit)) ? Math.max(0, Math.round(this.waveManager.timeAttackRemaining)) : undefined,
+        isIntermission: this.waveManager.isIntermission,
+        intermissionCountdown: Math.ceil(this.waveManager.intermissionTimer),
+        activeWeaponId: this.currentWeaponId,
+        isAiming: this.isZoomingActive(),
+        isZooming: this.isZoomingActive(),
+        zoomLevel: this.zoomLevel,
+        zoomMagnification: this.getZoomMagnification(),
+        targetLock: this.targetLock,
+        mode: this.mode,
+        missionObjective: this.getMissionObjectiveInfo(),
+        activeMission: this.currentMission,
+        isMultiplayer: this.isMultiplayer,
+        isRespawning: this.isRespawning,
+        respawnCountdown: Math.ceil(this.respawnCountdown),
+        killerName: this.killerName,
+        multiplayerAlphaScore: multiplayerService.room?.teamAlphaScore,
+        multiplayerBravoScore: multiplayerService.room?.teamBravoScore,
+        multiplayerScoreLimit: multiplayerService.room?.scoreLimit,
+        multiplayerPing: multiplayerService.currentPing,
+        fps: this.calculatedFps,
+        graphicsQuality: this.graphicsQuality,
+        radarPings: this.getRadarPings(),
+        playerPos: { x: this.player.position.x, y: this.player.position.y, z: this.player.position.z },
+        playerYaw: this.player.yaw
+      });
+    }
 
     const activeList: PowerupActiveState[] = [];
     this.player.activePowerups.forEach(p => activeList.push(p));
@@ -2519,6 +2582,9 @@ export class GameEngine {
     this.clearAllEntities();
     this.particles.dispose();
     this.renderer.dispose();
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.classList.remove('low-graphics');
+    }
     if (this.renderer.domElement.parentElement) {
       this.renderer.domElement.parentElement.removeChild(this.renderer.domElement);
     }

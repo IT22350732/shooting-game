@@ -118,7 +118,7 @@ export interface UpgradeLevels {
 }
 
 export type DifficultyLevel = 'easy' | 'medium' | 'hard';
-export type GraphicsQuality = 'normal' | 'high' | 'ultra';
+export type GraphicsQuality = 'low' | 'normal' | 'high' | 'ultra';
 export type FrameRateLimit = 30 | 60 | 120;
 
 export interface GameSettings {

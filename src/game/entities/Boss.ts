@@ -33,6 +33,7 @@ export class Boss {
   private hitFlashTimer: number = 0;
   private originalMaterials: Map<THREE.Mesh, THREE.Material> = new Map();
   private flashMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  public static isLowGraphics: boolean = false;
 
   constructor(waveMultiplier: number = 1) {
     this.maxHealth = Math.round(2800 * waveMultiplier);
@@ -59,12 +60,14 @@ export class Boss {
     const redGlow = new THREE.MeshBasicMaterial({ color: 0xef4444 });
     const coreGlow = new THREE.MeshBasicMaterial({ color: 0x0ea5e9 });
 
+    const castShadow = !Boss.isLowGraphics;
+
     // Massive Torso
     const torsoGeo = new THREE.BoxGeometry(3.6, 4.2, 2.8);
     const torso = new THREE.Mesh(torsoGeo, whiteArmor);
     torso.position.y = 4.5;
-    torso.castShadow = true;
-    torso.receiveShadow = true;
+    torso.castShadow = castShadow;
+    torso.receiveShadow = castShadow;
     this.mesh.add(torso);
     this.originalMaterials.set(torso, whiteArmor);
 
@@ -80,7 +83,7 @@ export class Boss {
     const headGeo = new THREE.BoxGeometry(1.4, 1.2, 1.4);
     const head = new THREE.Mesh(headGeo, chromeFrame);
     head.position.set(0, 7.0, 0.2);
-    head.castShadow = true;
+    head.castShadow = castShadow;
     this.mesh.add(head);
     this.originalMaterials.set(head, chromeFrame);
 
@@ -95,27 +98,27 @@ export class Boss {
     armGeo.rotateX(Math.PI / 4);
     const leftArm = new THREE.Mesh(armGeo, whiteArmor);
     leftArm.position.set(-2.6, 4.5, 0.8);
-    leftArm.castShadow = true;
+    leftArm.castShadow = castShadow;
     this.mesh.add(leftArm);
 
     // Giant Right Arm (Laser Emitter / Energy Cannon)
     const rightArm = new THREE.Mesh(armGeo, whiteArmor);
     rightArm.position.set(2.6, 4.5, 0.8);
-    rightArm.castShadow = true;
+    rightArm.castShadow = castShadow;
     this.mesh.add(rightArm);
 
     // Massive Hydraulic Legs
     const legGeo = new THREE.BoxGeometry(1.1, 3.0, 1.3);
     const leftLeg = new THREE.Mesh(legGeo, chromeFrame);
     leftLeg.position.set(-1.2, 1.5, 0);
-    leftLeg.castShadow = true;
-    leftLeg.receiveShadow = true;
+    leftLeg.castShadow = castShadow;
+    leftLeg.receiveShadow = castShadow;
     this.mesh.add(leftLeg);
 
     const rightLeg = new THREE.Mesh(legGeo, chromeFrame);
     rightLeg.position.set(1.2, 1.5, 0);
-    rightLeg.castShadow = true;
-    rightLeg.receiveShadow = true;
+    rightLeg.castShadow = castShadow;
+    rightLeg.receiveShadow = castShadow;
     this.mesh.add(rightLeg);
 
     // Laser Telegraph Indicator (red guide line)
