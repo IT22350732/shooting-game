@@ -19,7 +19,6 @@ import {
   Loader2,
   Share2,
   Play,
-  CheckCircle2,
   Smartphone
 } from 'lucide-react';
 import { userManager } from '../game/managers/UserManager';
@@ -718,24 +717,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
                       SAVED OPERATIVE ON THIS DEVICE
                     </span>
                   </div>
-                  <span
-                    style={{
-                      fontSize: '0.64rem',
-                      color: '#059669',
-                      background: 'rgba(16, 185, 129, 0.12)',
-                      border: '1px solid rgba(16, 185, 129, 0.4)',
-                      padding: '2px 8px',
-                      borderRadius: 12,
-                      fontWeight: 800,
-                      fontFamily: 'var(--font-display)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4
-                    }}
-                  >
-                    <CheckCircle2 size={11} color="#059669" />
-                    1-CLICK ACCESS (NO PASSWORD)
-                  </span>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
