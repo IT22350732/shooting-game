@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ArenaId, GraphicsQuality } from '../../types/game';
 import { TextureGenerator } from './TextureGenerator';
+import { soundManager } from '../../audio/SoundManager';
 
 export interface ArenaObstacle {
   mesh: THREE.Mesh | THREE.Group;
@@ -21,12 +22,127 @@ export interface ExplosiveBarrel {
   exploded: boolean;
 }
 
+export class InteractiveDoor {
+  public id: string;
+  public name: string;
+  public position: THREE.Vector3; // world interaction point
+  public pivot: THREE.Group;
+  public doorMesh: THREE.Mesh;
+  public isOpen: boolean = false;
+  public targetAngle: number = 0;
+  public openAngle: number;
+  public obstacle: ArenaObstacle;
+  public closedBox: THREE.Box3;
+
+  constructor(
+    id: string,
+    name: string,
+    worldPos: THREE.Vector3,
+    doorWidth: number,
+    doorHeight: number,
+    rotY: number,
+    doorMat: THREE.Material,
+    openInward: boolean = true,
+    parent?: THREE.Object3D
+  ) {
+    this.id = id;
+    this.name = name;
+    this.position = worldPos.clone();
+    this.openAngle = openInward ? -Math.PI / 2 : Math.PI / 2;
+
+    this.pivot = new THREE.Group();
+    // Offset pivot to hinge at left side of doorway in local space
+    const hingeOffset = new THREE.Vector3(-doorWidth / 2, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
+    this.pivot.position.copy(worldPos).add(hingeOffset);
+    this.pivot.rotation.y = rotY;
+
+    // Door leaf mesh
+    const doorGeo = new THREE.BoxGeometry(doorWidth, doorHeight, 0.12);
+    doorGeo.translate(doorWidth / 2, doorHeight / 2, 0); // origin at hinge
+    this.doorMesh = new THREE.Mesh(doorGeo, doorMat);
+    this.doorMesh.castShadow = true;
+    this.doorMesh.receiveShadow = true;
+    this.pivot.add(this.doorMesh);
+
+    // Brass / metallic lever handles attached to door leaf so they swing together
+    const handleMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.85, roughness: 0.2 });
+    const handleGeo = new THREE.BoxGeometry(0.18, 0.04, 0.08);
+
+    const handleFront = new THREE.Mesh(handleGeo, handleMat);
+    handleFront.position.set(doorWidth - 0.22, doorHeight * 0.48, 0.08);
+    this.doorMesh.add(handleFront);
+
+    const handleBack = new THREE.Mesh(handleGeo, handleMat);
+    handleBack.position.set(doorWidth - 0.22, doorHeight * 0.48, -0.08);
+    this.doorMesh.add(handleBack);
+
+    if (parent) {
+      parent.add(this.pivot);
+    }
+
+    // Closed doorway obstacle Box3
+    const halfW = doorWidth / 2;
+    const halfT = 0.35;
+    this.closedBox = new THREE.Box3();
+    const corners = [
+      new THREE.Vector3(-halfW, 0, -halfT),
+      new THREE.Vector3(halfW, 0, -halfT),
+      new THREE.Vector3(-halfW, doorHeight, -halfT),
+      new THREE.Vector3(halfW, doorHeight, -halfT),
+      new THREE.Vector3(-halfW, 0, halfT),
+      new THREE.Vector3(halfW, 0, halfT),
+      new THREE.Vector3(-halfW, doorHeight, halfT),
+      new THREE.Vector3(halfW, doorHeight, halfT)
+    ];
+    corners.forEach(c => {
+      c.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY).add(worldPos);
+      this.closedBox.expandByPoint(c);
+    });
+
+    this.obstacle = {
+      mesh: this.pivot,
+      box: this.closedBox.clone(),
+      isCover: false
+    };
+  }
+
+  public update(delta: number) {
+    if (Math.abs(this.doorMesh.rotation.y - this.targetAngle) > 0.001) {
+      this.doorMesh.rotation.y = THREE.MathUtils.lerp(this.doorMesh.rotation.y, this.targetAngle, Math.min(1.0, delta * 8));
+    }
+  }
+
+  public toggle(playSound: boolean = true): boolean {
+    this.isOpen = !this.isOpen;
+    this.targetAngle = this.isOpen ? this.openAngle : 0;
+    if (this.isOpen) {
+      this.obstacle.box.makeEmpty();
+      if (playSound) soundManager.playDoorOpen();
+    } else {
+      this.obstacle.box.copy(this.closedBox);
+      if (playSound) soundManager.playDoorClose();
+    }
+    return this.isOpen;
+  }
+
+  public setOpen(open: boolean, playSound: boolean = true) {
+    if (this.isOpen !== open) {
+      this.toggle(playSound);
+    }
+  }
+
+  public getWorldInteractionPoint(): THREE.Vector3 {
+    return this.position;
+  }
+}
+
 export class ArenaManager {
   private scene: THREE.Scene;
   public obstacles: ArenaObstacle[] = [];
   public spawnPoints: SpawnPoint[] = [];
   public explosiveBarrels: ExplosiveBarrel[] = [];
-  public arenaSize = 80; // 80x80m realistic neighborhood / city block
+  public doors: InteractiveDoor[] = [];
+  public arenaSize = 130; // Expanded 130x130m realistic neighborhood / city block
   public graphicsQuality: GraphicsQuality = 'high';
 
   private arenaGroup: THREE.Group;
@@ -41,6 +157,12 @@ export class ArenaManager {
     this.graphicsQuality = quality;
   }
 
+  public update(delta: number) {
+    for (let i = 0; i < this.doors.length; i++) {
+      this.doors[i].update(delta);
+    }
+  }
+
   public loadArena(arenaId: ArenaId, quality?: GraphicsQuality) {
     if (quality) this.graphicsQuality = quality;
     // Clear existing arena objects
@@ -52,6 +174,7 @@ export class ArenaManager {
     this.obstacles = [];
     this.spawnPoints = [];
     this.explosiveBarrels = [];
+    this.doors = [];
 
     switch (arenaId) {
       case 'desert':
@@ -122,47 +245,201 @@ export class ArenaManager {
     // Concrete Sidewalks bordering the streets
     this.createSidewalkBorder(12);
 
-    // REAL HOUSES IN THE 4 NEIGHBORHOOD SECTORS
-    // House 1 (North-West): 2-Story Red Brick Suburban Family House
-    this.createResidentialHouse(-22, -22, 13, 11, 2, 'brick', '#8b3a2b', '#334155', 0);
+    // REAL ENTERABLE HOUSES WITH WALKABLE INTERIORS & INTERACTIVE DOORS
+    // House 1 (North-West): Red Brick Family Manor
+    this.createEnterableBuilding({
+      id: 'suburb-nw',
+      name: 'West Manor',
+      x: -24,
+      z: -24,
+      width: 14,
+      depth: 12,
+      height: 4.2,
+      wallType: 'brick',
+      wallColor: '#8b3a2b',
+      roofType: 'gable',
+      roofColor: '#334155',
+      interiorFloorType: 'wood',
+      doorTheme: 'wood',
+      rotY: 0
+    });
 
-    // House 2 (North-East): 2-Story White Wood Siding House with Terracotta Roof & Garage
-    this.createResidentialHouse(22, -22, 14, 11, 2, 'siding', '#f8fafc', '#9a3412', 0);
+    // House 2 (North-East): White Wood Siding Villa with Terracotta Shingles
+    this.createEnterableBuilding({
+      id: 'suburb-ne',
+      name: 'White Villa',
+      x: 24,
+      z: -24,
+      width: 14,
+      depth: 12,
+      height: 4.2,
+      wallType: 'siding',
+      wallColor: '#f8fafc',
+      roofType: 'gable',
+      roofColor: '#9a3412',
+      interiorFloorType: 'wood',
+      doorTheme: 'wood',
+      rotY: 0
+    });
 
-    // House 3 (South-West): 1.5-Story Navy Blue Siding Bungalow with Front Porch
-    this.createResidentialHouse(-22, 22, 13, 11, 1, 'siding', '#1e293b', '#475569', Math.PI);
+    // House 3 (South-West): Navy Blue Bungalow
+    this.createEnterableBuilding({
+      id: 'suburb-sw',
+      name: 'South Bungalow',
+      x: -24,
+      z: 24,
+      width: 14,
+      depth: 12,
+      height: 4.2,
+      wallType: 'siding',
+      wallColor: '#1e293b',
+      roofType: 'gable',
+      roofColor: '#475569',
+      interiorFloorType: 'wood',
+      doorTheme: 'wood',
+      rotY: Math.PI
+    });
 
-    // House 4 (South-East): 2-Story Cream Colonial House with Balcony & Chimney
-    this.createResidentialHouse(22, 22, 14, 12, 2, 'siding', '#fef3c7', '#334155', Math.PI);
+    // House 4 (South-East): Cream Colonial Residence
+    this.createEnterableBuilding({
+      id: 'suburb-se',
+      name: 'East Colonial',
+      x: 24,
+      z: 24,
+      width: 14,
+      depth: 12,
+      height: 4.2,
+      wallType: 'siding',
+      wallColor: '#fef3c7',
+      roofType: 'gable',
+      roofColor: '#334155',
+      interiorFloorType: 'wood',
+      doorTheme: 'wood',
+      rotY: Math.PI
+    });
+
+    // EXPANDED 130M OUTER SECTOR BUILDINGS
+    // Far North: Lakeside Ranger Station & Cabin
+    this.createEnterableBuilding({
+      id: 'suburb-n',
+      name: 'Ranger Station',
+      x: 0,
+      z: -46,
+      width: 13,
+      depth: 10,
+      height: 4.2,
+      wallType: 'brick',
+      wallColor: '#78350f',
+      roofType: 'gable',
+      roofColor: '#1e293b',
+      interiorFloorType: 'wood',
+      doorTheme: 'wood',
+      signText: 'RANGER CABIN',
+      rotY: 0
+    });
+
+    // Far South: Security Workshop & Tool Depot
+    this.createEnterableBuilding({
+      id: 'suburb-s',
+      name: 'Suburban Workshop',
+      x: 0,
+      z: 46,
+      width: 13,
+      depth: 10,
+      height: 4.2,
+      wallType: 'siding',
+      wallColor: '#475569',
+      roofType: 'gable',
+      roofColor: '#0f172a',
+      interiorFloorType: 'concrete',
+      doorTheme: 'steel',
+      signText: 'WORKSHOP',
+      rotY: Math.PI
+    });
+
+    // Far West: Hillside Residence
+    this.createEnterableBuilding({
+      id: 'suburb-w',
+      name: 'Hillside House',
+      x: -46,
+      z: 0,
+      width: 10,
+      depth: 13,
+      height: 4.2,
+      wallType: 'siding',
+      wallColor: '#334155',
+      roofType: 'gable',
+      roofColor: '#b45309',
+      interiorFloorType: 'wood',
+      doorTheme: 'wood',
+      rotY: -Math.PI / 2
+    });
+
+    // Far East: Garden Estate House
+    this.createEnterableBuilding({
+      id: 'suburb-e',
+      name: 'Garden Estate',
+      x: 46,
+      z: 0,
+      width: 10,
+      depth: 13,
+      height: 4.2,
+      wallType: 'brick',
+      wallColor: '#991b1b',
+      roofType: 'gable',
+      roofColor: '#334155',
+      interiorFloorType: 'wood',
+      doorTheme: 'wood',
+      rotY: Math.PI / 2
+    });
 
     // Low Garden Picket & Stone Fences (Waist-high tactical cover)
     this.createGardenFence(-10, -12, 14, 0);
     this.createGardenFence(10, -12, 14, 0);
     this.createGardenFence(-10, 12, 14, 0);
     this.createGardenFence(10, 12, 14, 0);
+    this.createGardenFence(-36, -20, 14, 0);
+    this.createGardenFence(36, -20, 14, 0);
+    this.createGardenFence(-36, 20, 14, 0);
+    this.createGardenFence(36, 20, 14, 0);
 
     // Real Parked Vehicles on the Street (Full 3D Cars for waist-high cover)
     this.createParkedCar(-14, -3.5, 0, 0x1d4ed8); // Blue Sedan
     this.createParkedCar(14, 3.5, Math.PI, 0xd97706); // Amber SUV
     this.createParkedCar(3.5, -15, Math.PI / 2, 0xe2e8f0); // White Coupe
+    this.createParkedCar(-32, -3.5, 0, 0xdc2626); // Red Sedan
+    this.createParkedCar(32, 3.5, Math.PI, 0x0f172a); // Black SUV
+    this.createParkedCar(3.5, 32, Math.PI / 2, 0x15803d); // Green Pickup
 
     // Street furniture: Streetlights, Mailboxes, Hydrants, Dumpsters
     this.createStreetlight(-8, -7);
     this.createStreetlight(8, 7);
     this.createStreetlight(-8, 7);
     this.createStreetlight(8, -7);
+    this.createStreetlight(-30, -7);
+    this.createStreetlight(30, 7);
+    this.createStreetlight(-7, -30);
+    this.createStreetlight(7, 30);
 
     this.createFireHydrant(-7, -5.5);
     this.createFireHydrant(7, 5.5);
+    this.createFireHydrant(-28, -5.5);
+    this.createFireHydrant(28, 5.5);
 
     this.createDumpster(-16, -10, 0.2);
     this.createDumpster(16, 10, -0.3);
+    this.createDumpster(-36, -10, 0);
+    this.createDumpster(36, 10, Math.PI);
 
     // Explosive barrels in driveways/alleys
     this.addExplosiveBarrel(-13, 0, -8);
     this.addExplosiveBarrel(13, 0, 8);
     this.addExplosiveBarrel(-14, 0, 14);
     this.addExplosiveBarrel(14, 0, -14);
+    this.addExplosiveBarrel(-34, 0, -14);
+    this.addExplosiveBarrel(34, 0, 14);
+    this.addExplosiveBarrel(-14, 0, 34);
+    this.addExplosiveBarrel(14, 0, -34);
 
     // Neighborhood Perimeter Boundary Wall
     this.createRealBoundaryWalls(0x475569, 'stone');
@@ -216,41 +493,197 @@ export class ArenaManager {
     this.createStreetSystem(14);
     this.createSidewalkBorder(14);
 
-    // REAL MULTI-STORY BUILDINGS IN THE 4 CITY CORNERS
-    // Building 1 (NW): 6-Story Commercial Office with Ground-floor "CAFE APEX" with Green Awning
-    this.createUrbanBuilding(-23, -23, 15, 22, 15, 'office', 'CAFE METRO', '#15803d', 0);
+    // REAL ENTERABLE DOWNTOWN BUILDINGS WITH SKYSCRAPER TOWERS & INTERACTIVE DOORS
+    // Building 1 (NW): Metro Lounge & Cafe
+    this.createEnterableBuilding({
+      id: 'city-nw',
+      name: 'Metro Lounge',
+      x: -25,
+      z: -25,
+      width: 15,
+      depth: 14,
+      height: 4.4,
+      towerHeight: 24,
+      wallType: 'concrete',
+      wallColor: '#1e293b',
+      roofType: 'cyber_tower',
+      interiorFloorType: 'tile',
+      doorTheme: 'glass',
+      signText: 'METRO LOUNGE',
+      rotY: 0
+    });
 
-    // Building 2 (NE): 7-Story Red-Brick Apartment with "CITY MART" Blue Awning & Rooftop Water Tower
-    this.createUrbanBuilding(23, -23, 15, 26, 15, 'brick_apt', 'CITY MARKET', '#1d4ed8', 0);
+    // Building 2 (NE): Apex Armory & Tactical Depot
+    this.createEnterableBuilding({
+      id: 'city-ne',
+      name: 'Apex Armory',
+      x: 25,
+      z: -25,
+      width: 15,
+      depth: 14,
+      height: 4.4,
+      towerHeight: 28,
+      wallType: 'concrete',
+      wallColor: '#334155',
+      roofType: 'cyber_tower',
+      interiorFloorType: 'tile',
+      doorTheme: 'steel',
+      signText: 'APEX ARMORY',
+      rotY: 0
+    });
 
-    // Building 3 (SW): 5-Story Modern Bank / Hotel with Glass Storefront & Red Awning
-    this.createUrbanBuilding(-23, 23, 15, 19, 15, 'modern', 'FIRST BANK', '#b91c1c', Math.PI);
+    // Building 3 (SW): First Metro Bank & Vault
+    this.createEnterableBuilding({
+      id: 'city-sw',
+      name: 'Metro Bank',
+      x: -25,
+      z: 25,
+      width: 15,
+      depth: 14,
+      height: 4.4,
+      towerHeight: 22,
+      wallType: 'concrete',
+      wallColor: '#0f172a',
+      roofType: 'cyber_tower',
+      interiorFloorType: 'tile',
+      doorTheme: 'steel',
+      signText: 'METRO BANK',
+      rotY: Math.PI
+    });
 
-    // Building 4 (SE): 8-Story Metropolitan Tower with Rooftop Antenna & Storefront
-    this.createUrbanBuilding(23, 23, 15, 28, 15, 'highrise', 'PHARMACY', '#0284c7', Math.PI);
+    // Building 4 (SE): Cyber Clinic & Trauma Center
+    this.createEnterableBuilding({
+      id: 'city-se',
+      name: 'Cyber Clinic',
+      x: 25,
+      z: 25,
+      width: 15,
+      depth: 14,
+      height: 4.4,
+      towerHeight: 26,
+      wallType: 'concrete',
+      wallColor: '#0284c7',
+      roofType: 'cyber_tower',
+      interiorFloorType: 'tile',
+      doorTheme: 'glass',
+      signText: 'CYBER CLINIC',
+      rotY: Math.PI
+    });
 
-    // Parked Vehicles on Avenue (Yellow Taxi, Police Cruiser, Black SUV)
+    // EXPANDED 130M OUTER SECTOR URBAN STRUCTURES
+    // Far North Avenue: Police Substation Precinct
+    this.createEnterableBuilding({
+      id: 'city-n',
+      name: 'Police Precinct',
+      x: 0,
+      z: -48,
+      width: 14,
+      depth: 11,
+      height: 4.4,
+      towerHeight: 16,
+      wallType: 'concrete',
+      wallColor: '#1e293b',
+      roofType: 'cyber_tower',
+      interiorFloorType: 'tile',
+      doorTheme: 'steel',
+      signText: 'POLICE PRECINCT',
+      rotY: 0
+    });
+
+    // Far South Avenue: Neon Diner & Rest Stop
+    this.createEnterableBuilding({
+      id: 'city-s',
+      name: 'Neon Diner',
+      x: 0,
+      z: 48,
+      width: 14,
+      depth: 11,
+      height: 4.4,
+      towerHeight: 14,
+      wallType: 'concrete',
+      wallColor: '#0f172a',
+      roofType: 'cyber_tower',
+      interiorFloorType: 'tile',
+      doorTheme: 'glass',
+      signText: 'NEON DINER',
+      rotY: Math.PI
+    });
+
+    // Far West Avenue: Cargo Logistics & Dispatch Hub
+    this.createEnterableBuilding({
+      id: 'city-w',
+      name: 'Cargo Dispatch',
+      x: -48,
+      z: 0,
+      width: 11,
+      depth: 14,
+      height: 4.4,
+      towerHeight: 16,
+      wallType: 'concrete',
+      wallColor: '#334155',
+      roofType: 'cyber_tower',
+      interiorFloorType: 'tile',
+      doorTheme: 'steel',
+      signText: 'CARGO DISPATCH',
+      rotY: -Math.PI / 2
+    });
+
+    // Far East Avenue: Financial Data Vault & Server Center
+    this.createEnterableBuilding({
+      id: 'city-e',
+      name: 'Data Center',
+      x: 48,
+      z: 0,
+      width: 11,
+      depth: 14,
+      height: 4.4,
+      towerHeight: 18,
+      wallType: 'concrete',
+      wallColor: '#1e293b',
+      roofType: 'cyber_tower',
+      interiorFloorType: 'tile',
+      doorTheme: 'steel',
+      signText: 'DATA CENTER',
+      rotY: Math.PI / 2
+    });
+
+    // Parked Vehicles on Avenue (Yellow Taxi, Police Cruiser, Black SUV, Red Coupe)
     this.createParkedCar(-16, -4.5, 0, 0xeab308); // Yellow Taxi
     this.createParkedCar(16, 4.5, Math.PI, 0x0f172a); // Police / Black Sedan
     this.createParkedCar(4.5, -16, Math.PI / 2, 0xdc2626); // Red Car
     this.createParkedCar(-4.5, 16, -Math.PI / 2, 0x475569); // Grey Van
+    this.createParkedCar(-36, -4.5, 0, 0x1d4ed8); // Blue Cruiser
+    this.createParkedCar(36, 4.5, Math.PI, 0xeab308); // Outer Taxi
+    this.createParkedCar(4.5, 36, Math.PI / 2, 0xdc2626); // Red Sedan
 
-    // Street Details: Traffic Lights, Streetlamps, Bus Stop Shelter, Concrete Barriers
+    // Street Details: Traffic Lights, Streetlamps, Concrete Barriers
     this.createStreetlight(-9, -8);
     this.createStreetlight(9, 8);
     this.createStreetlight(-9, 8);
     this.createStreetlight(9, -8);
+    this.createStreetlight(-32, -8);
+    this.createStreetlight(32, 8);
+    this.createStreetlight(-8, -32);
+    this.createStreetlight(8, 32);
 
     this.createConcreteBarrier(-10, 0, 8, 0);
     this.createConcreteBarrier(10, 0, 8, 0);
+    this.createConcreteBarrier(-30, 0, 8, 0);
+    this.createConcreteBarrier(30, 0, 8, 0);
 
     this.createDumpster(-16, -11, 0);
     this.createDumpster(16, 11, Math.PI);
+    this.createDumpster(-36, -11, 0);
+    this.createDumpster(36, 11, Math.PI);
 
     this.addExplosiveBarrel(-12, 0, -6);
     this.addExplosiveBarrel(12, 0, 6);
     this.addExplosiveBarrel(-7, 0, 12);
     this.addExplosiveBarrel(7, 0, -12);
+    this.addExplosiveBarrel(-32, 0, -6);
+    this.addExplosiveBarrel(32, 0, 6);
+    this.addExplosiveBarrel(-6, 0, 32);
+    this.addExplosiveBarrel(6, 0, -32);
 
     this.createRealBoundaryWalls(0x1e293b, 'concrete');
 
@@ -298,18 +731,145 @@ export class ArenaManager {
     ground.receiveShadow = true;
     this.arenaGroup.add(ground);
 
-    // REAL DESERT PUEBLO / ADOBE HOUSES WITH TERRACES
-    // House 1 (NW): 2-Story Adobe House with Wooden Vigas & Roof Terrace
-    this.createDesertAdobeHouse(-22, -22, 13, 8.5, 11, true, 0);
+    // REAL ENTERABLE DESERT DWELLINGS WITH INTERACTIVE DOORS
+    // House 1 (NW): Desert Compound
+    this.createEnterableBuilding({
+      id: 'desert-nw',
+      name: 'Desert Residence',
+      x: -25,
+      z: -25,
+      width: 14,
+      depth: 12,
+      height: 4.0,
+      wallType: 'adobe',
+      wallColor: '#d97706',
+      roofType: 'flat',
+      interiorFloorType: 'wood',
+      doorTheme: 'wood',
+      rotY: 0
+    });
 
-    // House 2 (NE): L-Shaped Desert Dwelling with Rooftop Cloth Canopy
-    this.createDesertAdobeHouse(22, -22, 14, 8.0, 12, true, 0);
+    // House 2 (NE): Oasis Bazaar Dwelling
+    this.createEnterableBuilding({
+      id: 'desert-ne',
+      name: 'Oasis Bazaar',
+      x: 25,
+      z: -25,
+      width: 14,
+      depth: 12,
+      height: 4.0,
+      wallType: 'adobe',
+      wallColor: '#d97706',
+      roofType: 'flat',
+      interiorFloorType: 'tile',
+      doorTheme: 'wood',
+      signText: 'OASIS BAZAAR',
+      rotY: 0
+    });
 
-    // House 3 (SW): 1-Story Desert Adobe House with Arched Veranda
-    this.createDesertAdobeHouse(-22, 22, 13, 5.2, 11, false, Math.PI);
+    // House 3 (SW): Caravan Quarters
+    this.createEnterableBuilding({
+      id: 'desert-sw',
+      name: 'Caravan Quarters',
+      x: -25,
+      z: 25,
+      width: 14,
+      depth: 12,
+      height: 4.0,
+      wallType: 'adobe',
+      wallColor: '#d97706',
+      roofType: 'flat',
+      interiorFloorType: 'wood',
+      doorTheme: 'wood',
+      rotY: Math.PI
+    });
 
-    // House 4 (SE): 2-Story Adobe Bazaar with Marketplace Awning
-    this.createDesertAdobeHouse(22, 22, 14, 8.5, 12, true, Math.PI);
+    // House 4 (SE): Desert Tavern
+    this.createEnterableBuilding({
+      id: 'desert-se',
+      name: 'Desert Tavern',
+      x: 25,
+      z: 25,
+      width: 14,
+      depth: 12,
+      height: 4.0,
+      wallType: 'adobe',
+      wallColor: '#d97706',
+      roofType: 'flat',
+      interiorFloorType: 'tile',
+      doorTheme: 'wood',
+      signText: 'DESERT TAVERN',
+      rotY: Math.PI
+    });
+
+    // EXPANDED 130M OUTER SECTOR FORTRESSES & BUNKERS
+    // Far North: Watchtower Outpost
+    this.createEnterableBuilding({
+      id: 'desert-n',
+      name: 'North Watchtower',
+      x: 0,
+      z: -48,
+      width: 12,
+      depth: 10,
+      height: 4.4,
+      wallType: 'adobe',
+      wallColor: '#b45309',
+      roofType: 'flat',
+      doorTheme: 'bunker',
+      signText: 'WATCHTOWER',
+      rotY: 0
+    });
+
+    // Far South: Desert Fortress Barracks
+    this.createEnterableBuilding({
+      id: 'desert-s',
+      name: 'South Barracks',
+      x: 0,
+      z: 48,
+      width: 12,
+      depth: 10,
+      height: 4.4,
+      wallType: 'adobe',
+      wallColor: '#b45309',
+      roofType: 'flat',
+      doorTheme: 'bunker',
+      signText: 'BARRACKS',
+      rotY: Math.PI
+    });
+
+    // Far West: Munitions Depot Bunker
+    this.createEnterableBuilding({
+      id: 'desert-w',
+      name: 'Munitions Depot',
+      x: -48,
+      z: 0,
+      width: 10,
+      depth: 12,
+      height: 4.2,
+      wallType: 'adobe',
+      wallColor: '#b45309',
+      roofType: 'flat',
+      doorTheme: 'bunker',
+      signText: 'MUNITIONS DEPOT',
+      rotY: -Math.PI / 2
+    });
+
+    // Far East: Oasis Water Pump Station
+    this.createEnterableBuilding({
+      id: 'desert-e',
+      name: 'Water Pump Station',
+      x: 48,
+      z: 0,
+      width: 10,
+      depth: 12,
+      height: 4.2,
+      wallType: 'adobe',
+      wallColor: '#b45309',
+      roofType: 'flat',
+      doorTheme: 'wood',
+      signText: 'PUMP STATION',
+      rotY: Math.PI / 2
+    });
 
     // Central Stone Water Cistern & Fountain Well
     this.createDesertWell(0, 0);
@@ -319,18 +879,28 @@ export class ArenaManager {
     this.createGardenFence(11, -10, 12, 0, 0xb45309);
     this.createGardenFence(-11, 10, 12, 0, 0xb45309);
     this.createGardenFence(11, 10, 12, 0, 0xb45309);
+    this.createGardenFence(-32, -10, 12, 0, 0xb45309);
+    this.createGardenFence(32, -10, 12, 0, 0xb45309);
+    this.createGardenFence(-32, 10, 12, 0, 0xb45309);
+    this.createGardenFence(32, 10, 12, 0, 0xb45309);
 
     // Market Wooden Crates & Canvas Stalls
     this.createWoodenCrateStack(-6, -6, 2);
     this.createWoodenCrateStack(6, 6, 2);
     this.createWoodenCrateStack(-7, 7, 3);
     this.createWoodenCrateStack(7, -7, 3);
+    this.createWoodenCrateStack(-30, 0, 2);
+    this.createWoodenCrateStack(30, 0, 2);
 
     // Explosive Oil Barrels
     this.addExplosiveBarrel(-11, 0, -9);
     this.addExplosiveBarrel(11, 0, 9);
     this.addExplosiveBarrel(-6, 0, 6);
     this.addExplosiveBarrel(6, 0, -6);
+    this.addExplosiveBarrel(-34, 0, -9);
+    this.addExplosiveBarrel(34, 0, 9);
+    this.addExplosiveBarrel(-9, 0, 34);
+    this.addExplosiveBarrel(9, 0, -34);
 
     this.createRealBoundaryWalls(0xd97706, 'adobe');
 
@@ -378,12 +948,151 @@ export class ArenaManager {
     floor.receiveShadow = true;
     this.arenaGroup.add(floor);
 
-    // REAL CORRUGATED METAL WAREHOUSES
-    // Warehouse 1 (North): Heavy Freight Warehouse with Roll-Up Bay Doors
-    this.createWarehouse(-20, -22, 18, 14, 8.5, '#475569', 0);
+    // REAL ENTERABLE INDUSTRIAL DEPOTS & WAREHOUSES WITH INTERACTIVE DOORS
+    // Warehouse 1 (NW): Freight Logistics Depot Alpha
+    this.createEnterableBuilding({
+      id: 'ind-nw',
+      name: 'Depot Alpha',
+      x: -25,
+      z: -25,
+      width: 16,
+      depth: 14,
+      height: 4.8,
+      wallType: 'metal',
+      wallColor: '#475569',
+      roofType: 'flat',
+      interiorFloorType: 'concrete',
+      doorTheme: 'steel',
+      signText: 'DEPOT ALPHA',
+      rotY: 0
+    });
 
-    // Warehouse 2 (South): Secondary Logistics Depot
-    this.createWarehouse(20, 22, 18, 14, 8.5, '#334155', Math.PI);
+    // Warehouse 2 (NE): Tooling & Maintenance Workshop Bravo
+    this.createEnterableBuilding({
+      id: 'ind-ne',
+      name: 'Workshop Bravo',
+      x: 25,
+      z: -25,
+      width: 16,
+      depth: 14,
+      height: 4.8,
+      wallType: 'metal',
+      wallColor: '#334155',
+      roofType: 'flat',
+      interiorFloorType: 'concrete',
+      doorTheme: 'steel',
+      signText: 'WORKSHOP BRAVO',
+      rotY: 0
+    });
+
+    // Warehouse 3 (SW): Hazardous Storage Charlie
+    this.createEnterableBuilding({
+      id: 'ind-sw',
+      name: 'HazMat Charlie',
+      x: -25,
+      z: 25,
+      width: 16,
+      depth: 14,
+      height: 4.8,
+      wallType: 'metal',
+      wallColor: '#1e293b',
+      roofType: 'flat',
+      interiorFloorType: 'concrete',
+      doorTheme: 'bunker',
+      signText: 'HAZMAT CHARLIE',
+      rotY: Math.PI
+    });
+
+    // Warehouse 4 (SE): Distribution Center Delta
+    this.createEnterableBuilding({
+      id: 'ind-se',
+      name: 'Distribution Delta',
+      x: 25,
+      z: 25,
+      width: 16,
+      depth: 14,
+      height: 4.8,
+      wallType: 'metal',
+      wallColor: '#475569',
+      roofType: 'flat',
+      interiorFloorType: 'concrete',
+      doorTheme: 'steel',
+      signText: 'DISTRIBUTION',
+      rotY: Math.PI
+    });
+
+    // EXPANDED 130M OUTER INDUSTRIAL FACILITIES
+    // Far North Gate: Security Guardhouse
+    this.createEnterableBuilding({
+      id: 'ind-n',
+      name: 'Security Guardhouse',
+      x: 0,
+      z: -48,
+      width: 12,
+      depth: 10,
+      height: 4.2,
+      wallType: 'concrete',
+      wallColor: '#334155',
+      roofType: 'flat',
+      interiorFloorType: 'concrete',
+      doorTheme: 'steel',
+      signText: 'SECURITY GATE',
+      rotY: 0
+    });
+
+    // Far South Yard: Main Power Generator Vault
+    this.createEnterableBuilding({
+      id: 'ind-s',
+      name: 'Main Power Vault',
+      x: 0,
+      z: 48,
+      width: 14,
+      depth: 11,
+      height: 4.6,
+      wallType: 'concrete',
+      wallColor: '#1e293b',
+      roofType: 'flat',
+      interiorFloorType: 'concrete',
+      doorTheme: 'bunker',
+      signText: 'MAIN POWER',
+      rotY: Math.PI
+    });
+
+    // Far West Railhead: Freight Control Station
+    this.createEnterableBuilding({
+      id: 'ind-w',
+      name: 'Freight Control',
+      x: -48,
+      z: 0,
+      width: 10,
+      depth: 13,
+      height: 4.4,
+      wallType: 'metal',
+      wallColor: '#475569',
+      roofType: 'flat',
+      interiorFloorType: 'concrete',
+      doorTheme: 'steel',
+      signText: 'RAIL CONTROL',
+      rotY: -Math.PI / 2
+    });
+
+    // Far East Yard: Research & Bio-Lab Station
+    this.createEnterableBuilding({
+      id: 'ind-e',
+      name: 'Research Bio-Lab',
+      x: 48,
+      z: 0,
+      width: 11,
+      depth: 13,
+      height: 4.4,
+      wallType: 'concrete',
+      wallColor: '#0284c7',
+      roofType: 'flat',
+      interiorFloorType: 'tile',
+      doorTheme: 'glass',
+      signText: 'BIO-LAB RESEARCH',
+      rotY: Math.PI / 2
+    });
 
     // Real Intermodal Shipping Containers Stacked in Yard (Red, Blue, Green, Yellow)
     this.createShippingContainer(-8, 0, -10, 0x1d4ed8, 0); // Blue container
@@ -392,20 +1101,30 @@ export class ArenaManager {
     this.createShippingContainer(8, 2.6, 10, 0xeab308, 0); // Yellow container
     this.createShippingContainer(12, 0, -12, 0xdc2626, Math.PI / 2);
     this.createShippingContainer(-12, 0, 12, 0x1d4ed8, Math.PI / 2);
+    this.createShippingContainer(-34, 0, -10, 0xdc2626, 0);
+    this.createShippingContainer(34, 0, 10, 0x1d4ed8, 0);
 
     // Industrial Storage Silo Tanks
     this.createStorageSilo(0, -18, 3.2, 9);
     this.createStorageSilo(0, 18, 3.2, 9);
+    this.createStorageSilo(-18, -36, 3.2, 9);
+    this.createStorageSilo(18, 36, 3.2, 9);
 
     // Wooden Pallets and Crates
     this.createWoodenCrateStack(-4, 0, 2);
     this.createWoodenCrateStack(4, 0, 2);
+    this.createWoodenCrateStack(-30, 0, 2);
+    this.createWoodenCrateStack(30, 0, 2);
 
     // Hazard Explosive Barrels
     this.addExplosiveBarrel(-10, 0, -4);
     this.addExplosiveBarrel(10, 0, 4);
     this.addExplosiveBarrel(-5, 0, 8);
     this.addExplosiveBarrel(5, 0, -8);
+    this.addExplosiveBarrel(-32, 0, -4);
+    this.addExplosiveBarrel(32, 0, 4);
+    this.addExplosiveBarrel(-4, 0, 32);
+    this.addExplosiveBarrel(4, 0, -32);
 
     this.createRealBoundaryWalls(0x334155, 'fence');
 
@@ -415,6 +1134,423 @@ export class ArenaManager {
   // =========================================================================
   // REAL ARCHITECTURAL BUILDERS: HOUSES, BUILDINGS & STREET COVER
   // =========================================================================
+
+  /**
+   * Builds an authentic, fully hollow, enterable building with interior floor,
+   * walkable room interior, perimeter Box3 wall obstacles, decorative interior lighting,
+   * tactical interior cover (desks, crate stacks), transparent windows, and an interactive swinging door.
+   */
+  public createEnterableBuilding(options: {
+    id: string;
+    name: string;
+    x: number;
+    z: number;
+    width: number;
+    depth: number;
+    height?: number;
+    rotY?: number;
+    wallType: 'brick' | 'siding' | 'concrete' | 'adobe' | 'metal';
+    wallColor: string;
+    trimColor?: string;
+    roofType: 'gable' | 'flat' | 'cyber_tower';
+    roofColor?: string;
+    towerHeight?: number;
+    interiorFloorType?: 'wood' | 'tile' | 'concrete';
+    signText?: string;
+    doorTheme?: 'wood' | 'glass' | 'steel' | 'bunker';
+  }): THREE.Group {
+    const group = new THREE.Group();
+    group.position.set(options.x, 0, options.z);
+    if (options.rotY) group.rotation.y = options.rotY;
+    this.arenaGroup.add(group);
+
+    const w = options.width;
+    const d = options.depth;
+    const wallH = options.height || 4.2;
+    const wallThick = 0.35;
+    const doorW = 2.0;
+    const doorH = 2.7;
+
+    // 1. Interior Floor
+    let floorTex: THREE.Texture;
+    if (options.interiorFloorType === 'wood') {
+      floorTex = TextureGenerator.createWoodParquetFloorTexture();
+    } else if (options.interiorFloorType === 'tile') {
+      floorTex = TextureGenerator.createFloorTileTexture('#e2e8f0', '#94a3b8');
+    } else {
+      floorTex = TextureGenerator.createSidewalkTexture();
+    }
+    const floorGeo = new THREE.BoxGeometry(w - 0.2, 0.15, d - 0.2);
+    const floorMat = new THREE.MeshStandardMaterial({
+      map: floorTex,
+      roughness: 0.5,
+      metalness: 0.1
+    });
+    const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+    floorMesh.position.set(0, 0.08, 0);
+    floorMesh.receiveShadow = true;
+    group.add(floorMesh);
+
+    // 2. Wall Material
+    let wallTex: THREE.Texture;
+    if (options.wallType === 'brick') {
+      wallTex = TextureGenerator.createBrickTexture(options.wallColor, '#cbd5e1');
+    } else if (options.wallType === 'siding') {
+      wallTex = TextureGenerator.createWoodSidingTexture(options.wallColor);
+    } else if (options.wallType === 'adobe') {
+      wallTex = TextureGenerator.createAdobeTexture();
+    } else if (options.wallType === 'concrete') {
+      wallTex = TextureGenerator.createBrickTexture(options.wallColor, '#64748b');
+    } else {
+      wallTex = TextureGenerator.createCorrugatedMetalTexture();
+    }
+    const wallMat = new THREE.MeshStandardMaterial({
+      map: wallTex,
+      roughness: 0.65,
+      metalness: options.wallType === 'metal' ? 0.45 : 0.1
+    });
+
+    // 3. Perimeter Walls with Doorway Cutout on Front (+Z face)
+    const wallMeshes: THREE.Mesh[] = [];
+
+    // Back Wall (-Z)
+    const backGeo = new THREE.BoxGeometry(w, wallH, wallThick);
+    const backMesh = new THREE.Mesh(backGeo, wallMat);
+    backMesh.position.set(0, wallH / 2, -d / 2 + wallThick / 2);
+    backMesh.castShadow = true;
+    backMesh.receiveShadow = true;
+    group.add(backMesh);
+    wallMeshes.push(backMesh);
+
+    // Left Wall (-X)
+    const leftGeo = new THREE.BoxGeometry(wallThick, wallH, d - wallThick * 2);
+    const leftMesh = new THREE.Mesh(leftGeo, wallMat);
+    leftMesh.position.set(-w / 2 + wallThick / 2, wallH / 2, 0);
+    leftMesh.castShadow = true;
+    leftMesh.receiveShadow = true;
+    group.add(leftMesh);
+    wallMeshes.push(leftMesh);
+
+    // Right Wall (+X)
+    const rightGeo = new THREE.BoxGeometry(wallThick, wallH, d - wallThick * 2);
+    const rightMesh = new THREE.Mesh(rightGeo, wallMat);
+    rightMesh.position.set(w / 2 - wallThick / 2, wallH / 2, 0);
+    rightMesh.castShadow = true;
+    rightMesh.receiveShadow = true;
+    group.add(rightMesh);
+    wallMeshes.push(rightMesh);
+
+    // Front Left Wall Panel (+Z, left of doorway)
+    const panelW = (w - doorW) / 2;
+    const frontLGeo = new THREE.BoxGeometry(panelW, wallH, wallThick);
+    const frontLMesh = new THREE.Mesh(frontLGeo, wallMat);
+    frontLMesh.position.set(-w / 2 + panelW / 2, wallH / 2, d / 2 - wallThick / 2);
+    frontLMesh.castShadow = true;
+    frontLMesh.receiveShadow = true;
+    group.add(frontLMesh);
+    wallMeshes.push(frontLMesh);
+
+    // Front Right Wall Panel (+Z, right of doorway)
+    const frontRGeo = new THREE.BoxGeometry(panelW, wallH, wallThick);
+    const frontRMesh = new THREE.Mesh(frontRGeo, wallMat);
+    frontRMesh.position.set(w / 2 - panelW / 2, wallH / 2, d / 2 - wallThick / 2);
+    frontRMesh.castShadow = true;
+    frontRMesh.receiveShadow = true;
+    group.add(frontRMesh);
+    wallMeshes.push(frontRMesh);
+
+    // Front Lintel above doorway (+Z, spans doorway top)
+    const lintelH = wallH - doorH;
+    if (lintelH > 0.05) {
+      const lintelGeo = new THREE.BoxGeometry(doorW, lintelH, wallThick);
+      const lintelMesh = new THREE.Mesh(lintelGeo, wallMat);
+      lintelMesh.position.set(0, doorH + lintelH / 2, d / 2 - wallThick / 2);
+      lintelMesh.castShadow = true;
+      lintelMesh.receiveShadow = true;
+      group.add(lintelMesh);
+      wallMeshes.push(lintelMesh);
+    }
+
+    // Register individual perimeter wall Box3 obstacles (leaving hollow center 100% walkable!)
+    group.updateMatrixWorld(true);
+    for (const mesh of wallMeshes) {
+      const box = new THREE.Box3().setFromObject(mesh);
+      this.obstacles.push({ mesh, box, isCover: false });
+    }
+
+    // 4. Door Frame
+    const trimColor = options.trimColor ? new THREE.Color(options.trimColor) : 0x1e293b;
+    const frameMat = new THREE.MeshStandardMaterial({ color: trimColor, roughness: 0.5 });
+    const postGeo = new THREE.BoxGeometry(0.12, doorH, wallThick + 0.08);
+
+    const leftPost = new THREE.Mesh(postGeo, frameMat);
+    leftPost.position.set(-doorW / 2, doorH / 2, d / 2 - wallThick / 2);
+    group.add(leftPost);
+
+    const rightPost = new THREE.Mesh(postGeo, frameMat);
+    rightPost.position.set(doorW / 2, doorH / 2, d / 2 - wallThick / 2);
+    group.add(rightPost);
+
+    const topPostGeo = new THREE.BoxGeometry(doorW + 0.24, 0.12, wallThick + 0.08);
+    const topPost = new THREE.Mesh(topPostGeo, frameMat);
+    topPost.position.set(0, doorH, d / 2 - wallThick / 2);
+    group.add(topPost);
+
+    // 5. Interactive Door (with hinge pivot, Box3 obstacle, smooth swing & audio)
+    const localDoorPos = new THREE.Vector3(0, 0, d / 2 - wallThick / 2);
+    const worldDoorPos = localDoorPos.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), options.rotY || 0).add(group.position);
+
+    let doorMat: THREE.Material;
+    if (options.doorTheme === 'glass') {
+      doorMat = new THREE.MeshStandardMaterial({
+        color: 0x38bdf8,
+        roughness: 0.15,
+        metalness: 0.85,
+        opacity: 0.85,
+        transparent: true
+      });
+    } else if (options.doorTheme === 'steel' || options.doorTheme === 'bunker') {
+      doorMat = new THREE.MeshStandardMaterial({
+        color: 0x334155,
+        roughness: 0.35,
+        metalness: 0.8
+      });
+    } else {
+      doorMat = new THREE.MeshStandardMaterial({
+        color: 0x451a03,
+        roughness: 0.65,
+        metalness: 0.1
+      });
+    }
+
+    const door = new InteractiveDoor(
+      options.id + '-door',
+      options.name,
+      worldDoorPos,
+      doorW - 0.06,
+      doorH - 0.04,
+      options.rotY || 0,
+      doorMat,
+      true,
+      this.arenaGroup
+    );
+    this.doors.push(door);
+    this.obstacles.push(door.obstacle);
+
+    // 6. Ceiling Slab
+    const ceilingGeo = new THREE.BoxGeometry(w + 0.3, 0.2, d + 0.3);
+    const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
+    const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
+    ceiling.position.set(0, wallH + 0.1, 0);
+    ceiling.castShadow = true;
+    ceiling.receiveShadow = true;
+    group.add(ceiling);
+
+    // 7. Roof Styling
+    const roofColor = options.roofColor || '#334155';
+    if (options.roofType === 'gable') {
+      const roofH = 3.6;
+      const roofShingleTex = TextureGenerator.createRoofShingleTexture(roofColor);
+      const roofMat = new THREE.MeshStandardMaterial({
+        map: roofShingleTex,
+        roughness: 0.6,
+        metalness: 0.2
+      });
+      const roofShape = new THREE.Shape();
+      const halfW = (w + 0.8) / 2;
+      roofShape.moveTo(-halfW, 0);
+      roofShape.lineTo(0, roofH);
+      roofShape.lineTo(halfW, 0);
+      roofShape.closePath();
+
+      const roofGeo = new THREE.ExtrudeGeometry(roofShape, { depth: d + 0.8, bevelEnabled: false });
+      roofGeo.translate(0, 0, -(d + 0.8) / 2);
+      const roofMesh = new THREE.Mesh(roofGeo, roofMat);
+      roofMesh.position.y = wallH + 0.2;
+      roofMesh.castShadow = true;
+      roofMesh.receiveShadow = true;
+      group.add(roofMesh);
+
+      // Red brick chimney
+      const chimneyGeo = new THREE.BoxGeometry(1.0, roofH + 1.2, 1.0);
+      const chimneyMat = new THREE.MeshStandardMaterial({
+        map: TextureGenerator.createBrickTexture('#7f1d1d', '#94a3b8'),
+        roughness: 0.8
+      });
+      const chimney = new THREE.Mesh(chimneyGeo, chimneyMat);
+      chimney.position.set(w * 0.28, wallH + roofH * 0.65, 0);
+      chimney.castShadow = true;
+      group.add(chimney);
+    } else if (options.roofType === 'cyber_tower') {
+      // Skyscraper tower rising above enterable lobby
+      const towerH = options.towerHeight || 24;
+      const towerGeo = new THREE.BoxGeometry(w * 0.88, towerH, d * 0.88);
+      const facadeTex = TextureGenerator.createWindowFacadeTexture(options.wallColor);
+      facadeTex.repeat.set(1, Math.round(towerH / 4));
+      const towerMat = new THREE.MeshStandardMaterial({ map: facadeTex, roughness: 0.4, metalness: 0.2 });
+      const tower = new THREE.Mesh(towerGeo, towerMat);
+      tower.position.set(0, wallH + 0.2 + towerH / 2, 0);
+      tower.castShadow = true;
+      tower.receiveShadow = true;
+      group.add(tower);
+
+      group.updateMatrixWorld(true);
+      const towerBox = new THREE.Box3().setFromObject(tower);
+      this.obstacles.push({ mesh: tower, box: towerBox, isCover: false });
+
+      // Rooftop antenna mast with aircraft beacon
+      const mastGeo = new THREE.CylinderGeometry(0.08, 0.15, 6, 8);
+      const mastMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 });
+      const mast = new THREE.Mesh(mastGeo, mastMat);
+      mast.position.set(0, wallH + 0.2 + towerH + 3, 0);
+      group.add(mast);
+
+      const beaconGeo = new THREE.SphereGeometry(0.25, 8, 8);
+      const beaconMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+      const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+      beacon.position.set(0, wallH + 0.2 + towerH + 6.1, 0);
+      group.add(beacon);
+    } else {
+      // Flat roof with parapet railing + AC unit
+      const parapetGeo = new THREE.BoxGeometry(w + 0.3, 0.6, 0.2);
+      const parapetMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6 });
+      const pFront = new THREE.Mesh(parapetGeo, parapetMat);
+      pFront.position.set(0, wallH + 0.5, d / 2);
+      group.add(pFront);
+      const pBack = new THREE.Mesh(parapetGeo, parapetMat);
+      pBack.position.set(0, wallH + 0.5, -d / 2);
+      group.add(pBack);
+
+      // Rooftop AC unit
+      const acGeo = new THREE.BoxGeometry(2.0, 1.2, 1.8);
+      const acMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.6, roughness: 0.4 });
+      const ac = new THREE.Mesh(acGeo, acMat);
+      ac.position.set(w * 0.2, wallH + 0.8, -d * 0.15);
+      group.add(ac);
+    }
+
+    // 8. Interior Illumination
+    const fixtureGeo = new THREE.BoxGeometry(1.6, 0.08, 0.8);
+    const fixtureMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const fixture = new THREE.Mesh(fixtureGeo, fixtureMat);
+    fixture.position.set(0, wallH - 0.04, 0);
+    group.add(fixture);
+
+    const lightColor = options.wallType === 'adobe' ? 0xfef08a : options.doorTheme === 'glass' ? 0xbae6fd : 0xffedd5;
+    const interiorLight = new THREE.PointLight(lightColor, 1.35, 14);
+    interiorLight.position.set(0, wallH - 0.35, 0);
+    interiorLight.castShadow = false;
+    group.add(interiorLight);
+
+    // 9. Windows with Transparent Glass (Side Walls)
+    const winGeo = new THREE.BoxGeometry(1.6, 1.8, 0.08);
+    const winGlassMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      roughness: 0.1,
+      metalness: 0.8,
+      opacity: 0.4,
+      transparent: true
+    });
+    const winFrameMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+    const winFrameGeo = new THREE.BoxGeometry(1.8, 2.0, 0.12);
+
+    [-d * 0.25, d * 0.25].forEach(wz => {
+      // Left window
+      const frameL = new THREE.Mesh(winFrameGeo, winFrameMat);
+      frameL.rotation.y = Math.PI / 2;
+      frameL.position.set(-w / 2, 2.0, wz);
+      group.add(frameL);
+
+      const glassL = new THREE.Mesh(winGeo, winGlassMat);
+      glassL.rotation.y = Math.PI / 2;
+      glassL.position.set(-w / 2, 2.0, wz);
+      group.add(glassL);
+
+      // Right window
+      const frameR = new THREE.Mesh(winFrameGeo, winFrameMat);
+      frameR.rotation.y = Math.PI / 2;
+      frameR.position.set(w / 2, 2.0, wz);
+      group.add(frameR);
+
+      const glassR = new THREE.Mesh(winGeo, winGlassMat);
+      glassR.rotation.y = Math.PI / 2;
+      glassR.position.set(w / 2, 2.0, wz);
+      group.add(glassR);
+    });
+
+    // 10. Interior Tactical Furniture & Cover (Tactical gameplay inside!)
+    // Executive desk / dispatch terminal table against back interior wall
+    const deskGeo = new THREE.BoxGeometry(2.4, 0.9, 1.1);
+    const deskMat = new THREE.MeshStandardMaterial({ color: 0x3f3f46, roughness: 0.6 });
+    const desk = new THREE.Mesh(deskGeo, deskMat);
+    desk.position.set(0, 0.45, -d / 2 + 1.3);
+    desk.castShadow = true;
+    desk.receiveShadow = true;
+    group.add(desk);
+
+    group.updateMatrixWorld(true);
+    const deskBox = new THREE.Box3().setFromObject(desk);
+    this.obstacles.push({ mesh: desk, box: deskBox, isCover: true });
+
+    // Corner Stack of Supply Crates (waist-high interior tactical cover)
+    const crateMat = new THREE.MeshStandardMaterial({ color: 0xa16207, roughness: 0.8 });
+    const crateGeo = new THREE.BoxGeometry(1.05, 1.05, 1.05);
+
+    const crate1 = new THREE.Mesh(crateGeo, crateMat);
+    crate1.position.set(-w / 2 + 1.2, 0.53, -d / 2 + 1.2);
+    crate1.castShadow = true;
+    crate1.receiveShadow = true;
+    group.add(crate1);
+
+    const crate2 = new THREE.Mesh(crateGeo, crateMat);
+    crate2.position.set(-w / 2 + 1.2, 0.53, -d / 2 + 2.4);
+    crate2.castShadow = true;
+    crate2.receiveShadow = true;
+    group.add(crate2);
+
+    group.updateMatrixWorld(true);
+    const crateBox1 = new THREE.Box3().setFromObject(crate1);
+    this.obstacles.push({ mesh: crate1, box: crateBox1, isCover: true });
+    const crateBox2 = new THREE.Box3().setFromObject(crate2);
+    this.obstacles.push({ mesh: crate2, box: crateBox2, isCover: true });
+
+    // Tactical Screen / Whiteboard on back interior wall
+    const screenGeo = new THREE.BoxGeometry(2.2, 1.2, 0.06);
+    const screenMat = new THREE.MeshStandardMaterial({
+      color: 0x0284c7,
+      emissive: 0x0369a1,
+      emissiveIntensity: 0.35,
+      roughness: 0.3
+    });
+    const screenMesh = new THREE.Mesh(screenGeo, screenMat);
+    screenMesh.position.set(0, 2.2, -d / 2 + wallThick + 0.04);
+    group.add(screenMesh);
+
+    // 11. Entrance Signboard & Canopy
+    if (options.signText) {
+      const signBoardGeo = new THREE.BoxGeometry(doorW + 1.2, 0.5, 0.15);
+      const signBoardMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 });
+      const signBoard = new THREE.Mesh(signBoardGeo, signBoardMat);
+      signBoard.position.set(0, doorH + 0.35, d / 2 + 0.1);
+      group.add(signBoard);
+
+      const signGlowGeo = new THREE.BoxGeometry(doorW + 0.9, 0.32, 0.06);
+      const signGlowMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+      const signGlow = new THREE.Mesh(signGlowGeo, signGlowMat);
+      signGlow.position.set(0, doorH + 0.35, d / 2 + 0.18);
+      group.add(signGlow);
+    }
+
+    // Porch Entrance Step
+    const stepGeo = new THREE.BoxGeometry(doorW + 0.6, 0.16, 1.0);
+    const stepMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.7 });
+    const step = new THREE.Mesh(stepGeo, stepMat);
+    step.position.set(0, 0.08, d / 2 + 0.5);
+    step.receiveShadow = true;
+    group.add(step);
+
+    return group;
+  }
 
   /**
    * Builds an authentic residential house with walls, pitched shingle roof, windows, door, porch & chimney
@@ -1323,14 +2459,25 @@ export class ArenaManager {
    */
   private addSpawnPoints() {
     this.spawnPoints = [
+      // Central crossroads
       { position: new THREE.Vector3(0, 0, 18), name: 'South Boulevard' },
       { position: new THREE.Vector3(0, 0, -18), name: 'North Boulevard' },
       { position: new THREE.Vector3(-18, 0, 0), name: 'West Avenue' },
       { position: new THREE.Vector3(18, 0, 0), name: 'East Avenue' },
-      { position: new THREE.Vector3(-3, 0, 10), name: 'South-West Street' },
-      { position: new THREE.Vector3(3, 0, -10), name: 'North-East Street' },
-      { position: new THREE.Vector3(3, 0, 10), name: 'South-East Street' },
-      { position: new THREE.Vector3(-3, 0, -10), name: 'North-West Street' }
+      // Mid streets
+      { position: new THREE.Vector3(-12, 0, 12), name: 'South-West Crossing' },
+      { position: new THREE.Vector3(12, 0, -12), name: 'North-East Crossing' },
+      { position: new THREE.Vector3(12, 0, 12), name: 'South-East Crossing' },
+      { position: new THREE.Vector3(-12, 0, -12), name: 'North-West Crossing' },
+      // Expanded outer sector spawn points (130m perimeter coverage)
+      { position: new THREE.Vector3(0, 0, 36), name: 'Far South Gate' },
+      { position: new THREE.Vector3(0, 0, -36), name: 'Far North Gate' },
+      { position: new THREE.Vector3(-36, 0, 0), name: 'Far West District' },
+      { position: new THREE.Vector3(36, 0, 0), name: 'Far East District' },
+      { position: new THREE.Vector3(-35, 0, 35), name: 'Outer South-West Sector' },
+      { position: new THREE.Vector3(35, 0, -35), name: 'Outer North-East Sector' },
+      { position: new THREE.Vector3(35, 0, 35), name: 'Outer South-East Sector' },
+      { position: new THREE.Vector3(-35, 0, -35), name: 'Outer North-West Sector' }
     ];
   }
 

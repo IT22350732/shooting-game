@@ -217,6 +217,11 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
                     desc="Shoot freely or fire while zoomed with aim-assist"
                   />
                   <HighlightKeyItem
+                    keys={['E']}
+                    action="OPEN / CLOSE DOOR"
+                    desc="Press [E] near building doors to open them and enter interior rooms for cover & tactical positions"
+                  />
+                  <HighlightKeyItem
                     keys={['V']}
                     action="SQUAD VOICE CHAT (HOLD PTT / TAP LIVE)"
                     desc="Hold [V] for temporary push-to-talk. Tap [V] for always live talking; tap [V] again to mute"
@@ -231,6 +236,11 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({ onClose }) => {
                 </span>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+                  <KeyCard
+                    keys={['E']}
+                    label="Open Door / Enter Building"
+                    detail="Press [E] near any building door to swing it open/closed and enter rooms"
+                  />
                   <KeyCard
                     keys={['W', 'A', 'S', 'D']}
                     label="Move Operative"

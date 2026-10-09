@@ -259,6 +259,48 @@ export class SoundManager {
     osc.stop(t + 0.05);
   }
 
+  public playDoorOpen() {
+    this.initContext();
+    if (!this.ctx || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+    // Mechanical latch click
+    this.playClick(now, 1800, 0.35);
+    this.playClick(now + 0.05, 1100, 0.25);
+    // Smooth door hinge creak / sliding air woosh
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(180, now + 0.04);
+    osc.frequency.exponentialRampToValueAtTime(320, now + 0.22);
+    gain.gain.setValueAtTime(0.12, now + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(now + 0.04);
+    osc.stop(now + 0.30);
+  }
+
+  public playDoorClose() {
+    this.initContext();
+    if (!this.ctx || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+    // Heavy solid door frame slam & latch shut
+    const subOsc = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+    subOsc.type = 'triangle';
+    subOsc.frequency.setValueAtTime(120, now);
+    subOsc.frequency.exponentialRampToValueAtTime(40, now + 0.18);
+    subGain.gain.setValueAtTime(0.4, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    subOsc.connect(subGain);
+    subGain.connect(this.sfxGain);
+    subOsc.start(now);
+    subOsc.stop(now + 0.2);
+
+    this.playNoiseBurst(0.12, 1600, 200, 0.35);
+    this.playClick(now + 0.12, 2200, 0.3);
+  }
+
   // --- HIT FEEDBACK ---
   public playHitmark(isCrit: boolean) {
     this.initContext();

@@ -79,6 +79,7 @@ interface HUDProps {
     radarPings?: RadarPing[];
     playerPos?: { x: number; y: number; z: number };
     playerYaw?: number;
+    interactionPrompt?: string | null;
   };
   hitMarker: HitMarkerInfo | null;
   damageNumbers: FloatingDamageNumber[];
@@ -587,6 +588,55 @@ export const HUD: React.FC<HUDProps> = ({
               <div style={{ position: 'absolute', inset: 0, border: `2.5px solid ${hitmarkerCrit ? '#f43f5e' : '#0284c7'}`, borderRadius: 2 }} />
             </div>
           )}
+        </div>
+      )}
+
+      {/* INTERACTIVE DOOR / OBJECT PROMPT */}
+      {stats.interactionPrompt && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '60%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+            zIndex: 60,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            background: 'rgba(15, 23, 42, 0.88)',
+            backdropFilter: 'blur(8px)',
+            border: '1.5px solid rgba(56, 189, 248, 0.75)',
+            boxShadow: '0 0 20px rgba(56, 189, 248, 0.3), inset 0 0 12px rgba(56, 189, 248, 0.1)',
+            borderRadius: 10,
+            padding: '8px 18px',
+            color: '#f8fafc',
+            fontFamily: 'system-ui, sans-serif',
+            fontSize: '13px',
+            letterSpacing: '1px',
+            fontWeight: 700
+          }}
+        >
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+              color: '#ffffff',
+              width: 26,
+              height: 26,
+              borderRadius: 6,
+              fontWeight: 900,
+              fontSize: '14px',
+              boxShadow: '0 0 10px rgba(2, 132, 199, 0.8)'
+            }}
+          >
+            E
+          </div>
+          <span style={{ textTransform: 'uppercase', color: '#e0f2fe' }}>
+            {stats.interactionPrompt}
+          </span>
         </div>
       )}
 

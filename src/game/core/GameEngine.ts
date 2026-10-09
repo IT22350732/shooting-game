@@ -24,7 +24,7 @@ import { Boss } from '../entities/Boss';
 import { Projectile } from '../entities/Projectile';
 import { Powerup } from '../entities/Powerup';
 import { PracticeTarget } from '../entities/PracticeTarget';
-import { ArenaManager } from '../world/ArenaManager';
+import { ArenaManager, InteractiveDoor } from '../world/ArenaManager';
 import { ParticleSystem } from '../world/ParticleSystem';
 import { TextureGenerator } from '../world/TextureGenerator';
 import { WaveManager } from '../managers/WaveManager';
@@ -78,6 +78,7 @@ export interface HUDStats {
   radarPings?: RadarPing[];
   playerPos?: { x: number; y: number; z: number };
   playerYaw?: number;
+  interactionPrompt?: string | null;
 }
 
 export interface GameEngineCallbacks {
@@ -154,6 +155,7 @@ export class GameEngine {
   private analogMove: { x: number; y: number; sprint: boolean } = { x: 0, y: 0, sprint: false };
   private isTouchShooting: boolean = false;
   private isTouchAiming: boolean = false;
+  private currentInteractionPrompt: string | null = null;
   private isRunning: boolean = false;
   private animFrameId: number | null = null;
   private killsSinceHealthPack: number = 0;
@@ -502,6 +504,12 @@ export class GameEngine {
       onMatchStart: (arena, mode) => {
         this.startMultiplayerGame(arena, mode);
       },
+      onDoorToggle: (doorId, isOpen) => {
+        const door = this.arena.doors.find(d => d.id === doorId);
+        if (door) {
+          door.setOpen(isOpen, true);
+        }
+      },
       onMatchEnd: (winnerTeam) => {
         if (!this.isMultiplayer) return;
         this.state = (winnerTeam === multiplayerService.localPlayer?.team || (winnerTeam !== 'draw' && multiplayerService.room?.mode === 'multiplayer_ffa')) ? 'VICTORY' : 'GAME_OVER';
@@ -740,6 +748,7 @@ export class GameEngine {
           }
           break;
         }
+        case 'KeyE': this.interact(); break;
         case 'KeyR': this.currentWeapon.startReload(); break;
         case 'Digit1': this.switchWeapon('assault_rifle'); break;
         case 'Digit2': this.switchWeapon('shotgun'); break;
@@ -1416,9 +1425,36 @@ export class GameEngine {
     }, 350);
   }
 
+  public getNearestDoor(maxDist: number = 3.8): InteractiveDoor | null {
+    if (!this.arena || !this.arena.doors) return null;
+    let nearest: InteractiveDoor | null = null;
+    let minDist = maxDist;
+    const playerPos = this.player.position;
+    for (let i = 0; i < this.arena.doors.length; i++) {
+      const door = this.arena.doors[i];
+      const dist = playerPos.distanceTo(door.position);
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = door;
+      }
+    }
+    return nearest;
+  }
+
   public interact(): string | null {
     if (this.state !== 'PLAYING') return null;
 
+    // 1. Check nearest interactive door
+    const door = this.getNearestDoor(3.8);
+    if (door) {
+      const isOpen = door.toggle(true);
+      if (this.isMultiplayer) {
+        multiplayerService.broadcastDoorToggle(door.id, isOpen);
+      }
+      return isOpen ? `Opened ${door.name}` : `Closed ${door.name}`;
+    }
+
+    // 2. Powerups collection
     for (let i = this.powerups.length - 1; i >= 0; i--) {
       const p = this.powerups[i];
       const dist = this.player.position.distanceTo(p.position);
@@ -2047,6 +2083,17 @@ export class GameEngine {
       this.camera.updateProjectionMatrix();
     }
 
+    // 0.0 Arena World Update (interactive swinging doors & mechanics)
+    this.arena.update(delta);
+
+    // 0.05 Check proximity to interactive door for HUD interaction prompt
+    const nearDoor = this.getNearestDoor(3.8);
+    if (nearDoor) {
+      this.currentInteractionPrompt = `${nearDoor.isOpen ? 'CLOSE' : 'OPEN'} ${nearDoor.name.toUpperCase()}`;
+    } else {
+      this.currentInteractionPrompt = null;
+    }
+
     // 0.1 Target Acquisition & Tactical Assist
     this.targetLock = this.updateTargetAcquisition();
     if (this.targetLock && this.targetLockWorldPos) {
@@ -2549,7 +2596,8 @@ export class GameEngine {
         graphicsQuality: this.graphicsQuality,
         radarPings: this.getRadarPings(),
         playerPos: { x: this.player.position.x, y: this.player.position.y, z: this.player.position.z },
-        playerYaw: this.player.yaw
+        playerYaw: this.player.yaw,
+        interactionPrompt: this.currentInteractionPrompt
       });
     }
 

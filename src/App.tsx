@@ -78,7 +78,8 @@ export const App: React.FC = () => {
     zoomLevel: 0,
     zoomMagnification: 1.0,
     targetLock: null,
-    mode: 'medium'
+    mode: 'medium',
+    interactionPrompt: null
   });
 
   const [hitMarker, setHitMarker] = useState<HitMarkerInfo | null>(null);

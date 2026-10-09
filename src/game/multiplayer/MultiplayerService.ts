@@ -43,6 +43,7 @@ export interface MultiplayerServiceEvents {
   onEnemyHit?: (shooterId: string, enemyId: string, damage: number, isHeadshot: boolean, hitPoint: { x: number; y: number; z: number }) => void;
   onEnemyKilled?: (enemyId: string, killerId: string, isHeadshot: boolean, rewardScore: number) => void;
   onWaveCompleted?: (wave: number, rewardCoins: number) => void;
+  onDoorToggle?: (doorId: string, isOpen: boolean) => void;
 }
 
 const PEER_PREFIX = 'shoot-arena-v1-';
@@ -686,6 +687,11 @@ export class MultiplayerService {
         break;
       }
 
+      case 'DOOR_TOGGLE': {
+        this.trigger('onDoorToggle', packet.doorId, packet.isOpen);
+        break;
+      }
+
       case 'MATCH_END': {
         if (this.room) {
           this.room.status = 'ended';
@@ -1038,6 +1044,14 @@ export class MultiplayerService {
       type: 'MULTIPLAYER_WAVE_COMPLETED',
       wave,
       rewardCoins
+    });
+  }
+
+  public broadcastDoorToggle(doorId: string, isOpen: boolean) {
+    this.sendPacket({
+      type: 'DOOR_TOGGLE',
+      doorId,
+      isOpen
     });
   }
 

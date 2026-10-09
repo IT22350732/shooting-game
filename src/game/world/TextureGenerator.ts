@@ -550,6 +550,75 @@ export class TextureGenerator {
     return texture;
   }
 
+  /**
+   * Warm hardwood parquet plank floor for interior rooms
+   */
+  public static createWoodParquetFloorTexture(): THREE.CanvasTexture {
+    const key = 'wood_parquet';
+    if (this.cache.has(key)) return this.cache.get(key)!;
+
+    const size = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+
+    ctx.fillStyle = '#78350f'; // Rich mahogany/warm walnut base
+    ctx.fillRect(0, 0, size, size);
+
+    const plankWidth = 32;
+    const plankHeight = 128;
+    const plankColors = ['#92400e', '#b45309', '#78350f', '#a16207', '#854d0e'];
+
+    for (let x = 0; x < size; x += plankWidth) {
+      for (let y = 0; y < size; y += plankHeight) {
+        const offset = (Math.floor(x / plankWidth) % 2) * (plankHeight / 2);
+        const actualY = (y + offset) % size;
+        ctx.fillStyle = plankColors[Math.floor(Math.random() * plankColors.length)];
+        ctx.fillRect(x + 1, actualY + 1, plankWidth - 2, plankHeight - 2);
+
+        // Subtle wood grain lines
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+        for (let g = 0; g < 4; g++) {
+          ctx.fillRect(x + 3 + g * 6, actualY + 1, 1, plankHeight - 2);
+        }
+      }
+    }
+
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 3, 3);
+    this.cache.set(key, texture);
+    return texture;
+  }
+
+  /**
+   * Polished interior checkerboard / ceramic room tiles
+   */
+  public static createFloorTileTexture(color1: string = '#1e293b', color2: string = '#0f172a'): THREE.CanvasTexture {
+    const key = `floor_tile_${color1}_${color2}`;
+    if (this.cache.has(key)) return this.cache.get(key)!;
+
+    const size = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+
+    const tileSize = 64;
+    for (let x = 0; x < size; x += tileSize) {
+      for (let y = 0; y < size; y += tileSize) {
+        const isAlt = ((x / tileSize) + (y / tileSize)) % 2 === 0;
+        ctx.fillStyle = isAlt ? color1 : color2;
+        ctx.fillRect(x + 1, y + 1, tileSize - 2, tileSize - 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.fillRect(x + 2, y + 2, tileSize - 4, 3);
+      }
+    }
+
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 4, 4);
+    this.cache.set(key, texture);
+    return texture;
+  }
+
   private static drawHex(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {

@@ -161,6 +161,11 @@ export type NetworkPacket =
       wave: number;
       rewardCoins: number;
     }
+  | {
+      type: 'DOOR_TOGGLE';
+      doorId: string;
+      isOpen: boolean;
+    }
   | { type: 'CHAT'; message: ChatMessage }
   | { type: 'PING'; timestamp: number; senderId: string }
   | { type: 'PONG'; originalTimestamp: number; senderId: string }
