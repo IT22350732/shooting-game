@@ -980,14 +980,21 @@ body.low-graphics .glass-panel {
    ========================================================== */
 @media (max-width: 680px) and (orientation: portrait), (max-width: 500px) {
   .menu-scroll-container {
-    padding: calc(var(--safe-top) + 10px) calc(var(--safe-right) + 12px) calc(var(--safe-bottom) + 12px) calc(var(--safe-left) + 12px) !important;
-    justify-content: flex-start !important;
-    gap: 12px !important;
+    padding: calc(var(--safe-top) + 10px) calc(var(--safe-right) + 12px) calc(var(--safe-bottom) + 8px) calc(var(--safe-left) + 12px) !important;
+    justify-content: space-between !important;
+    min-height: 100% !important;
+    min-height: 100dvh !important;
+    height: 100% !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
   }
 
   .menu-top-bar {
     flex-wrap: wrap !important;
     gap: 8px !important;
+    flex-shrink: 0 !important;
   }
 
   .menu-top-profile {
@@ -1027,14 +1034,18 @@ body.low-graphics .glass-panel {
     display: inline-flex !important;
   }
 
-
   .menu-corner-selectors {
     display: none !important;
   }
 
   .menu-center-hero {
-    margin: 8px 0 !important;
-    padding: 6px 0 !important;
+    margin: auto 0 !important;
+    padding: 8px 0 !important;
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
   }
 
   .menu-hero-badge {
@@ -1060,8 +1071,12 @@ body.low-graphics .glass-panel {
     align-items: stretch !important;
     gap: 8px !important;
     max-width: 480px !important;
-    margin: 0 auto !important;
+    margin-top: auto !important;
+    margin-bottom: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
     width: 100% !important;
+    flex-shrink: 0 !important;
   }
 
   .menu-bottom-dock {
@@ -1098,7 +1113,9 @@ body.low-graphics .glass-panel {
   }
 
   .menu-owner-footer-wrap {
-    margin-top: 6px !important;
+    margin-top: 4px !important;
+    margin-bottom: calc(var(--safe-bottom) + 2px) !important;
+    flex-shrink: 0 !important;
   }
 
   .menu-owner-footer {

@@ -60,6 +60,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // User deletion confirmation
+  const [userToDelete, setUserToDelete] = useState<{ id: string; username: string } | null>(null);
+
   const clearMessages = () => {
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -201,22 +204,38 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
     handleOneClickLogin(userId);
   };
 
-  const handleDeleteUser = (userId: string, username: string, e: React.MouseEvent) => {
+  const promptDeleteUser = (userId: string, username: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm(`Are you sure you want to delete profile "${username}"? This cannot be undone.`)) {
-      return;
-    }
-    const res = userManager.deleteUser(userId);
+    setUserToDelete({ id: userId, username });
+  };
+
+  const handleConfirmDelete = () => {
+    if (!userToDelete) return;
+    const target = userToDelete;
+    const res = userManager.deleteUser(target.id);
     if (res.success) {
       soundManager.playClick(0, 800, 0.3);
-      setUsersList(userManager.getAllUsers());
-      setRememberedUsers(userManager.getRememberedUsers());
+      const remainingUsers = userManager.getAllUsers();
+      const remainingRemembered = userManager.getRememberedUsers();
+      setUsersList(remainingUsers);
+      setRememberedUsers(remainingRemembered);
+      if (remainingRemembered.length === 0) {
+        setShowManualLogin(true);
+      }
       onUserChanged(userManager.getCurrentUser());
       setSuccessMsg(res.message);
     } else {
+      soundManager.playEmptyClick();
       setErrorMsg(res.message);
     }
+    setUserToDelete(null);
   };
+
+  const handleCancelDelete = () => {
+    setUserToDelete(null);
+  };
+
+  const handleDeleteUser = promptDeleteUser;
 
   return (
     <div
@@ -248,9 +267,109 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
           flexDirection: 'column',
           boxShadow: '0 25px 60px rgba(2, 132, 199, 0.25)',
           padding: 'clamp(16px, 3vw, 28px)',
-          gap: 16
+          gap: 16,
+          position: 'relative'
         }}
       >
+        {/* OPERATIVE DELETION CONFIRMATION DIALOG */}
+        {userToDelete && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.75)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              zIndex: 300,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16
+            }}
+          >
+            <div
+              className="glass-panel"
+              style={{
+                width: '100%',
+                maxWidth: 400,
+                background: '#ffffff',
+                border: '2px solid rgba(239, 68, 68, 0.45)',
+                boxShadow: '0 16px 40px rgba(239, 68, 68, 0.28)',
+                borderRadius: 18,
+                padding: '24px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+                gap: 14
+              }}
+            >
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 26,
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  color: '#ef4444',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Trash2 size={26} strokeWidth={2.4} />
+              </div>
+
+              <div>
+                <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 900, color: '#0f172a', margin: 0 }}>
+                  DELETE OPERATIVE?
+                </h4>
+                <p style={{ fontSize: '0.84rem', color: '#64748b', marginTop: 6, lineHeight: 1.45 }}>
+                  Are you sure you want to permanently delete operative profile <strong style={{ color: '#ef4444' }}>"{userToDelete.username}"</strong>?
+                  All local combat stats and achievements for this user will be erased.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, width: '100%', marginTop: 6 }}>
+                <button
+                  type="button"
+                  onClick={handleCancelDelete}
+                  className="btn-cyber"
+                  style={{
+                    flex: 1,
+                    padding: '11px 14px',
+                    fontSize: '0.8rem',
+                    background: 'rgba(241, 245, 249, 0.95)',
+                    border: '1.5px solid rgba(148, 163, 184, 0.35)',
+                    color: '#475569',
+                    justifyContent: 'center',
+                    fontWeight: 800
+                  }}
+                >
+                  CANCEL
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  className="btn-cyber"
+                  style={{
+                    flex: 1,
+                    padding: '11px 14px',
+                    fontSize: '0.8rem',
+                    background: '#ef4444',
+                    border: '1.5px solid #dc2626',
+                    color: '#ffffff',
+                    boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
+                    justifyContent: 'center',
+                    fontWeight: 900
+                  }}
+                >
+                  DELETE USER
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -559,22 +678,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
                         <span>ENTER GAME</span>
                       </button>
 
-                      {usersList.length > 1 && (
-                        <button
-                          onClick={(e) => handleDeleteUser(u.id, u.username, e)}
-                          title="Delete profile"
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#ef4444',
-                            cursor: 'pointer',
-                            padding: 6,
-                            borderRadius: 6
-                          }}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => promptDeleteUser(u.id, u.username, e)}
+                        title={`Delete profile ${u.username}`}
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.08)',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          padding: '6px 8px',
+                          borderRadius: 8,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </div>
                   </div>
                 );
@@ -691,29 +813,51 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
                           </div>
                         </div>
 
-                        {/* Instant Enter Button */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOneClickLogin(u.id);
-                          }}
-                          className="btn-cyber btn-cyber-primary"
-                          style={{
-                            padding: '9px 18px',
-                            fontSize: '0.82rem',
-                            fontWeight: 900,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            flexShrink: 0,
-                            borderRadius: 10,
-                            boxShadow: '0 4px 14px rgba(2, 132, 199, 0.35)'
-                          }}
-                        >
-                          <Play size={14} fill="currentColor" />
-                          <span>ENTER GAME</span>
-                        </button>
+                        {/* Instant Enter & Delete Action Buttons */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOneClickLogin(u.id);
+                            }}
+                            className="btn-cyber btn-cyber-primary"
+                            style={{
+                              padding: '8px 14px',
+                              fontSize: '0.80rem',
+                              fontWeight: 900,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              borderRadius: 10,
+                              boxShadow: '0 4px 14px rgba(2, 132, 199, 0.35)'
+                            }}
+                          >
+                            <Play size={14} fill="currentColor" />
+                            <span>ENTER GAME</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => promptDeleteUser(u.id, u.username, e)}
+                            title={`Delete profile ${u.username}`}
+                            className="btn-cyber"
+                            style={{
+                              padding: '8px 10px',
+                              background: 'rgba(239, 68, 68, 0.08)',
+                              border: '1.5px solid rgba(239, 68, 68, 0.35)',
+                              color: '#ef4444',
+                              borderRadius: 10,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

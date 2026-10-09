@@ -179,7 +179,7 @@ export class UserManager {
   public getRememberedUsers(): UserProfile[] {
     const all = Array.from(this.users.values()).sort((a, b) => b.lastLoginAt - a.lastLoginAt);
     const realUsers = all.filter(u => u.id !== 'usr_default_01' || u.totalKills > 0 || u.highScore > 0);
-    return realUsers.length > 0 ? realUsers : all;
+    return realUsers;
   }
 
   /**
@@ -406,23 +406,52 @@ export class UserManager {
   }
 
   public deleteUser(userId: string): { success: boolean; message: string } {
-    if (this.users.size <= 1) {
-      return { success: false, message: 'Cannot delete the only registered operative.' };
+    if (!this.users.has(userId)) {
+      return { success: false, message: 'Operative profile not found.' };
     }
 
-    if (!this.users.has(userId)) {
-      return { success: false, message: 'User not found.' };
-    }
+    const targetUser = this.users.get(userId);
+    const targetUsername = targetUser?.username || 'Operative';
 
     this.users.delete(userId);
-    if (this.currentUserId === userId) {
+
+    // If no users left, reset cleanly to a fresh Operative-01
+    if (this.users.size === 0) {
+      const freshSave = saveManager.getDefaultSaveData();
+      saveManager.loadFromUserData(freshSave);
+      const defaultUser: UserProfile = {
+        id: 'usr_default_01',
+        username: 'Operative-01',
+        displayName: 'Operative-01',
+        passwordHash: hashString('1234'),
+        avatarId: 'soldier_apex',
+        avatarColor: '#0284c7',
+        tier: 'RECRUIT',
+        createdAt: Date.now(),
+        lastLoginAt: Date.now(),
+        highScore: 0,
+        highestWave: 1,
+        totalKills: 0,
+        headshots: 0,
+        gamesPlayed: 0,
+        saveData: freshSave
+      };
+
+      this.users.set(defaultUser.id, defaultUser);
+      this.currentUserId = defaultUser.id;
+      try {
+        localStorage.removeItem(ACTIVE_USER_ID_KEY);
+      } catch {}
+    } else if (this.currentUserId === userId) {
       this.currentUserId = Array.from(this.users.keys())[0];
       const nextUser = this.users.get(this.currentUserId)!;
       saveManager.loadFromUserData(nextUser.saveData);
     }
 
     this.saveToStorage();
-    return { success: true, message: 'Operative profile deleted.' };
+    this.notifyLeaderboardChange();
+    this.refreshCloudLeaderboard().catch(() => {});
+    return { success: true, message: `Operative profile "${targetUsername}" deleted.` };
   }
 
   public syncCurrentUserData(saveData: SaveData) {
