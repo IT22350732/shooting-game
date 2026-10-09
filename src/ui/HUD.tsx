@@ -614,10 +614,10 @@ export const HUD: React.FC<HUDProps> = ({
             border: '1.5px solid rgba(56, 189, 248, 0.75)',
             boxShadow: '0 0 20px rgba(56, 189, 248, 0.3), inset 0 0 12px rgba(56, 189, 248, 0.1)',
             borderRadius: 10,
-            padding: '8px 18px',
+            padding: isMobileView ? '6px 14px' : '8px 18px',
             color: '#f8fafc',
             fontFamily: 'system-ui, sans-serif',
-            fontSize: '13px',
+            fontSize: isMobileView ? '12px' : '13px',
             letterSpacing: '1px',
             fontWeight: 700
           }}
@@ -629,15 +629,16 @@ export const HUD: React.FC<HUDProps> = ({
               justifyContent: 'center',
               background: 'linear-gradient(135deg, #0284c7, #0369a1)',
               color: '#ffffff',
-              width: 26,
+              padding: isMobileView ? '2px 8px' : '0 8px',
+              minWidth: 26,
               height: 26,
               borderRadius: 6,
               fontWeight: 900,
-              fontSize: '14px',
+              fontSize: isMobileView ? '11px' : '14px',
               boxShadow: '0 0 10px rgba(2, 132, 199, 0.8)'
             }}
           >
-            E
+            {isMobileView ? 'TAP ACTION' : 'E'}
           </div>
           <span style={{ textTransform: 'uppercase', color: '#e0f2fe' }}>
             {stats.interactionPrompt}
@@ -650,17 +651,21 @@ export const HUD: React.FC<HUDProps> = ({
         <div
           style={{
             position: 'absolute',
-            top: 65,
+            top: boss && boss.isAlive
+              ? 'calc(env(safe-area-inset-top, 0px) + 96px)'
+              : isMobileView
+                ? 'calc(env(safe-area-inset-top, 0px) + 54px)'
+                : 'calc(env(safe-area-inset-top, 0px) + 70px)',
             left: '50%',
             transform: 'translateX(-50%)',
             pointerEvents: 'none',
             zIndex: 60,
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
+            gap: isMobileView ? 6 : 10,
             background: stats.isSheltered
-              ? 'linear-gradient(135deg, rgba(6, 78, 59, 0.92), rgba(15, 23, 42, 0.95))'
-              : 'linear-gradient(135deg, rgba(120, 53, 15, 0.92), rgba(15, 23, 42, 0.95))',
+              ? 'linear-gradient(135deg, rgba(6, 78, 59, 0.94), rgba(15, 23, 42, 0.96))'
+              : 'linear-gradient(135deg, rgba(120, 53, 15, 0.94), rgba(15, 23, 42, 0.96))',
             backdropFilter: 'blur(10px)',
             border: stats.isSheltered
               ? '1.5px solid rgba(52, 211, 153, 0.85)'
@@ -669,12 +674,16 @@ export const HUD: React.FC<HUDProps> = ({
               ? '0 0 25px rgba(52, 211, 153, 0.4), inset 0 0 14px rgba(52, 211, 153, 0.2)'
               : '0 0 25px rgba(245, 158, 11, 0.4), inset 0 0 14px rgba(245, 158, 11, 0.2)',
             borderRadius: 24,
-            padding: '7px 20px',
+            padding: isMobileView ? '5px 12px' : '7px 20px',
             color: '#ecfdf5',
             fontFamily: 'system-ui, sans-serif',
-            fontSize: '12px',
-            letterSpacing: '1.5px',
-            fontWeight: 800
+            fontSize: isMobileView ? '10.5px' : '12px',
+            letterSpacing: '1px',
+            fontWeight: 800,
+            whiteSpace: 'nowrap',
+            maxWidth: '92vw',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
           }}
         >
           {stats.isSheltered ? (
@@ -714,7 +723,7 @@ export const HUD: React.FC<HUDProps> = ({
                   letterSpacing: '1px'
                 }}
               >
-                ENEMIES CAN ENTER • [E] TO CLOSE
+                ENEMIES CAN ENTER • {isMobileView ? 'ACTION TO CLOSE' : '[E] TO CLOSE'}
               </span>
             </>
           )}

@@ -17,6 +17,7 @@ export interface EnemyBuildingContext {
   playerBuilding: InteriorZone | null;
   arenaSize?: number;
   isInsideBuilding?: (pos: THREE.Vector3) => boolean;
+  getBuildingAtPosition?: (pos: THREE.Vector3) => InteriorZone | null;
 }
 
 interface HumanTheme {
@@ -825,6 +826,8 @@ export class Enemy {
     const isEnemyInPlayerBuilding = playerBuilding
       ? (buildingContext?.isInsideBuilding ? buildingContext.isInsideBuilding(this.position) : false)
       : false;
+    const currentEnemyBuilding = buildingContext?.getBuildingAtPosition ? buildingContext.getBuildingAtPosition(this.position) : null;
+    const isEnemyIndoors = currentEnemyBuilding !== null;
 
     // Tactical Target Acquisition: doorway waypoints or direct player tracking
     let aimTarget = playerPos;
@@ -848,7 +851,7 @@ export class Enemy {
           aimTarget = playerPos;
         }
       } else {
-        // Player is inside and door is CLOSED: enemies CANNOT enter!
+        // Player is inside and door is CLOSED: enemies outside CANNOT enter!
         const distToApproach = this.position.distanceTo(playerBuilding.doorApproachPos);
         if (distToApproach > 4.5) {
           moveTarget = playerBuilding.doorApproachPos;
@@ -856,6 +859,24 @@ export class Enemy {
           moveTarget = this.position;
         }
         aimTarget = playerBuilding.doorWorldPos;
+      }
+    } else if (isEnemyIndoors && currentEnemyBuilding) {
+      // Enemy is inside building, but player is OUTSIDE!
+      const doorOpen = currentEnemyBuilding.door.isOpen;
+      if (doorOpen) {
+        // Path through doorway to pursue player outside
+        const distToInside = this.position.distanceTo(currentEnemyBuilding.doorInsidePos);
+        if (distToInside > 1.8) {
+          moveTarget = currentEnemyBuilding.doorInsidePos;
+          aimTarget = currentEnemyBuilding.doorInsidePos;
+        } else {
+          moveTarget = currentEnemyBuilding.doorApproachPos;
+          aimTarget = playerPos;
+        }
+      } else {
+        // Door is closed: enemy is locked inside and cannot escape through walls
+        moveTarget = this.position;
+        aimTarget = currentEnemyBuilding.doorWorldPos;
       }
     }
 
@@ -915,16 +936,30 @@ export class Enemy {
         const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mesh.rotation.y);
         moveDir.copy(right).multiplyScalar(this.strafeDir * 0.45);
       }
+    } else if (isEnemyIndoors && !isPlayerInBuilding && currentEnemyBuilding && !currentEnemyBuilding.door.isOpen) {
+      // Enemy is inside closed building: hold position inside
+      if (distToMoveTarget > 0.5) {
+        moveDir.subVectors(moveTarget, this.position).normalize();
+      }
     } else if (this.type === 'exploder') {
       // Suicide bomber charges directly to moveTarget (enters doorway if open, or charges player)
       moveDir.subVectors(moveTarget, this.position).normalize();
     } else if (isPlayerInBuilding && !isEnemyInPlayerBuilding && isDoorOpen) {
       // Infiltrating into the building through the open door!
       moveDir.subVectors(moveTarget, this.position).normalize();
+    } else if (isEnemyIndoors && !isPlayerInBuilding && currentEnemyBuilding && currentEnemyBuilding.door.isOpen) {
+      // Exiting the building through the open door to pursue player outside!
+      moveDir.subVectors(moveTarget, this.position).normalize();
     } else {
       // ARMED HUMAN COMBATANT (SHOOTING & TACTICAL ENGAGEMENT)
-      const minDistance = this.type === 'ranged' ? 12 : (this.type === 'basic' ? 8 : (this.type === 'tank' ? 6 : 5));
-      const maxDistance = this.type === 'ranged' ? 24 : (this.type === 'basic' ? 15 : 13);
+      let minDistance = this.type === 'ranged' ? 12 : (this.type === 'basic' ? 8 : (this.type === 'tank' ? 6 : 5));
+      let maxDistance = this.type === 'ranged' ? 24 : (this.type === 'basic' ? 15 : 13);
+
+      if (isEnemyInPlayerBuilding) {
+        // Tight tactical CQB spacing inside rooms: avoid backing into perimeter walls
+        minDistance = this.type === 'ranged' ? 4.5 : (this.type === 'tank' ? 3.0 : 2.2);
+        maxDistance = this.type === 'ranged' ? 9.5 : 6.5;
+      }
 
       if (distToMoveTarget > maxDistance) {
         // Advance into optimal combat firing range
@@ -939,7 +974,7 @@ export class Enemy {
           this.stateTimer = 0;
         }
         const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mesh.rotation.y);
-        moveDir.copy(right).multiplyScalar(this.strafeDir * 0.75);
+        moveDir.copy(right).multiplyScalar(this.strafeDir * (isEnemyInPlayerBuilding ? 0.45 : 0.75));
       }
     }
 
@@ -1100,41 +1135,95 @@ export class Enemy {
       this.torsoGroup.rotation.y = THREE.MathUtils.lerp(this.torsoGroup.rotation.y, 0, delta * 6);
     }
 
-    // 7. Move enemy and avoid obstacles
+    // 7. Move enemy, resolve obstacle collisions with multi-pass sliding and floor elevation
+    const nextPos = this.position.clone();
     if (isMoving) {
       moveDir.y = 0;
       moveDir.normalize();
+      nextPos.addScaledVector(moveDir, this.speed * delta);
+    }
 
-      const nextPos = this.position.clone().addScaledVector(moveDir, this.speed * delta);
-      const collisionDist = 0.45 * this.scaleFactor;
+    const enemyRadius = 0.48 * this.scaleFactor;
+    const closestPoint = new THREE.Vector3();
+    const collisionPasses = 3;
 
-      for (const obs of obstacles) {
-        // Skip obstacles high above (roofs, lintels) or below ground
-        if (obs.box.min.y > 1.8 || obs.box.max.y < 0.05) continue;
-        // Skip empty boxes (e.g. open door obstacles)
+    for (let pass = 0; pass < collisionPasses; pass++) {
+      let collided = false;
+      for (let i = 0; i < obstacles.length; i++) {
+        const obs = obstacles[i];
         if (obs.box.isEmpty()) continue;
+        // Skip obstacles far above enemy head or below ground
+        if (obs.box.min.y > 1.85 || obs.box.max.y < 0.08) continue;
 
-        if (obs.box.distanceToPoint(nextPos) < collisionDist) {
-          const obsCenter = obs.box.getCenter(new THREE.Vector3());
-          const toObs = new THREE.Vector3().subVectors(nextPos, obsCenter);
-          toObs.y = 0;
-          if (toObs.lengthSq() > 0.001) {
-            toObs.normalize();
-            const tangent = new THREE.Vector3(-toObs.z, 0, toObs.x);
-            const dot = tangent.dot(moveDir);
-            moveDir.copy(tangent).multiplyScalar(dot >= 0 ? 1 : -1).normalize();
-            nextPos.copy(this.position).addScaledVector(moveDir, this.speed * 0.7 * delta);
+        // Broadphase 2D distance check
+        if (
+          nextPos.x < obs.box.min.x - enemyRadius ||
+          nextPos.x > obs.box.max.x + enemyRadius ||
+          nextPos.z < obs.box.min.z - enemyRadius ||
+          nextPos.z > obs.box.max.z + enemyRadius
+        ) {
+          continue;
+        }
+
+        // Clamp nextPos to the obstacle box in X/Z to get the closest surface point
+        closestPoint.set(
+          THREE.MathUtils.clamp(nextPos.x, obs.box.min.x, obs.box.max.x),
+          nextPos.y,
+          THREE.MathUtils.clamp(nextPos.z, obs.box.min.z, obs.box.max.z)
+        );
+
+        const dx = nextPos.x - closestPoint.x;
+        const dz = nextPos.z - closestPoint.z;
+        const distSq = dx * dx + dz * dz;
+
+        if (distSq < enemyRadius * enemyRadius) {
+          collided = true;
+          if (distSq > 0.000001) {
+            const dist = Math.sqrt(distSq);
+            const nx = dx / dist;
+            const nz = dz / dist;
+            const penetration = enemyRadius - dist;
+
+            // Push outward along surface normal
+            nextPos.x += nx * penetration;
+            nextPos.z += nz * penetration;
+
+            // Slide moveDir along wall tangent
+            if (isMoving) {
+              const dot = moveDir.x * nx + moveDir.z * nz;
+              if (dot < 0) {
+                moveDir.x -= dot * nx;
+                moveDir.z -= dot * nz;
+              }
+            }
+          } else {
+            // Center is inside box: push out along the shallowest axis
+            const dLeft = nextPos.x - obs.box.min.x;
+            const dRight = obs.box.max.x - nextPos.x;
+            const dBack = nextPos.z - obs.box.min.z;
+            const dFront = obs.box.max.z - nextPos.z;
+            const minPen = Math.min(dLeft, dRight, dBack, dFront);
+
+            if (minPen === dLeft) nextPos.x = obs.box.min.x - enemyRadius - 0.01;
+            else if (minPen === dRight) nextPos.x = obs.box.max.x + enemyRadius + 0.01;
+            else if (minPen === dBack) nextPos.z = obs.box.min.z - enemyRadius - 0.01;
+            else nextPos.z = obs.box.max.z + enemyRadius + 0.01;
           }
-          break;
         }
       }
-
-      const maxCoord = (buildingContext?.arenaSize ? buildingContext.arenaSize / 2 : 62) - 2.5;
-      this.position.x = THREE.MathUtils.clamp(nextPos.x, -maxCoord, maxCoord);
-      this.position.y = 0; // Firmly lock to ground level
-      this.position.z = THREE.MathUtils.clamp(nextPos.z, -maxCoord, maxCoord);
-      this.mesh.position.copy(this.position);
+      if (!collided) break;
     }
+
+    const maxCoord = (buildingContext?.arenaSize ? buildingContext.arenaSize / 2 : 62) - 2.5;
+    this.position.x = THREE.MathUtils.clamp(nextPos.x, -maxCoord, maxCoord);
+    this.position.z = THREE.MathUtils.clamp(nextPos.z, -maxCoord, maxCoord);
+
+    // Floor elevation interpolation: smoothly step onto building interior floor (y = 0.05)
+    const isIndoors = buildingContext?.isInsideBuilding ? buildingContext.isInsideBuilding(this.position) : false;
+    const targetY = isIndoors ? 0.05 : 0.0;
+    this.position.y = THREE.MathUtils.lerp(this.position.y, targetY, delta * 14);
+
+    this.mesh.position.copy(this.position);
   }
 
   public dispose() {

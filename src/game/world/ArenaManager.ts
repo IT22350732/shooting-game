@@ -1249,14 +1249,15 @@ export class ArenaManager {
     } else {
       floorTex = TextureGenerator.createSidewalkTexture();
     }
-    const floorGeo = new THREE.BoxGeometry(w - 0.2, 0.15, d - 0.2);
+    const floorGeo = new THREE.BoxGeometry(w - 0.2, 0.05, d - 0.2);
     const floorMat = new THREE.MeshStandardMaterial({
       map: floorTex,
       roughness: 0.5,
-      metalness: 0.1
+      metalness: 0.1,
+      side: THREE.DoubleSide
     });
     const floorMesh = new THREE.Mesh(floorGeo, floorMat);
-    floorMesh.position.set(0, 0.08, 0);
+    floorMesh.position.set(0, 0.025, 0);
     floorMesh.receiveShadow = true;
     group.add(floorMesh);
 
@@ -1276,7 +1277,8 @@ export class ArenaManager {
     const wallMat = new THREE.MeshStandardMaterial({
       map: wallTex,
       roughness: 0.65,
-      metalness: options.wallType === 'metal' ? 0.45 : 0.1
+      metalness: options.wallType === 'metal' ? 0.45 : 0.1,
+      side: THREE.DoubleSide
     });
 
     // 3. Perimeter Walls with Doorway Cutout on Front (+Z face)
@@ -1408,7 +1410,7 @@ export class ArenaManager {
 
     // 6. Ceiling Slab
     const ceilingGeo = new THREE.BoxGeometry(w + 0.3, 0.2, d + 0.3);
-    const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
+    const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7, side: THREE.DoubleSide });
     const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
     ceiling.position.set(0, wallH + 0.1, 0);
     ceiling.castShadow = true;
@@ -1506,10 +1508,16 @@ export class ArenaManager {
     group.add(fixture);
 
     const lightColor = options.wallType === 'adobe' ? 0xfef08a : options.doorTheme === 'glass' ? 0xbae6fd : 0xffedd5;
-    const interiorLight = new THREE.PointLight(lightColor, 1.35, 14);
+    const interiorLight = new THREE.PointLight(lightColor, 1.4, 16);
     interiorLight.position.set(0, wallH - 0.35, 0);
     interiorLight.castShadow = false;
     group.add(interiorLight);
+
+    // Warm eye-level fill light to eliminate dark corners and illuminate enemies/characters clearly
+    const fillLight = new THREE.PointLight(lightColor, 0.85, 14);
+    fillLight.position.set(0, 1.6, 0);
+    fillLight.castShadow = false;
+    group.add(fillLight);
 
     // 9. Windows with Transparent Glass (Side Walls)
     const winGeo = new THREE.BoxGeometry(1.6, 1.8, 0.08);
