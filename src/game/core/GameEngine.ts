@@ -2340,8 +2340,11 @@ export class GameEngine {
       getBuildingAtPosition: (pos: THREE.Vector3) => this.arena.getBuildingAtPosition(pos)
     };
 
-    // 5a. Inter-enemy separation pass: prevents swarms from clipping into each other and pushing through walls
+    // 5a. Inter-enemy separation pass: prevents swarms from clipping into each other while allowing fluid doorway funnels
     const activeEnemiesCount = this.enemies.length;
+    const minDist = 0.75;
+    const playerBldg = currentBuilding;
+
     for (let i = 0; i < activeEnemiesCount; i++) {
       const eA = this.enemies[i];
       if (eA.isDead) continue;
@@ -2350,12 +2353,20 @@ export class GameEngine {
         if (eB.isDead) continue;
 
         const dx = eB.position.x - eA.position.x;
+        if (Math.abs(dx) >= minDist) continue;
         const dz = eB.position.z - eA.position.z;
+        if (Math.abs(dz) >= minDist) continue;
+
         const distSq = dx * dx + dz * dz;
-        const minDist = 0.92;
         if (distSq < minDist * minDist && distSq > 0.0001) {
           const dist = Math.sqrt(distSq);
-          const push = (minDist - dist) * 0.5;
+          // Soften lateral push near building entrances so queuing enemies don't get shoved into door frames
+          const isNearDoorway = playerBldg && (
+            eA.position.distanceTo(playerBldg.doorWorldPos) < 3.0 ||
+            eB.position.distanceTo(playerBldg.doorWorldPos) < 3.0
+          );
+          const pushScale = isNearDoorway ? 0.35 : 1.0;
+          const push = (minDist - dist) * 0.5 * pushScale;
           const nx = dx / dist;
           const nz = dz / dist;
           eA.position.x -= nx * push;

@@ -129,6 +129,13 @@ export const HUMAN_THEMES: Record<EnemyType, HumanTheme> = {
 };
 
 export class Enemy {
+  private static _moveDir = new THREE.Vector3();
+  private static _nextPos = new THREE.Vector3();
+  private static _closestPoint = new THREE.Vector3();
+  private static _rightVec = new THREE.Vector3();
+  private static _yUpAxis = new THREE.Vector3(0, 1, 0);
+  private static _nearbyObstacles: ArenaObstacle[] = [];
+
   public id: string;
   public type: EnemyType;
   public mesh: THREE.Group;
@@ -840,15 +847,18 @@ export class Enemy {
         moveTarget = playerPos;
       } else if (isDoorOpen) {
         // Player is inside and door is OPEN: enemies actively enter through the doorway!
+        const distToDoor = this.position.distanceTo(playerBuilding.doorWorldPos);
         const distToApproach = this.position.distanceTo(playerBuilding.doorApproachPos);
-        if (distToApproach > 2.0) {
-          // Approach front entrance outside
-          moveTarget = playerBuilding.doorApproachPos;
-          aimTarget = playerBuilding.doorApproachPos;
-        } else {
-          // Cross open threshold into building interior
+        const distToInside = this.position.distanceTo(playerBuilding.doorInsidePos);
+
+        // Commit forward toward doorInsidePos once in approach funnel (< 3.2m to door or closer to inside than approach)
+        // Prevents any back-and-forth oscillation at the entrance!
+        if (distToInside < distToApproach || distToDoor < 3.2) {
           moveTarget = playerBuilding.doorInsidePos;
           aimTarget = playerPos;
+        } else {
+          moveTarget = playerBuilding.doorApproachPos;
+          aimTarget = playerBuilding.doorApproachPos;
         }
       } else {
         // Player is inside and door is CLOSED: enemies outside CANNOT enter!
@@ -865,13 +875,16 @@ export class Enemy {
       const doorOpen = currentEnemyBuilding.door.isOpen;
       if (doorOpen) {
         // Path through doorway to pursue player outside
+        const distToDoor = this.position.distanceTo(currentEnemyBuilding.doorWorldPos);
         const distToInside = this.position.distanceTo(currentEnemyBuilding.doorInsidePos);
-        if (distToInside > 1.8) {
-          moveTarget = currentEnemyBuilding.doorInsidePos;
-          aimTarget = currentEnemyBuilding.doorInsidePos;
-        } else {
+        const distToApproach = this.position.distanceTo(currentEnemyBuilding.doorApproachPos);
+
+        if (distToApproach < distToInside || distToDoor < 3.2) {
           moveTarget = currentEnemyBuilding.doorApproachPos;
           aimTarget = playerPos;
+        } else {
+          moveTarget = currentEnemyBuilding.doorInsidePos;
+          aimTarget = currentEnemyBuilding.doorInsidePos;
         }
       } else {
         // Door is closed: enemy is locked inside and cannot escape through walls
@@ -921,7 +934,7 @@ export class Enemy {
     }
 
     // 4. Movement & Combat AI
-    let moveDir = new THREE.Vector3();
+    const moveDir = Enemy._moveDir.set(0, 0, 0);
 
     if (isPlayerInBuilding && !isEnemyInPlayerBuilding && !isDoorOpen) {
       // Door is closed: enemy outside holds position and paces/patrols outside, CANNOT enter!
@@ -933,7 +946,7 @@ export class Enemy {
           this.strafeDir *= -1;
           this.stateTimer = 0;
         }
-        const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mesh.rotation.y);
+        const right = Enemy._rightVec.set(1, 0, 0).applyAxisAngle(Enemy._yUpAxis, this.mesh.rotation.y);
         moveDir.copy(right).multiplyScalar(this.strafeDir * 0.45);
       }
     } else if (isEnemyIndoors && !isPlayerInBuilding && currentEnemyBuilding && !currentEnemyBuilding.door.isOpen) {
@@ -973,7 +986,7 @@ export class Enemy {
           this.strafeDir *= -1;
           this.stateTimer = 0;
         }
-        const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mesh.rotation.y);
+        const right = Enemy._rightVec.set(1, 0, 0).applyAxisAngle(Enemy._yUpAxis, this.mesh.rotation.y);
         moveDir.copy(right).multiplyScalar(this.strafeDir * (isEnemyInPlayerBuilding ? 0.45 : 0.75));
       }
     }
@@ -1135,83 +1148,94 @@ export class Enemy {
       this.torsoGroup.rotation.y = THREE.MathUtils.lerp(this.torsoGroup.rotation.y, 0, delta * 6);
     }
 
-    // 7. Move enemy, resolve obstacle collisions with multi-pass sliding and floor elevation
-    const nextPos = this.position.clone();
+    // 7. Move enemy, resolve obstacle collisions with spatial pre-filtering and smooth sliding
+    const nextPos = Enemy._nextPos.copy(this.position);
     if (isMoving) {
       moveDir.y = 0;
-      moveDir.normalize();
+      if (moveDir.lengthSq() > 0.001) moveDir.normalize();
       nextPos.addScaledVector(moveDir, this.speed * delta);
     }
 
-    const enemyRadius = 0.48 * this.scaleFactor;
-    const closestPoint = new THREE.Vector3();
-    const collisionPasses = 3;
+    const enemyRadius = 0.38 * this.scaleFactor;
+    const searchDist = 3.2;
+    const curX = this.position.x;
+    const curZ = this.position.z;
 
-    for (let pass = 0; pass < collisionPasses; pass++) {
-      let collided = false;
-      for (let i = 0; i < obstacles.length; i++) {
-        const obs = obstacles[i];
-        if (obs.box.isEmpty()) continue;
-        // Skip obstacles far above enemy head or below ground
-        if (obs.box.min.y > 1.85 || obs.box.max.y < 0.08) continue;
+    const nearby = Enemy._nearbyObstacles;
+    nearby.length = 0;
 
-        // Broadphase 2D distance check
-        if (
-          nextPos.x < obs.box.min.x - enemyRadius ||
-          nextPos.x > obs.box.max.x + enemyRadius ||
-          nextPos.z < obs.box.min.z - enemyRadius ||
-          nextPos.z > obs.box.max.z + enemyRadius
-        ) {
-          continue;
-        }
+    for (let i = 0; i < obstacles.length; i++) {
+      const obs = obstacles[i];
+      if (obs.box.isEmpty()) continue;
+      if (obs.box.min.y > 1.85 || obs.box.max.y < 0.08) continue;
+      if (
+        curX < obs.box.min.x - searchDist ||
+        curX > obs.box.max.x + searchDist ||
+        curZ < obs.box.min.z - searchDist ||
+        curZ > obs.box.max.z + searchDist
+      ) {
+        continue;
+      }
+      nearby.push(obs);
+    }
 
-        // Clamp nextPos to the obstacle box in X/Z to get the closest surface point
-        closestPoint.set(
-          THREE.MathUtils.clamp(nextPos.x, obs.box.min.x, obs.box.max.x),
-          nextPos.y,
-          THREE.MathUtils.clamp(nextPos.z, obs.box.min.z, obs.box.max.z)
-        );
+    if (nearby.length > 0) {
+      const closestPoint = Enemy._closestPoint;
+      const collisionPasses = 3;
 
-        const dx = nextPos.x - closestPoint.x;
-        const dz = nextPos.z - closestPoint.z;
-        const distSq = dx * dx + dz * dz;
+      for (let pass = 0; pass < collisionPasses; pass++) {
+        let collided = false;
+        for (let i = 0; i < nearby.length; i++) {
+          const obs = nearby[i];
 
-        if (distSq < enemyRadius * enemyRadius) {
-          collided = true;
-          if (distSq > 0.000001) {
-            const dist = Math.sqrt(distSq);
-            const nx = dx / dist;
-            const nz = dz / dist;
-            const penetration = enemyRadius - dist;
+          // Clamp nextPos to the obstacle box in X/Z to get the closest surface point
+          closestPoint.set(
+            THREE.MathUtils.clamp(nextPos.x, obs.box.min.x, obs.box.max.x),
+            nextPos.y,
+            THREE.MathUtils.clamp(nextPos.z, obs.box.min.z, obs.box.max.z)
+          );
 
-            // Push outward along surface normal
-            nextPos.x += nx * penetration;
-            nextPos.z += nz * penetration;
+          const dx = nextPos.x - closestPoint.x;
+          const dz = nextPos.z - closestPoint.z;
+          const distSq = dx * dx + dz * dz;
 
-            // Slide moveDir along wall tangent
-            if (isMoving) {
-              const dot = moveDir.x * nx + moveDir.z * nz;
-              if (dot < 0) {
-                moveDir.x -= dot * nx;
-                moveDir.z -= dot * nz;
+          if (distSq < enemyRadius * enemyRadius) {
+            collided = true;
+            if (distSq > 0.000001) {
+              const dist = Math.sqrt(distSq);
+              const nx = dx / dist;
+              const nz = dz / dist;
+              const penetration = enemyRadius - dist;
+
+              // Push outward along surface normal
+              nextPos.x += nx * penetration;
+              nextPos.z += nz * penetration;
+
+              // Slide moveDir along wall tangent
+              if (isMoving) {
+                const dot = moveDir.x * nx + moveDir.z * nz;
+                if (dot < 0) {
+                  moveDir.x -= dot * nx;
+                  moveDir.z -= dot * nz;
+                }
               }
-            }
-          } else {
-            // Center is inside box: push out along the shallowest axis
-            const dLeft = nextPos.x - obs.box.min.x;
-            const dRight = obs.box.max.x - nextPos.x;
-            const dBack = nextPos.z - obs.box.min.z;
-            const dFront = obs.box.max.z - nextPos.z;
-            const minPen = Math.min(dLeft, dRight, dBack, dFront);
+            } else {
+              // Center is inside box: push out along the shallowest axis
+              const dLeft = nextPos.x - obs.box.min.x;
+              const dRight = obs.box.max.x - nextPos.x;
+              const dBack = nextPos.z - obs.box.min.z;
+              const dFront = obs.box.max.z - nextPos.z;
+              const minPen = Math.min(dLeft, dRight, dBack, dFront);
 
-            if (minPen === dLeft) nextPos.x = obs.box.min.x - enemyRadius - 0.01;
-            else if (minPen === dRight) nextPos.x = obs.box.max.x + enemyRadius + 0.01;
-            else if (minPen === dBack) nextPos.z = obs.box.min.z - enemyRadius - 0.01;
-            else nextPos.z = obs.box.max.z + enemyRadius + 0.01;
+              if (minPen === dLeft) nextPos.x = obs.box.min.x - enemyRadius - 0.01;
+              else if (minPen === dRight) nextPos.x = obs.box.max.x + enemyRadius + 0.01;
+              else if (minPen === dBack) nextPos.z = obs.box.min.z - enemyRadius - 0.01;
+              else nextPos.z = obs.box.max.z + enemyRadius + 0.01;
+            }
           }
         }
+        if (!collided) break;
       }
-      if (!collided) break;
     }
 
     const maxCoord = (buildingContext?.arenaSize ? buildingContext.arenaSize / 2 : 62) - 2.5;

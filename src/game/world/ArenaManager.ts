@@ -183,12 +183,15 @@ export class ArenaManager {
     }
   }
 
+  private static _zoneLocalVec = new THREE.Vector3();
+  private static _yAxis = new THREE.Vector3(0, 1, 0);
+
   public isPositionInsideBuilding(pos: THREE.Vector3): boolean {
     for (let i = 0; i < this.interiorZones.length; i++) {
       const z = this.interiorZones[i];
-      const local = new THREE.Vector3().subVectors(pos, z.center);
+      const local = ArenaManager._zoneLocalVec.subVectors(pos, z.center);
       if (z.rotY) {
-        local.applyAxisAngle(new THREE.Vector3(0, 1, 0), -z.rotY);
+        local.applyAxisAngle(ArenaManager._yAxis, -z.rotY);
       }
       const halfW = (z.width - 0.7) / 2;
       const halfD = (z.depth - 0.7) / 2;
@@ -209,9 +212,9 @@ export class ArenaManager {
   public getBuildingAtPosition(pos: THREE.Vector3): InteriorZone | null {
     for (let i = 0; i < this.interiorZones.length; i++) {
       const z = this.interiorZones[i];
-      const local = new THREE.Vector3().subVectors(pos, z.center);
+      const local = ArenaManager._zoneLocalVec.subVectors(pos, z.center);
       if (z.rotY) {
-        local.applyAxisAngle(new THREE.Vector3(0, 1, 0), -z.rotY);
+        local.applyAxisAngle(ArenaManager._yAxis, -z.rotY);
       }
       const halfW = (z.width - 0.7) / 2;
       const halfD = (z.depth - 0.7) / 2;
@@ -1508,16 +1511,10 @@ export class ArenaManager {
     group.add(fixture);
 
     const lightColor = options.wallType === 'adobe' ? 0xfef08a : options.doorTheme === 'glass' ? 0xbae6fd : 0xffedd5;
-    const interiorLight = new THREE.PointLight(lightColor, 1.4, 16);
-    interiorLight.position.set(0, wallH - 0.35, 0);
+    const interiorLight = new THREE.PointLight(lightColor, 1.45, 18);
+    interiorLight.position.set(0, wallH * 0.6, 0);
     interiorLight.castShadow = false;
     group.add(interiorLight);
-
-    // Warm eye-level fill light to eliminate dark corners and illuminate enemies/characters clearly
-    const fillLight = new THREE.PointLight(lightColor, 0.85, 14);
-    fillLight.position.set(0, 1.6, 0);
-    fillLight.castShadow = false;
-    group.add(fillLight);
 
     // 9. Windows with Transparent Glass (Side Walls)
     const winGeo = new THREE.BoxGeometry(1.6, 1.8, 0.08);
