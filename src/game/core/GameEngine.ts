@@ -25,6 +25,8 @@ import { Projectile } from '../entities/Projectile';
 import { Powerup } from '../entities/Powerup';
 import { PracticeTarget } from '../entities/PracticeTarget';
 import { ArenaManager, InteractiveDoor } from '../world/ArenaManager';
+import { DestructibleProp, LootType } from '../entities/DestructibleProp';
+import { LootDrop } from '../entities/LootDrop';
 import { ParticleSystem } from '../world/ParticleSystem';
 import { TextureGenerator } from '../world/TextureGenerator';
 import { WaveManager } from '../managers/WaveManager';
@@ -42,6 +44,8 @@ export interface HUDStats {
   maxHealth: number;
   armor: number;
   maxArmor: number;
+  isSheltered?: boolean;
+  shelterName?: string;
   ammo: number;
   maxAmmo: number;
   isReloading: boolean;
@@ -113,6 +117,7 @@ export class GameEngine {
   public boss: Boss | null = null;
   public projectiles: Projectile[] = [];
   public powerups: Powerup[] = [];
+  public lootDrops: LootDrop[] = [];
 
   // Multiplayer State
   public isMultiplayer: boolean = false;
@@ -711,11 +716,24 @@ export class GameEngine {
     this.powerups = [];
     this.killsSinceHealthPack = 0;
 
+    this.lootDrops.forEach(l => {
+      this.scene.remove(l.mesh);
+      l.dispose();
+    });
+    this.lootDrops = [];
+
     this.remotePlayers.forEach(r => {
       this.scene.remove(r.mesh);
       r.dispose();
     });
     this.remotePlayers.clear();
+  }
+
+  public spawnLootDrop(pos: THREE.Vector3, type: LootType) {
+    const loot = new LootDrop(`loot-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`, type, pos);
+    this.lootDrops.push(loot);
+    this.scene.add(loot.mesh);
+    this.particles.spawnSparks(pos, new THREE.Vector3(0, 1, 0), 0xfacc15, 16);
   }
 
   // --- INPUT HANDLING ---
@@ -1619,6 +1637,9 @@ export class GameEngine {
       if (!t.isDead) targets.push(t.mesh);
     });
     if (this.boss && !this.boss.isDead) targets.push(this.boss.mesh);
+    this.arena.destructibles.forEach(d => {
+      if (!d.isDestroyed) targets.push(d.mesh);
+    });
     this.arena.obstacles.forEach(o => targets.push(o.mesh));
     this.arena.explosiveBarrels.forEach(b => {
       if (!b.exploded) targets.push(b.mesh);
@@ -1774,6 +1795,27 @@ export class GameEngine {
             } else {
               this.handleEnemyKill(enemy, isHeadshot);
             }
+          }
+          return;
+        }
+      }
+
+      // Check Destructible Indoor Props (Clay Pots, Loot Crates, Tech Safes)
+      for (const prop of this.arena.destructibles) {
+        if (prop.isDestroyed) continue;
+        let isPartOfProp = false;
+        hit.object.traverseAncestors(ancestor => {
+          if (ancestor === prop.mesh) isPartOfProp = true;
+        });
+        if (hit.object === prop.mesh) isPartOfProp = true;
+
+        if (isPartOfProp) {
+          const baseDmg = this.currentWeapon.config.damage * (hasDamageBoost ? 2.0 : 1.0);
+          const res = prop.takeDamage(baseDmg, this.particles);
+          this.triggerHitFeedback(hitPoint, res.damageDealt, res.destroyed);
+
+          if (res.destroyed && res.lootType && res.position) {
+            this.spawnLootDrop(res.position, res.lootType);
           }
           return;
         }
@@ -2094,6 +2136,10 @@ export class GameEngine {
       this.currentInteractionPrompt = null;
     }
 
+    // 0.06 Check Sanctuary Indoor Immunity State
+    const currentBuilding = this.arena.getBuildingAtPosition(this.player.position);
+    this.player.isSheltered = currentBuilding !== null;
+
     // 0.1 Target Acquisition & Tactical Assist
     this.targetLock = this.updateTargetAcquisition();
     if (this.targetLock && this.targetLockWorldPos) {
@@ -2311,6 +2357,10 @@ export class GameEngine {
         // on enemy ranged shoot
         (evt) => {
           if (this.mode === 'free_mode') return;
+          if (this.player.isSheltered) {
+            // Player is inside building sanctuary - enemies cannot shoot the user
+            return;
+          }
 
           // Spread calculation so player can dodge with movement and use cover
           const spread = evt.spread ?? 0.05;
@@ -2335,6 +2385,11 @@ export class GameEngine {
         // on enemy melee hit
         (damage) => {
           if (this.mode !== 'free_mode') {
+            if (this.player.isSheltered) {
+              soundManager.playDeflect();
+              this.particles.spawnSparks(this.player.position, new THREE.Vector3(0, 1, 0), 0x38bdf8, 14);
+              return;
+            }
             const dead = this.player.takeDamage(damage, enemy.position);
             if (dead) this.triggerGameOver();
           }
@@ -2372,6 +2427,11 @@ export class GameEngine {
           this.arena.obstacles,
           // on boss attack
           (evt) => {
+            if (this.player.isSheltered) {
+              soundManager.playDeflect();
+              this.particles.spawnSparks(this.player.position, new THREE.Vector3(0, 1, 0), 0x38bdf8, 16);
+              return;
+            }
             if (evt.type === 'laser') {
               // Direct laser beam hit check
               const dist = this.player.position.distanceTo(evt.target);
@@ -2501,12 +2561,33 @@ export class GameEngine {
             proj.isDead = true;
           }
         }
+
+        // Player Projectile hits Destructible Indoor Prop
+        if (!proj.isDead) {
+          for (const prop of this.arena.destructibles) {
+            if (!prop.isDestroyed && prop.position.distanceTo(proj.position) < (1.1 + proj.radius)) {
+              const res = prop.takeDamage(proj.damage, this.particles);
+              this.particles.spawnExplosion(proj.position, 16);
+              this.triggerHitFeedback(proj.position, res.damageDealt, res.destroyed);
+              if (res.destroyed && res.lootType && res.position) {
+                this.spawnLootDrop(res.position, res.lootType);
+              }
+              proj.isDead = true;
+              break;
+            }
+          }
+        }
       } else {
         // Enemy Projectile hits player
         if (proj.position.distanceTo(this.player.position) < (0.8 + proj.radius)) {
           if (this.mode !== 'free_mode') {
-            const dead = this.player.takeDamage(proj.damage, proj.position);
-            if (dead) this.triggerGameOver();
+            if (this.player.isSheltered) {
+              soundManager.playDeflect();
+              this.particles.spawnSparks(proj.position, new THREE.Vector3(0, 1, 0), 0x38bdf8, 14);
+            } else {
+              const dead = this.player.takeDamage(proj.damage, proj.position);
+              if (dead) this.triggerGameOver();
+            }
           }
           this.particles.spawnSparks(proj.position, new THREE.Vector3(0, 1, 0), 0xef4444, 12);
           proj.isDead = true;
@@ -2548,6 +2629,27 @@ export class GameEngine {
       }
     }
 
+    // 8b. Loot Drops Update & Player Proximity Magnet/Collection
+    for (let i = this.lootDrops.length - 1; i >= 0; i--) {
+      const drop = this.lootDrops[i];
+      const expired = drop.update(delta, this.player.position);
+      if (expired) {
+        this.scene.remove(drop.mesh);
+        drop.dispose();
+        this.lootDrops.splice(i, 1);
+        continue;
+      }
+
+      // Proximity collect
+      const dist = drop.position.distanceTo(this.player.position);
+      if (dist < 1.35 && !drop.isCollected) {
+        drop.collect(this.player, this.particles);
+        this.scene.remove(drop.mesh);
+        drop.dispose();
+        this.lootDrops.splice(i, 1);
+      }
+    }
+
     // 9. Particle System Update
     this.particles.update(delta);
 
@@ -2561,6 +2663,8 @@ export class GameEngine {
         maxHealth: this.player.stats.maxHealth,
         armor: this.player.stats.armor,
         maxArmor: this.player.stats.maxArmor,
+        isSheltered: this.player.isSheltered,
+        shelterName: currentBuilding?.name,
         ammo: this.currentWeapon.currentAmmo,
         maxAmmo: this.currentWeapon.maxAmmo,
         isReloading: this.currentWeapon.isReloading,

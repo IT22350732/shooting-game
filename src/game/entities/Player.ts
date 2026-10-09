@@ -33,6 +33,7 @@ export class Player {
 
   // Invulnerability window after hurt
   private hurtCooldown: number = 0;
+  public isSheltered: boolean = false;
 
   constructor(camera: THREE.PerspectiveCamera, upgrades?: UpgradeLevels) {
     this.camera = camera;
@@ -111,6 +112,7 @@ export class Player {
   }
 
   public takeDamage(amount: number, sourcePosition?: THREE.Vector3): boolean {
+    if (this.isSheltered) return false;
     if (this.hurtCooldown > 0) return false;
     if (this.hasPowerup('shield')) return false; // Shield invulnerability
 

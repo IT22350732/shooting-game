@@ -2,11 +2,22 @@ import * as THREE from 'three';
 import { ArenaId, GraphicsQuality } from '../../types/game';
 import { TextureGenerator } from './TextureGenerator';
 import { soundManager } from '../../audio/SoundManager';
+import { DestructibleProp, DestructibleType, LootType } from '../entities/DestructibleProp';
 
 export interface ArenaObstacle {
   mesh: THREE.Mesh | THREE.Group;
   box: THREE.Box3;
   isCover: boolean;
+}
+
+export interface InteriorZone {
+  id: string;
+  name: string;
+  center: THREE.Vector3;
+  width: number;
+  depth: number;
+  height: number;
+  rotY: number;
 }
 
 export interface SpawnPoint {
@@ -142,6 +153,8 @@ export class ArenaManager {
   public spawnPoints: SpawnPoint[] = [];
   public explosiveBarrels: ExplosiveBarrel[] = [];
   public doors: InteractiveDoor[] = [];
+  public interiorZones: InteriorZone[] = [];
+  public destructibles: DestructibleProp[] = [];
   public arenaSize = 130; // Expanded 130x130m realistic neighborhood / city block
   public graphicsQuality: GraphicsQuality = 'high';
 
@@ -161,6 +174,55 @@ export class ArenaManager {
     for (let i = 0; i < this.doors.length; i++) {
       this.doors[i].update(delta);
     }
+    for (let i = 0; i < this.destructibles.length; i++) {
+      this.destructibles[i].update(delta);
+    }
+  }
+
+  public isPositionInsideBuilding(pos: THREE.Vector3): boolean {
+    for (let i = 0; i < this.interiorZones.length; i++) {
+      const z = this.interiorZones[i];
+      const local = new THREE.Vector3().subVectors(pos, z.center);
+      if (z.rotY) {
+        local.applyAxisAngle(new THREE.Vector3(0, 1, 0), -z.rotY);
+      }
+      const halfW = (z.width - 0.7) / 2;
+      const halfD = (z.depth - 0.7) / 2;
+      if (
+        local.x >= -halfW &&
+        local.x <= halfW &&
+        local.z >= -halfD &&
+        local.z <= halfD &&
+        pos.y >= -0.5 &&
+        pos.y <= z.height + 1.2
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public getBuildingAtPosition(pos: THREE.Vector3): InteriorZone | null {
+    for (let i = 0; i < this.interiorZones.length; i++) {
+      const z = this.interiorZones[i];
+      const local = new THREE.Vector3().subVectors(pos, z.center);
+      if (z.rotY) {
+        local.applyAxisAngle(new THREE.Vector3(0, 1, 0), -z.rotY);
+      }
+      const halfW = (z.width - 0.7) / 2;
+      const halfD = (z.depth - 0.7) / 2;
+      if (
+        local.x >= -halfW &&
+        local.x <= halfW &&
+        local.z >= -halfD &&
+        local.z <= halfD &&
+        pos.y >= -0.5 &&
+        pos.y <= z.height + 1.2
+      ) {
+        return z;
+      }
+    }
+    return null;
   }
 
   public loadArena(arenaId: ArenaId, quality?: GraphicsQuality) {
@@ -175,6 +237,9 @@ export class ArenaManager {
     this.spawnPoints = [];
     this.explosiveBarrels = [];
     this.doors = [];
+    this.destructibles.forEach(d => d.dispose());
+    this.destructibles = [];
+    this.interiorZones = [];
 
     switch (arenaId) {
       case 'desert':
@@ -1492,27 +1557,60 @@ export class ArenaManager {
     const deskBox = new THREE.Box3().setFromObject(desk);
     this.obstacles.push({ mesh: desk, box: deskBox, isCover: true });
 
-    // Corner Stack of Supply Crates (waist-high interior tactical cover)
-    const crateMat = new THREE.MeshStandardMaterial({ color: 0xa16207, roughness: 0.8 });
-    const crateGeo = new THREE.BoxGeometry(1.05, 1.05, 1.05);
+    // Register Interior Sanctuary Zone for immunity & safe room detection
+    this.interiorZones.push({
+      id: options.id,
+      name: options.name,
+      center: new THREE.Vector3(options.x, 0, options.z),
+      width: w,
+      depth: d,
+      height: wallH,
+      rotY: options.rotY || 0
+    });
 
-    const crate1 = new THREE.Mesh(crateGeo, crateMat);
-    crate1.position.set(-w / 2 + 1.2, 0.53, -d / 2 + 1.2);
-    crate1.castShadow = true;
-    crate1.receiveShadow = true;
-    group.add(crate1);
+    // 10. Interactive Shootable Props & Loot Containers
+    const buildingRot = options.rotY || 0;
+    const yAxis = new THREE.Vector3(0, 1, 0);
 
-    const crate2 = new THREE.Mesh(crateGeo, crateMat);
-    crate2.position.set(-w / 2 + 1.2, 0.53, -d / 2 + 2.4);
-    crate2.castShadow = true;
-    crate2.receiveShadow = true;
-    group.add(crate2);
+    const spawnBuildingProp = (
+      type: DestructibleType,
+      localX: number,
+      localY: number,
+      localZ: number,
+      localRot: number,
+      loot: LootType,
+      suffix: string
+    ) => {
+      const v = new THREE.Vector3(localX, localY, localZ);
+      v.applyAxisAngle(yAxis, buildingRot);
+      v.add(group.position);
+      const prop = new DestructibleProp(
+        `${options.id}-prop-${suffix}`,
+        type,
+        v,
+        buildingRot + localRot,
+        loot,
+        options.id
+      );
+      this.arenaGroup.add(prop.mesh);
+      this.destructibles.push(prop);
+      this.obstacles.push(prop.obstacle);
+    };
 
-    group.updateMatrixWorld(true);
-    const crateBox1 = new THREE.Box3().setFromObject(crate1);
-    this.obstacles.push({ mesh: crate1, box: crateBox1, isCover: true });
-    const crateBox2 = new THREE.Box3().setFromObject(crate2);
-    this.obstacles.push({ mesh: crate2, box: crateBox2, isCover: true });
+    // Prop 1: Terracotta Pot on top of the desk (drops gold coin pack)
+    spawnBuildingProp('clay_pot', 0.5, 0.9, -d / 2 + 1.3, 0, 'coin_pack', 'pot-1');
+
+    // Prop 2: Wooden Loot Crate in back-left corner (drops medkit health pack)
+    spawnBuildingProp('loot_crate', -w / 2 + 1.25, 0, -d / 2 + 1.25, 0.1, 'health_pack', 'crate-1');
+
+    // Prop 3: Tactical Ammo Crate along side wall (drops ammo pack)
+    spawnBuildingProp('loot_crate', -w / 2 + 1.25, 0, -d / 2 + 2.5, -0.15, 'ammo_pack', 'crate-2');
+
+    // Prop 4: Armored Tech Safe in back-right corner (drops body armor pack)
+    spawnBuildingProp('tech_safe', w / 2 - 1.25, 0, -d / 2 + 1.25, -Math.PI / 4, 'armor_pack', 'safe-1');
+
+    // Prop 5: Extra Clay Pot near front corner (drops coins)
+    spawnBuildingProp('clay_pot', w / 2 - 1.25, 0, d / 2 - 1.6, 0.4, 'coin_pack', 'pot-2');
 
     // Tactical Screen / Whiteboard on back interior wall
     const screenGeo = new THREE.BoxGeometry(2.2, 1.2, 0.06);

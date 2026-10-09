@@ -80,6 +80,8 @@ interface HUDProps {
     playerPos?: { x: number; y: number; z: number };
     playerYaw?: number;
     interactionPrompt?: string | null;
+    isSheltered?: boolean;
+    shelterName?: string;
   };
   hitMarker: HitMarkerInfo | null;
   damageNumbers: FloatingDamageNumber[];
@@ -636,6 +638,52 @@ export const HUD: React.FC<HUDProps> = ({
           </div>
           <span style={{ textTransform: 'uppercase', color: '#e0f2fe' }}>
             {stats.interactionPrompt}
+          </span>
+        </div>
+      )}
+
+      {/* INDOOR SANCTUARY IMMUNITY STATUS BADGE */}
+      {stats.isSheltered && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 65,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            pointerEvents: 'none',
+            zIndex: 60,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            background: 'linear-gradient(135deg, rgba(6, 78, 59, 0.9), rgba(15, 23, 42, 0.94))',
+            backdropFilter: 'blur(10px)',
+            border: '1.5px solid rgba(52, 211, 153, 0.85)',
+            boxShadow: '0 0 25px rgba(52, 211, 153, 0.4), inset 0 0 14px rgba(52, 211, 153, 0.2)',
+            borderRadius: 24,
+            padding: '7px 20px',
+            color: '#ecfdf5',
+            fontFamily: 'system-ui, sans-serif',
+            fontSize: '12px',
+            letterSpacing: '1.5px',
+            fontWeight: 800
+          }}
+        >
+          <Shield size={16} color="#34d399" />
+          <span style={{ textTransform: 'uppercase', color: '#6ee7b7' }}>
+            {stats.shelterName ? `${stats.shelterName.toUpperCase()} SANCTUARY` : 'INDOOR SANCTUARY'}
+          </span>
+          <span
+            style={{
+              fontSize: '10px',
+              color: '#a7f3d0',
+              background: 'rgba(6, 78, 59, 0.7)',
+              padding: '2px 8px',
+              borderRadius: 12,
+              border: '1px solid rgba(52, 211, 153, 0.5)',
+              letterSpacing: '1px'
+            }}
+          >
+            IMMUNE TO ENEMY FIRE
           </span>
         </div>
       )}
