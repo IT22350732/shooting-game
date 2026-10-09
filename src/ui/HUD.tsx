@@ -15,7 +15,8 @@ import {
   HelpCircle,
   Wifi,
   Skull,
-  Activity
+  Activity,
+  DoorOpen
 } from 'lucide-react';
 import {
   WeaponId,
@@ -82,6 +83,8 @@ interface HUDProps {
     interactionPrompt?: string | null;
     isSheltered?: boolean;
     shelterName?: string;
+    isInsideBuilding?: boolean;
+    isBuildingDoorOpen?: boolean;
   };
   hitMarker: HitMarkerInfo | null;
   damageNumbers: FloatingDamageNumber[];
@@ -642,8 +645,8 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       )}
 
-      {/* INDOOR SANCTUARY IMMUNITY STATUS BADGE */}
-      {stats.isSheltered && (
+      {/* INDOOR SANCTUARY / BUILDING STATUS BADGE */}
+      {stats.isInsideBuilding && (
         <div
           style={{
             position: 'absolute',
@@ -655,10 +658,16 @@ export const HUD: React.FC<HUDProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: 10,
-            background: 'linear-gradient(135deg, rgba(6, 78, 59, 0.9), rgba(15, 23, 42, 0.94))',
+            background: stats.isSheltered
+              ? 'linear-gradient(135deg, rgba(6, 78, 59, 0.92), rgba(15, 23, 42, 0.95))'
+              : 'linear-gradient(135deg, rgba(120, 53, 15, 0.92), rgba(15, 23, 42, 0.95))',
             backdropFilter: 'blur(10px)',
-            border: '1.5px solid rgba(52, 211, 153, 0.85)',
-            boxShadow: '0 0 25px rgba(52, 211, 153, 0.4), inset 0 0 14px rgba(52, 211, 153, 0.2)',
+            border: stats.isSheltered
+              ? '1.5px solid rgba(52, 211, 153, 0.85)'
+              : '1.5px solid rgba(245, 158, 11, 0.85)',
+            boxShadow: stats.isSheltered
+              ? '0 0 25px rgba(52, 211, 153, 0.4), inset 0 0 14px rgba(52, 211, 153, 0.2)'
+              : '0 0 25px rgba(245, 158, 11, 0.4), inset 0 0 14px rgba(245, 158, 11, 0.2)',
             borderRadius: 24,
             padding: '7px 20px',
             color: '#ecfdf5',
@@ -668,23 +677,47 @@ export const HUD: React.FC<HUDProps> = ({
             fontWeight: 800
           }}
         >
-          <Shield size={16} color="#34d399" />
-          <span style={{ textTransform: 'uppercase', color: '#6ee7b7' }}>
-            {stats.shelterName ? `${stats.shelterName.toUpperCase()} SANCTUARY` : 'INDOOR SANCTUARY'}
-          </span>
-          <span
-            style={{
-              fontSize: '10px',
-              color: '#a7f3d0',
-              background: 'rgba(6, 78, 59, 0.7)',
-              padding: '2px 8px',
-              borderRadius: 12,
-              border: '1px solid rgba(52, 211, 153, 0.5)',
-              letterSpacing: '1px'
-            }}
-          >
-            IMMUNE TO ENEMY FIRE
-          </span>
+          {stats.isSheltered ? (
+            <>
+              <Shield size={16} color="#34d399" />
+              <span style={{ textTransform: 'uppercase', color: '#6ee7b7' }}>
+                {stats.shelterName ? stats.shelterName.toUpperCase() : 'BUILDING'} • SAFE (DOOR CLOSED)
+              </span>
+              <span
+                style={{
+                  fontSize: '10px',
+                  color: '#a7f3d0',
+                  background: 'rgba(6, 78, 59, 0.7)',
+                  padding: '2px 8px',
+                  borderRadius: 12,
+                  border: '1px solid rgba(52, 211, 153, 0.5)',
+                  letterSpacing: '1px'
+                }}
+              >
+                ENEMIES CANNOT ENTER
+              </span>
+            </>
+          ) : (
+            <>
+              <DoorOpen size={16} color="#fbbf24" />
+              <span style={{ textTransform: 'uppercase', color: '#fde68a' }}>
+                {stats.shelterName ? stats.shelterName.toUpperCase() : 'BUILDING'} • DOOR OPEN
+              </span>
+              <span
+                style={{
+                  fontSize: '10px',
+                  color: '#fef08a',
+                  background: 'rgba(180, 83, 9, 0.65)',
+                  padding: '2px 8px',
+                  borderRadius: 12,
+                  border: '1px solid rgba(245, 158, 11, 0.6)',
+                  letterSpacing: '1px'
+                }}
+              >
+                ENEMIES CAN ENTER • [E] TO CLOSE
+              </span>
+            </>
+          )}
         </div>
       )}
 
