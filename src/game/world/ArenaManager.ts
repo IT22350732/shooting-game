@@ -18,6 +18,10 @@ export interface InteriorZone {
   depth: number;
   height: number;
   rotY: number;
+  door: InteractiveDoor;
+  doorWorldPos: THREE.Vector3;
+  doorApproachPos: THREE.Vector3;
+  doorInsidePos: THREE.Vector3;
 }
 
 export interface SpawnPoint {
@@ -1558,6 +1562,12 @@ export class ArenaManager {
     this.obstacles.push({ mesh: desk, box: deskBox, isCover: true });
 
     // Register Interior Sanctuary Zone for immunity & safe room detection
+    const bRot = options.rotY || 0;
+    const doorApproachLocal = new THREE.Vector3(0, 0, d / 2 + 2.2);
+    const doorInsideLocal = new THREE.Vector3(0, 0, d / 2 - 1.6);
+    const doorApproachPos = doorApproachLocal.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), bRot).add(group.position);
+    const doorInsidePos = doorInsideLocal.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), bRot).add(group.position);
+
     this.interiorZones.push({
       id: options.id,
       name: options.name,
@@ -1565,7 +1575,11 @@ export class ArenaManager {
       width: w,
       depth: d,
       height: wallH,
-      rotY: options.rotY || 0
+      rotY: bRot,
+      door,
+      doorWorldPos: worldDoorPos,
+      doorApproachPos,
+      doorInsidePos
     });
 
     // 10. Interactive Shootable Props & Loot Containers

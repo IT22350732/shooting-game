@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { EnemyType } from '../../types/game';
 import { soundManager } from '../../audio/SoundManager';
-import { ArenaObstacle } from '../world/ArenaManager';
+import { ArenaObstacle, InteriorZone } from '../world/ArenaManager';
 
 export interface EnemyShootEvent {
   origin: THREE.Vector3;
@@ -11,6 +11,12 @@ export interface EnemyShootEvent {
   spread?: number;
   soundType?: 'rifle' | 'shotgun' | 'smg' | 'sniper' | 'plasma';
   isPlasma?: boolean;
+}
+
+export interface EnemyBuildingContext {
+  playerBuilding: InteriorZone | null;
+  arenaSize?: number;
+  isInsideBuilding?: (pos: THREE.Vector3) => boolean;
 }
 
 interface HumanTheme {
@@ -776,7 +782,8 @@ export class Enemy {
     obstacles: ArenaObstacle[],
     onShoot?: (event: EnemyShootEvent) => void,
     onPlayerHit?: (damage: number) => void,
-    onExplode?: (enemy: Enemy) => void
+    onExplode?: (enemy: Enemy) => void,
+    buildingContext?: EnemyBuildingContext
   ) {
     // 1. Human Death Animation (ragdoll collapse backward onto the floor, then sinks away)
     if (this.isDead) {
@@ -812,11 +819,52 @@ export class Enemy {
     this.healthBarBg.lookAt(playerPos.x, this.healthBarBg.position.y + this.position.y, playerPos.z);
     this.healthBarMesh.lookAt(playerPos.x, this.healthBarMesh.position.y + this.position.y, playerPos.z);
 
+    const playerBuilding = buildingContext?.playerBuilding || null;
+    const isPlayerInBuilding = playerBuilding !== null;
+    const isDoorOpen = playerBuilding ? playerBuilding.door.isOpen : false;
+    const isEnemyInPlayerBuilding = playerBuilding
+      ? (buildingContext?.isInsideBuilding ? buildingContext.isInsideBuilding(this.position) : false)
+      : false;
+
+    // Tactical Target Acquisition: doorway waypoints or direct player tracking
+    let aimTarget = playerPos;
+    let moveTarget = playerPos;
+
+    if (isPlayerInBuilding) {
+      if (isEnemyInPlayerBuilding) {
+        // Both enemy and player are inside the building: direct close-quarters indoor combat!
+        aimTarget = playerPos;
+        moveTarget = playerPos;
+      } else if (isDoorOpen) {
+        // Player is inside and door is OPEN: enemies actively enter through the doorway!
+        const distToApproach = this.position.distanceTo(playerBuilding.doorApproachPos);
+        if (distToApproach > 2.0) {
+          // Approach front entrance outside
+          moveTarget = playerBuilding.doorApproachPos;
+          aimTarget = playerBuilding.doorApproachPos;
+        } else {
+          // Cross open threshold into building interior
+          moveTarget = playerBuilding.doorInsidePos;
+          aimTarget = playerPos;
+        }
+      } else {
+        // Player is inside and door is CLOSED: enemies CANNOT enter!
+        const distToApproach = this.position.distanceTo(playerBuilding.doorApproachPos);
+        if (distToApproach > 4.5) {
+          moveTarget = playerBuilding.doorApproachPos;
+        } else {
+          moveTarget = this.position;
+        }
+        aimTarget = playerBuilding.doorWorldPos;
+      }
+    }
+
     const distToPlayer = this.position.distanceTo(playerPos);
+    const distToMoveTarget = this.position.distanceTo(moveTarget);
     this.stateTimer += delta;
 
-    // Turn toward player
-    const targetAngle = Math.atan2(playerPos.x - this.position.x, playerPos.z - this.position.z);
+    // Turn toward target
+    const targetAngle = Math.atan2(aimTarget.x - this.position.x, aimTarget.z - this.position.z);
     this.mesh.rotation.y = THREE.MathUtils.lerp(this.mesh.rotation.y, targetAngle, delta * 8);
 
     // 3. Exploder Fuse Logic & Blinking Chest Core
@@ -854,20 +902,36 @@ export class Enemy {
     // 4. Movement & Combat AI
     let moveDir = new THREE.Vector3();
 
-    if (this.type === 'exploder') {
-      // Suicide bomber charges directly into player to detonate
-      moveDir.subVectors(playerPos, this.position).normalize();
+    if (isPlayerInBuilding && !isEnemyInPlayerBuilding && !isDoorOpen) {
+      // Door is closed: enemy outside holds position and paces/patrols outside, CANNOT enter!
+      if (distToMoveTarget > 0.5) {
+        moveDir.subVectors(moveTarget, this.position).normalize();
+      } else {
+        // Gentle strafe outside the entrance
+        if (this.stateTimer > 2.5) {
+          this.strafeDir *= -1;
+          this.stateTimer = 0;
+        }
+        const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mesh.rotation.y);
+        moveDir.copy(right).multiplyScalar(this.strafeDir * 0.45);
+      }
+    } else if (this.type === 'exploder') {
+      // Suicide bomber charges directly to moveTarget (enters doorway if open, or charges player)
+      moveDir.subVectors(moveTarget, this.position).normalize();
+    } else if (isPlayerInBuilding && !isEnemyInPlayerBuilding && isDoorOpen) {
+      // Infiltrating into the building through the open door!
+      moveDir.subVectors(moveTarget, this.position).normalize();
     } else {
       // ARMED HUMAN COMBATANT (SHOOTING & TACTICAL ENGAGEMENT)
       const minDistance = this.type === 'ranged' ? 12 : (this.type === 'basic' ? 8 : (this.type === 'tank' ? 6 : 5));
       const maxDistance = this.type === 'ranged' ? 24 : (this.type === 'basic' ? 15 : 13);
 
-      if (distToPlayer > maxDistance) {
+      if (distToMoveTarget > maxDistance) {
         // Advance into optimal combat firing range
-        moveDir.subVectors(playerPos, this.position).normalize();
-      } else if (distToPlayer < minDistance) {
+        moveDir.subVectors(moveTarget, this.position).normalize();
+      } else if (distToMoveTarget < minDistance) {
         // Backpedal to maintain tactical shooting distance
-        moveDir.subVectors(this.position, playerPos).normalize();
+        moveDir.subVectors(this.position, moveTarget).normalize();
       } else {
         // In sweet-spot: strafe left & right while aiming and firing
         if (this.stateTimer > 2.2) {
@@ -877,18 +941,21 @@ export class Enemy {
         const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mesh.rotation.y);
         moveDir.copy(right).multiplyScalar(this.strafeDir * 0.75);
       }
+    }
 
-      // Close-range emergency melee strike if player is within 1.8m
-      if (distToPlayer < 1.8 && this.attackCooldown <= 0) {
-        this.attackCooldown = 0.8;
-        if (onPlayerHit) {
-          onPlayerHit(this.damage + 4);
-        }
+    // Close-range emergency melee strike if player is within 1.8m
+    const canMelee = !isPlayerInBuilding || isEnemyInPlayerBuilding || isDoorOpen;
+    if (distToPlayer < 1.8 && this.attackCooldown <= 0 && canMelee) {
+      this.attackCooldown = 0.8;
+      if (onPlayerHit) {
+        onPlayerHit(this.damage + 4);
       }
+    }
 
-      // Ranged Fire Attack (Shooting at player)
-      if (this.attackCooldown <= 0 && distToPlayer <= this.attackRange) {
-        this.attackCooldown = this.attackInterval + (Math.random() * 0.3 - 0.15);
+    // Ranged Fire Attack (Shooting at player)
+    const canShoot = !isPlayerInBuilding || isEnemyInPlayerBuilding || isDoorOpen;
+    if (canShoot && this.attackCooldown <= 0 && distToPlayer <= this.attackRange) {
+      this.attackCooldown = this.attackInterval + (Math.random() * 0.3 - 0.15);
 
         if (onShoot) {
           const shootOrigin = this.position.clone();
@@ -945,7 +1012,6 @@ export class Enemy {
           });
         }
       }
-    }
 
     const isMoving = moveDir.lengthSq() > 0.01;
 
@@ -1040,9 +1106,15 @@ export class Enemy {
       moveDir.normalize();
 
       const nextPos = this.position.clone().addScaledVector(moveDir, this.speed * delta);
+      const collisionDist = 0.45 * this.scaleFactor;
 
       for (const obs of obstacles) {
-        if (obs.box.distanceToPoint(nextPos) < 1.0) {
+        // Skip obstacles high above (roofs, lintels) or below ground
+        if (obs.box.min.y > 1.8 || obs.box.max.y < 0.05) continue;
+        // Skip empty boxes (e.g. open door obstacles)
+        if (obs.box.isEmpty()) continue;
+
+        if (obs.box.distanceToPoint(nextPos) < collisionDist) {
           const obsCenter = obs.box.getCenter(new THREE.Vector3());
           const toObs = new THREE.Vector3().subVectors(nextPos, obsCenter);
           toObs.y = 0;
@@ -1057,9 +1129,10 @@ export class Enemy {
         }
       }
 
-      this.position.x = THREE.MathUtils.clamp(nextPos.x, -37.5, 37.5);
+      const maxCoord = (buildingContext?.arenaSize ? buildingContext.arenaSize / 2 : 62) - 2.5;
+      this.position.x = THREE.MathUtils.clamp(nextPos.x, -maxCoord, maxCoord);
       this.position.y = 0; // Firmly lock to ground level
-      this.position.z = THREE.MathUtils.clamp(nextPos.z, -37.5, 37.5);
+      this.position.z = THREE.MathUtils.clamp(nextPos.z, -maxCoord, maxCoord);
       this.mesh.position.copy(this.position);
     }
   }

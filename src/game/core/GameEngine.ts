@@ -46,6 +46,8 @@ export interface HUDStats {
   maxArmor: number;
   isSheltered?: boolean;
   shelterName?: string;
+  isInsideBuilding?: boolean;
+  isBuildingDoorOpen?: boolean;
   ammo: number;
   maxAmmo: number;
   isReloading: boolean;
@@ -2136,9 +2138,10 @@ export class GameEngine {
       this.currentInteractionPrompt = null;
     }
 
-    // 0.06 Check Sanctuary Indoor Immunity State
+    // 0.06 Check Sanctuary Indoor Immunity State (Active when inside building AND door is closed)
     const currentBuilding = this.arena.getBuildingAtPosition(this.player.position);
-    this.player.isSheltered = currentBuilding !== null;
+    const isDoorClosed = currentBuilding ? !currentBuilding.door.isOpen : false;
+    this.player.isSheltered = currentBuilding !== null && isDoorClosed;
 
     // 0.1 Target Acquisition & Tactical Assist
     this.targetLock = this.updateTargetAcquisition();
@@ -2330,6 +2333,12 @@ export class GameEngine {
     }
 
     // 5. Enemies Update
+    const buildingContext = {
+      playerBuilding: currentBuilding,
+      arenaSize: this.arena.arenaSize,
+      isInsideBuilding: (pos: THREE.Vector3) => this.arena.isPositionInsideBuilding(pos)
+    };
+
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const enemy = this.enemies[i];
 
@@ -2357,8 +2366,11 @@ export class GameEngine {
         // on enemy ranged shoot
         (evt) => {
           if (this.mode === 'free_mode') return;
-          if (this.player.isSheltered) {
-            // Player is inside building sanctuary - enemies cannot shoot the user
+          const enemyBuilding = this.arena.getBuildingAtPosition(enemy.position);
+          const isEnemyInSameBuilding = currentBuilding && enemyBuilding && enemyBuilding.id === currentBuilding.id;
+
+          if (this.player.isSheltered && !isEnemyInSameBuilding) {
+            // Player is inside building with door closed - outside enemies cannot shoot the user
             return;
           }
 
@@ -2385,7 +2397,10 @@ export class GameEngine {
         // on enemy melee hit
         (damage) => {
           if (this.mode !== 'free_mode') {
-            if (this.player.isSheltered) {
+            const enemyBuilding = this.arena.getBuildingAtPosition(enemy.position);
+            const isEnemyInSameBuilding = currentBuilding && enemyBuilding && enemyBuilding.id === currentBuilding.id;
+
+            if (this.player.isSheltered && !isEnemyInSameBuilding) {
               soundManager.playDeflect();
               this.particles.spawnSparks(this.player.position, new THREE.Vector3(0, 1, 0), 0x38bdf8, 14);
               return;
@@ -2396,8 +2411,15 @@ export class GameEngine {
         },
         // on exploder self-destruct
         (exploderEnemy) => {
+          const enemyBuilding = this.arena.getBuildingAtPosition(exploderEnemy.position);
+          const isEnemyInSameBuilding = currentBuilding && enemyBuilding && enemyBuilding.id === currentBuilding.id;
+
+          if (this.player.isSheltered && !isEnemyInSameBuilding) {
+            return;
+          }
           this.handleEnemySelfDestruct(exploderEnemy);
-        }
+        },
+        buildingContext
       );
     }
 
@@ -2427,7 +2449,10 @@ export class GameEngine {
           this.arena.obstacles,
           // on boss attack
           (evt) => {
-            if (this.player.isSheltered) {
+            const bossBuilding = this.arena.getBuildingAtPosition(this.boss!.position);
+            const isBossInSameBuilding = currentBuilding && bossBuilding && bossBuilding.id === currentBuilding.id;
+
+            if (this.player.isSheltered && !isBossInSameBuilding) {
               soundManager.playDeflect();
               this.particles.spawnSparks(this.player.position, new THREE.Vector3(0, 1, 0), 0x38bdf8, 16);
               return;
@@ -2665,6 +2690,8 @@ export class GameEngine {
         maxArmor: this.player.stats.maxArmor,
         isSheltered: this.player.isSheltered,
         shelterName: currentBuilding?.name,
+        isInsideBuilding: currentBuilding !== null,
+        isBuildingDoorOpen: currentBuilding ? currentBuilding.door.isOpen : false,
         ammo: this.currentWeapon.currentAmmo,
         maxAmmo: this.currentWeapon.maxAmmo,
         isReloading: this.currentWeapon.isReloading,
