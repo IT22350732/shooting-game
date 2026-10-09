@@ -12,11 +12,14 @@ export class Player {
   public position: THREE.Vector3 = new THREE.Vector3(0, 1.8, 12);
   public velocity: THREE.Vector3 = new THREE.Vector3();
   public isGrounded: boolean = true;
-  private readonly playerRadius = 0.6;
+  private readonly playerRadius = 0.38;
   public stance: 'stand' | 'crouch' | 'prone' = 'stand';
   public targetEyeHeight: number = 1.75;
   public eyeHeight: number = 1.75;
   private walkTime: number = 0;
+
+  private static _newPos = new THREE.Vector3();
+  private static _nearbyObstacles: ArenaObstacle[] = [];
 
   // Camera angles
   public pitch: number = 0; // vertical (radians)
@@ -320,14 +323,33 @@ export class Player {
     this.velocity.y -= 22.0 * delta;
 
     // Proposed new position
-    const newPos = this.position.clone();
+    const newPos = Player._newPos.copy(this.position);
     newPos.x += this.velocity.x * delta;
     newPos.z += this.velocity.z * delta;
     newPos.y += this.velocity.y * delta;
 
     // Check landing on top of waist-high cover obstacles (crates, fences, cars)
     let groundY = this.eyeHeight;
-    for (const obs of obstacles) {
+    const searchDist = 3.0;
+
+    const nearby = Player._nearbyObstacles;
+    nearby.length = 0;
+
+    for (let i = 0; i < obstacles.length; i++) {
+      const obs = obstacles[i];
+      if (obs.box.isEmpty()) continue;
+      // Fast spatial pre-filter: skip obstacles beyond local radius
+      if (
+        newPos.x < obs.box.min.x - searchDist ||
+        newPos.x > obs.box.max.x + searchDist ||
+        newPos.z < obs.box.min.z - searchDist ||
+        newPos.z > obs.box.max.z + searchDist
+      ) {
+        continue;
+      }
+      nearby.push(obs);
+
+      // Check standing on top of waist-high cover
       if (obs.isCover && obs.box.max.y <= 2.2) {
         if (
           newPos.x >= obs.box.min.x - this.playerRadius * 0.6 &&
@@ -355,62 +377,59 @@ export class Player {
     newPos.x = Math.max(-halfArena, Math.min(halfArena, newPos.x));
     newPos.z = Math.max(-halfArena, Math.min(halfArena, newPos.z));
 
-    // Obstacle AABB Collision resolution with smooth wall sliding
-    const boxSize = new THREE.Vector3(this.playerRadius * 2, this.eyeHeight, this.playerRadius * 2);
+    // Smooth cylinder-to-AABB collision resolution with sliding (Zero sticking, zero micro-stutter)
+    const feetY = newPos.y - this.eyeHeight;
+    const r = this.playerRadius;
+    const passes = 2;
 
-    for (const obs of obstacles) {
-      // Skip horizontal blocking if standing safely on top
-      if (newPos.y > obs.box.max.y + this.eyeHeight - 0.05) continue;
+    for (let pass = 0; pass < passes; pass++) {
+      let collided = false;
+      for (let i = 0; i < nearby.length; i++) {
+        const obs = nearby[i];
+        // Skip horizontal blocking if standing safely on top or obstacle is above head
+        if (newPos.y > obs.box.max.y + this.eyeHeight - 0.05) continue;
+        if (obs.box.max.y <= feetY + 0.05) continue;
+        if (obs.box.min.y >= newPos.y + 0.1) continue;
 
-      const playerBox = new THREE.Box3().setFromCenterAndSize(
-        new THREE.Vector3(newPos.x, newPos.y - this.eyeHeight / 2, newPos.z),
-        boxSize
-      );
+        const clampX = THREE.MathUtils.clamp(newPos.x, obs.box.min.x, obs.box.max.x);
+        const clampZ = THREE.MathUtils.clamp(newPos.z, obs.box.min.z, obs.box.max.z);
+        const dx = newPos.x - clampX;
+        const dz = newPos.z - clampZ;
+        const distSq = dx * dx + dz * dz;
 
-      if (obs.box.intersectsBox(playerBox)) {
-        // Resolve collision along X
-        const testBoxX = new THREE.Box3().setFromCenterAndSize(
-          new THREE.Vector3(newPos.x, this.position.y - this.eyeHeight / 2, this.position.z),
-          boxSize
-        );
-        if (obs.box.intersectsBox(testBoxX)) {
-          newPos.x = this.position.x;
-          this.velocity.x = 0;
-        }
+        if (distSq < r * r) {
+          collided = true;
+          if (distSq > 0.000001) {
+            const dist = Math.sqrt(distSq);
+            const nx = dx / dist;
+            const nz = dz / dist;
+            const penetration = r - dist;
 
-        // Resolve collision along Z using the resolved newPos.x (allows smooth wall sliding!)
-        const testBoxZ = new THREE.Box3().setFromCenterAndSize(
-          new THREE.Vector3(newPos.x, this.position.y - this.eyeHeight / 2, newPos.z),
-          boxSize
-        );
-        if (obs.box.intersectsBox(testBoxZ)) {
-          newPos.z = this.position.z;
-          this.velocity.z = 0;
-        }
+            newPos.x += nx * penetration;
+            newPos.z += nz * penetration;
 
-        // Depenetration safeguard: If player is still intersecting after reverting (e.g. spawned into an obstacle), push out
-        const remainingBox = new THREE.Box3().setFromCenterAndSize(
-          new THREE.Vector3(newPos.x, newPos.y - this.eyeHeight / 2, newPos.z),
-          boxSize
-        );
-        if (obs.box.intersectsBox(remainingBox)) {
-          const pushX1 = obs.box.max.x - remainingBox.min.x;
-          const pushX2 = remainingBox.max.x - obs.box.min.x;
-          const pushZ1 = obs.box.max.z - remainingBox.min.z;
-          const pushZ2 = remainingBox.max.z - obs.box.min.z;
-
-          const minPushX = pushX1 < pushX2 ? pushX1 : -pushX2;
-          const minPushZ = pushZ1 < pushZ2 ? pushZ1 : -pushZ2;
-
-          if (Math.abs(minPushX) < Math.abs(minPushZ)) {
-            newPos.x += minPushX + (minPushX > 0 ? 0.05 : -0.05);
-            this.velocity.x = 0;
+            // Remove only inward velocity component: tangential sliding velocity is fully preserved!
+            const vDot = this.velocity.x * nx + this.velocity.z * nz;
+            if (vDot < 0) {
+              this.velocity.x -= vDot * nx;
+              this.velocity.z -= vDot * nz;
+            }
           } else {
-            newPos.z += minPushZ + (minPushZ > 0 ? 0.05 : -0.05);
-            this.velocity.z = 0;
+            // Player center strictly inside box: push out along shallowest face
+            const dLeft = newPos.x - obs.box.min.x;
+            const dRight = obs.box.max.x - newPos.x;
+            const dBack = newPos.z - obs.box.min.z;
+            const dFront = obs.box.max.z - newPos.z;
+            const minD = Math.min(dLeft, dRight, dBack, dFront);
+
+            if (minD === dLeft) { newPos.x = obs.box.min.x - r; if (this.velocity.x > 0) this.velocity.x = 0; }
+            else if (minD === dRight) { newPos.x = obs.box.max.x + r; if (this.velocity.x < 0) this.velocity.x = 0; }
+            else if (minD === dBack) { newPos.z = obs.box.min.z - r; if (this.velocity.z > 0) this.velocity.z = 0; }
+            else { newPos.z = obs.box.max.z + r; if (this.velocity.z < 0) this.velocity.z = 0; }
           }
         }
       }
+      if (!collided) break;
     }
 
     this.position.copy(newPos);
