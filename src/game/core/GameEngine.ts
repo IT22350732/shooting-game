@@ -2336,8 +2336,35 @@ export class GameEngine {
     const buildingContext = {
       playerBuilding: currentBuilding,
       arenaSize: this.arena.arenaSize,
-      isInsideBuilding: (pos: THREE.Vector3) => this.arena.isPositionInsideBuilding(pos)
+      isInsideBuilding: (pos: THREE.Vector3) => this.arena.isPositionInsideBuilding(pos),
+      getBuildingAtPosition: (pos: THREE.Vector3) => this.arena.getBuildingAtPosition(pos)
     };
+
+    // 5a. Inter-enemy separation pass: prevents swarms from clipping into each other and pushing through walls
+    const activeEnemiesCount = this.enemies.length;
+    for (let i = 0; i < activeEnemiesCount; i++) {
+      const eA = this.enemies[i];
+      if (eA.isDead) continue;
+      for (let j = i + 1; j < activeEnemiesCount; j++) {
+        const eB = this.enemies[j];
+        if (eB.isDead) continue;
+
+        const dx = eB.position.x - eA.position.x;
+        const dz = eB.position.z - eA.position.z;
+        const distSq = dx * dx + dz * dz;
+        const minDist = 0.92;
+        if (distSq < minDist * minDist && distSq > 0.0001) {
+          const dist = Math.sqrt(distSq);
+          const push = (minDist - dist) * 0.5;
+          const nx = dx / dist;
+          const nz = dz / dist;
+          eA.position.x -= nx * push;
+          eA.position.z -= nz * push;
+          eB.position.x += nx * push;
+          eB.position.z += nz * push;
+        }
+      }
+    }
 
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       const enemy = this.enemies[i];
