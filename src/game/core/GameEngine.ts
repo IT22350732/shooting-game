@@ -289,7 +289,7 @@ export class GameEngine {
     const localTeam = multiplayerService.localPlayer?.team || 'alpha';
     if (mode === 'multiplayer_coop') {
       spawn = new THREE.Vector3(0, this.player.eyeHeight, 14);
-      this.waveManager.reset();
+      this.waveManager.reset(mode);
       this.waveManager.currentWave = 1;
     } else if (mode === 'multiplayer_tdm') {
       spawn = localTeam === 'alpha' ? new THREE.Vector3(0, this.player.eyeHeight, 16) : new THREE.Vector3(0, this.player.eyeHeight, -16);
@@ -428,17 +428,22 @@ export class GameEngine {
           if (!localEnemy) {
             const spawnPos = new THREE.Vector3(re.position.x, re.position.y, re.position.z);
             localEnemy = new Enemy(re.id, re.type as EnemyType, spawnPos, 1.0, { hp: 1, dmg: 1, speed: 1 });
-            localEnemy.health = re.health;
-            localEnemy.maxHealth = re.maxHealth;
+            localEnemy.setHealth(re.health, re.maxHealth);
+            if (re.isDead) {
+              localEnemy.die();
+            }
             this.enemies.push(localEnemy);
             this.scene.add(localEnemy.mesh);
           } else {
             localEnemy.position.lerp(new THREE.Vector3(re.position.x, re.position.y, re.position.z), 0.35);
             localEnemy.mesh.position.copy(localEnemy.position);
             localEnemy.mesh.rotation.y = re.yaw;
-            localEnemy.health = re.health;
+            // Synchronize health with host (only if host has lower health or enemy was killed)
+            if (re.health < localEnemy.health) {
+              localEnemy.setHealth(re.health, re.maxHealth);
+            }
             if (re.isDead && !localEnemy.isDead) {
-              localEnemy.isDead = true;
+              localEnemy.die();
               this.particles.spawnExplosion(localEnemy.position, 25);
             }
           }
@@ -448,7 +453,7 @@ export class GameEngine {
         if (!multiplayerService.isHost) {
           for (let i = this.enemies.length - 1; i >= 0; i--) {
             const e = this.enemies[i];
-            if (!activeIds.has(e.id)) {
+            if (!activeIds.has(e.id) && (e.isDead || e.mesh.scale.x <= 0.08)) {
               this.scene.remove(e.mesh);
               e.dispose();
               this.enemies.splice(i, 1);
@@ -457,22 +462,27 @@ export class GameEngine {
         }
       },
       onEnemyHit: (shooterId, enemyId, damage, isHeadshot, hitPoint) => {
-        if (!this.isMultiplayer || !multiplayerService.isHost) return;
-        const enemy = this.enemies.find(e => e.id === enemyId);
-        if (enemy && !enemy.isDead) {
-          const res = enemy.takeDamage(damage, isHeadshot);
-          const hpVec = new THREE.Vector3(hitPoint.x, hitPoint.y, hitPoint.z);
-          this.particles.spawnSparks(hpVec, new THREE.Vector3(0, 1, 0), isHeadshot ? 0xfef08a : 0xef4444, 12);
-          if (res.killed) {
-            this.handleMultiplayerEnemyKilled(enemy, shooterId, isHeadshot);
+        if (!this.isMultiplayer) return;
+        // Host and non-shooter peers apply authoritative hit damage
+        if (shooterId !== multiplayerService.localPlayerId) {
+          const enemy = this.enemies.find(e => e.id === enemyId);
+          if (enemy && !enemy.isDead) {
+            const res = enemy.takeDamage(damage, isHeadshot);
+            const hpVec = new THREE.Vector3(hitPoint.x, hitPoint.y, hitPoint.z);
+            this.particles.spawnSparks(hpVec, new THREE.Vector3(0, 1, 0), isHeadshot ? 0xfef08a : 0xef4444, 12);
+            if (res.killed) {
+              this.handleMultiplayerEnemyKilled(enemy, shooterId, isHeadshot);
+            }
           }
         }
       },
       onEnemyKilled: (enemyId, killerId, isHeadshot, rewardScore) => {
         const enemy = this.enemies.find(e => e.id === enemyId);
         if (enemy) {
-          enemy.isDead = true;
-          this.particles.spawnExplosion(enemy.position, 25);
+          if (!enemy.isDead) {
+            enemy.die();
+            this.particles.spawnExplosion(enemy.position, 25);
+          }
         }
         if (killerId === multiplayerService.localPlayerId) {
           this.player.stats.kills++;
@@ -518,8 +528,10 @@ export class GameEngine {
   }
 
   private handleMultiplayerEnemyKilled(enemy: Enemy, killerId: string, isHeadshot: boolean) {
+    if (enemy.isDead && enemy.isKillProcessed) return;
     enemy.isDead = true;
     enemy.isKillProcessed = true;
+    enemy.die();
     this.particles.spawnExplosion(enemy.position, 30);
     const reward = isHeadshot ? 150 : 100;
     multiplayerService.broadcastEnemyKilled(enemy.id, isHeadshot, reward);
@@ -1319,8 +1331,20 @@ export class GameEngine {
         if (dot > 0.4) {
           const res = enemy.takeDamage(95, true);
           this.triggerHitFeedback(enemy.position.clone().setY(origin.y), res.finalDamage, true);
+          if (this.isMultiplayer) {
+            multiplayerService.reportEnemyHit(
+              enemy.id,
+              res.finalDamage,
+              true,
+              { x: enemy.position.x, y: enemy.position.y + 1, z: enemy.position.z }
+            );
+          }
           if (res.killed) {
-            this.handleEnemyKill(enemy, true);
+            if (this.isMultiplayer) {
+              this.handleMultiplayerEnemyKilled(enemy, multiplayerService.localPlayerId, true);
+            } else {
+              this.handleEnemyKill(enemy, true);
+            }
           }
           hitAny = true;
           break;
@@ -1360,8 +1384,20 @@ export class GameEngine {
             const dmg = Math.round(180 * factor);
             const res = enemy.takeDamage(dmg, false);
             this.triggerHitFeedback(enemy.position, res.finalDamage, false);
+            if (this.isMultiplayer) {
+              multiplayerService.reportEnemyHit(
+                enemy.id,
+                res.finalDamage,
+                false,
+                { x: enemy.position.x, y: enemy.position.y + 1, z: enemy.position.z }
+              );
+            }
             if (res.killed) {
-              this.handleEnemyKill(enemy, false);
+              if (this.isMultiplayer) {
+                this.handleMultiplayerEnemyKilled(enemy, multiplayerService.localPlayerId, false);
+              } else {
+                this.handleEnemyKill(enemy, false);
+              }
             }
           }
         }
@@ -1540,11 +1576,13 @@ export class GameEngine {
         if (r.isAlive) targets.push(r.mesh);
       });
     }
-    this.enemies.forEach(e => targets.push(e.mesh));
+    this.enemies.forEach(e => {
+      if (!e.isDead) targets.push(e.mesh);
+    });
     this.practiceTargets.forEach(t => {
       if (!t.isDead) targets.push(t.mesh);
     });
-    if (this.boss) targets.push(this.boss.mesh);
+    if (this.boss && !this.boss.isDead) targets.push(this.boss.mesh);
     this.arena.obstacles.forEach(o => targets.push(o.mesh));
     this.arena.explosiveBarrels.forEach(b => {
       if (!b.exploded) targets.push(b.mesh);
@@ -1674,14 +1712,6 @@ export class GameEngine {
           }
 
           const baseDmg = this.currentWeapon.config.damage * (hasDamageBoost ? 2.0 : 1.0);
-
-          if (this.isMultiplayer && !multiplayerService.isHost) {
-            this.particles.spawnSparks(hitPoint, hitNormal, isHeadshot ? 0xfef08a : 0xf97316, 14);
-            this.triggerHitFeedback(hitPoint, Math.round(baseDmg), isHeadshot);
-            multiplayerService.reportEnemyHit(enemy.id, baseDmg, isHeadshot, { x: hitPoint.x, y: hitPoint.y, z: hitPoint.z });
-            return;
-          }
-
           const res = enemy.takeDamage(baseDmg, isHeadshot, hitNormal);
 
           if (res.blocked) {
@@ -1692,6 +1722,15 @@ export class GameEngine {
 
           this.particles.spawnSparks(hitPoint, hitNormal, isHeadshot ? 0xfef08a : 0xf97316, 14);
           this.triggerHitFeedback(hitPoint, res.finalDamage, isHeadshot);
+
+          if (this.isMultiplayer) {
+            multiplayerService.reportEnemyHit(
+              enemy.id,
+              res.finalDamage,
+              isHeadshot,
+              { x: hitPoint.x, y: hitPoint.y, z: hitPoint.z }
+            );
+          }
 
           if (res.killed) {
             if (this.isMultiplayer) {
@@ -1733,8 +1772,20 @@ export class GameEngine {
           const factor = 1 - (dist / barrel.radius);
           const res = enemy.takeDamage(Math.round(barrel.damage * factor), false);
           this.triggerHitFeedback(enemy.position, res.finalDamage, false);
+          if (this.isMultiplayer) {
+            multiplayerService.reportEnemyHit(
+              enemy.id,
+              res.finalDamage,
+              false,
+              { x: enemy.position.x, y: enemy.position.y + 1, z: enemy.position.z }
+            );
+          }
           if (res.killed) {
-            this.handleEnemyKill(enemy, false);
+            if (this.isMultiplayer) {
+              this.handleMultiplayerEnemyKilled(enemy, multiplayerService.localPlayerId, false);
+            } else {
+              this.handleEnemyKill(enemy, false);
+            }
           }
         }
       }
@@ -2155,7 +2206,7 @@ export class GameEngine {
             this.triggerGameOver();
             return;
           }
-        } else if (isTDM && enableBots) {
+        } else if ((isTDM || this.mode === 'multiplayer_ffa') && enableBots) {
           // Maintain 3-4 tactical enemy combatant bots so players always have combat
           const aliveEnemies = this.enemies.filter(e => !e.isDead).length;
           if (aliveEnemies < 4 && this.enemies.length < 5) {
@@ -2169,7 +2220,7 @@ export class GameEngine {
 
         // Broadcast enemy sync at 10Hz (every 100ms)
         this.multiplayerEnemySyncTimer += delta;
-        if ((isCoop || (isTDM && enableBots)) && this.multiplayerEnemySyncTimer >= 0.1) {
+        if ((isCoop || ((isTDM || this.mode === 'multiplayer_ffa') && enableBots)) && this.multiplayerEnemySyncTimer >= 0.1) {
           this.multiplayerEnemySyncTimer = 0;
           const enemyStates = this.enemies.map(e => ({
             id: e.id,
@@ -2367,17 +2418,20 @@ export class GameEngine {
         if (!proj.isDead) {
           for (const enemy of this.enemies) {
             if (!enemy.isDead && enemy.position.distanceTo(proj.position) < (enemy.getHeight() * 0.7 + proj.radius)) {
-              if (this.isMultiplayer && !multiplayerService.isHost) {
-                this.particles.spawnExplosion(proj.position, 20);
-                this.triggerHitFeedback(proj.position, Math.round(proj.damage), false);
-                multiplayerService.reportEnemyHit(enemy.id, proj.damage, false, { x: proj.position.x, y: proj.position.y, z: proj.position.z });
-                proj.isDead = true;
-                break;
-              }
-
               const res = enemy.takeDamage(proj.damage, false);
               this.particles.spawnExplosion(proj.position, 20);
               this.triggerHitFeedback(proj.position, res.finalDamage, false);
+              proj.isDead = true;
+
+              if (this.isMultiplayer) {
+                multiplayerService.reportEnemyHit(
+                  enemy.id,
+                  res.finalDamage,
+                  false,
+                  { x: proj.position.x, y: proj.position.y, z: proj.position.z }
+                );
+              }
+
               if (res.killed) {
                 if (this.isMultiplayer) {
                   this.handleMultiplayerEnemyKilled(enemy, multiplayerService.localPlayerId, false);
@@ -2385,7 +2439,6 @@ export class GameEngine {
                   this.handleEnemyKill(enemy, false);
                 }
               }
-              proj.isDead = true;
               break;
             }
           }

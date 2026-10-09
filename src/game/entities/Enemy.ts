@@ -288,6 +288,7 @@ export class Enemy {
     const bgMat = new THREE.MeshBasicMaterial({ color: 0x0f172a, side: THREE.DoubleSide });
     this.healthBarBg = new THREE.Mesh(bgGeo, bgMat);
     this.healthBarBg.position.y = this.getHeight() + 0.35;
+    this.healthBarBg.raycast = () => {};
     this.mesh.add(this.healthBarBg);
 
     const barGeo = new THREE.PlaneGeometry(0.96, 0.08);
@@ -298,6 +299,7 @@ export class Enemy {
     this.healthBarMesh = new THREE.Mesh(barGeo, barMat);
     this.healthBarMesh.position.y = this.getHeight() + 0.35;
     this.healthBarMesh.position.z = 0.01;
+    this.healthBarMesh.raycast = () => {};
     this.mesh.add(this.healthBarMesh);
   }
 
@@ -368,6 +370,7 @@ export class Enemy {
     this.groundHighlightRing = new THREE.Mesh(ringGeo, ringMat);
     this.groundHighlightRing.rotation.x = -Math.PI / 2;
     this.groundHighlightRing.position.y = 0.02;
+    this.groundHighlightRing.raycast = () => {};
     this.mesh.add(this.groundHighlightRing);
 
     // 1. Pelvis / Hips (Root of body motion)
@@ -700,6 +703,30 @@ export class Enemy {
     this.registerMesh(rightBoot, jointMat);
   }
 
+  public updateHealthBar() {
+    if (!this.healthBarMesh) return;
+    const healthRatio = Math.max(0, Math.min(1, this.health / this.maxHealth));
+    this.healthBarMesh.scale.x = healthRatio;
+    this.healthBarMesh.position.x = -(1 - healthRatio) * 0.48;
+  }
+
+  public setHealth(health: number, maxHealth?: number) {
+    if (maxHealth !== undefined) this.maxHealth = maxHealth;
+    this.health = Math.max(0, health);
+    this.updateHealthBar();
+    if (this.health <= 0 && !this.isDead) {
+      this.die();
+    }
+  }
+
+  public die() {
+    if (this.isDead) return;
+    this.isDead = true;
+    this.health = 0;
+    this.updateHealthBar();
+    soundManager.playEnemyDeath(this.type);
+  }
+
   public takeDamage(
     amount: number,
     isHeadshot: boolean,
@@ -718,7 +745,7 @@ export class Enemy {
     }
 
     const finalDamage = Math.round(amount * (isHeadshot ? 2.5 : 1.0));
-    this.health -= finalDamage;
+    this.health = Math.max(0, this.health - finalDamage);
 
     // Trigger visual hit flash
     this.hitFlashTimer = 0.08;
@@ -727,13 +754,10 @@ export class Enemy {
     soundManager.playEnemyHit();
 
     // Update health bar scale
-    const healthRatio = Math.max(0, this.health / this.maxHealth);
-    this.healthBarMesh.scale.x = healthRatio;
-    this.healthBarMesh.position.x = -(1 - healthRatio) * 0.48;
+    this.updateHealthBar();
 
     if (this.health <= 0) {
-      this.isDead = true;
-      soundManager.playEnemyDeath(this.type);
+      this.die();
       return { killed: true, finalDamage, blocked: false };
     }
 

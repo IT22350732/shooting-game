@@ -188,6 +188,7 @@ export class RemotePlayer {
     this.shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
     this.shieldMesh.position.set(0, 1.0, 0);
     this.shieldMesh.visible = false;
+    this.shieldMesh.raycast = () => {};
     this.mesh.add(this.shieldMesh);
 
     // Overhead 3D Canvas Sprite for Name, Team, HP bar, Ping & Distance
@@ -206,6 +207,7 @@ export class RemotePlayer {
     this.overheadSprite.renderOrder = 9999; // Render above world geometry so teammates can always be located
     this.overheadSprite.scale.set(2.3, 0.7, 1);
     this.overheadSprite.position.set(0, 2.35, 0);
+    this.overheadSprite.raycast = () => {};
     this.mesh.add(this.overheadSprite);
 
     this.updateOverheadUI();
@@ -345,10 +347,21 @@ export class RemotePlayer {
     this.stance = state.stance;
     this.isMoving = state.isMoving;
     this.velocity.set(state.velocity.x, state.velocity.y, state.velocity.z);
-    this.health = state.health;
+    
+    // Only accept authoritative health if it's lower or if not alive to avoid snapping back over client prediction
+    if (state.health < this.health || !this.isAlive) {
+      this.health = state.health;
+    }
     this.maxHealth = state.maxHealth;
-    this.armor = state.armor;
+    if (state.armor < this.armor) {
+      this.armor = state.armor;
+    }
     this.maxArmor = state.maxArmor;
+
+    if (!state.isAlive && this.isAlive) {
+      this.isAlive = false;
+      this.triggerDeathAnimation();
+    }
 
     if (this.activeWeapon !== state.activeWeapon) {
       this.switchWeapon(state.activeWeapon);

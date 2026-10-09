@@ -114,7 +114,7 @@ export class Player {
     if (this.hurtCooldown > 0) return false;
     if (this.hasPowerup('shield')) return false; // Shield invulnerability
 
-    this.hurtCooldown = 0.25;
+    this.hurtCooldown = 0.05;
     this.damageFlashTimer = 0.45;
     this.addTrauma(0.45);
     soundManager.playPlayerHurt();
