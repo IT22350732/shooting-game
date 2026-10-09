@@ -56,7 +56,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
   onClose,
   onLaunchMatch
 }) => {
-  const [activeTab, setActiveTab] = useState<'quick' | 'create' | 'join' | 'info'>('quick');
+  const [activeTab, setActiveTab] = useState<'quick' | 'create' | 'join'>('quick');
   const [room, setRoom] = useState<RoomConfig | null>(() => multiplayerService.room);
   const [players, setPlayers] = useState<NetworkPlayerState[]>(() => Array.from(multiplayerService.players.values()));
   const [connectionStatus, setConnectionStatus] = useState<string>('Ready to Connect');
@@ -301,9 +301,6 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                   ONLINE PVP
                 </span>
               </div>
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: 'var(--font-sub)', fontWeight: 700 }}>
-                High-Performance Real-Time WebRTC Peer Network • Zero Latency
-              </span>
             </div>
           </div>
 
@@ -465,22 +462,6 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                 >
                   <Globe size={16} />
                   <span>JOIN WITH ROOM CODE</span>
-                </button>
-
-                <button
-                  onClick={() => { setActiveTab('info'); soundManager.playTabSwitch(); }}
-                  className={`btn-cyber ${activeTab === 'info' ? 'btn-cyber-primary' : ''}`}
-                  style={{
-                    padding: '8px 18px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    fontWeight: 800,
-                    fontSize: '0.85rem'
-                  }}
-                >
-                  <HelpCircle size={16} />
-                  <span>HOW IT WORKS</span>
                 </button>
               </div>
 
@@ -937,11 +918,6 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                     </button>
                   </form>
                 </div>
-              )}
-
-              {/* TAB 4: HOW IT WORKS / BRIEFING */}
-              {activeTab === 'info' && (
-                <MultiplayerBriefing />
               )}
             </div>
           ) : (
