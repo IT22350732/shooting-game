@@ -17,7 +17,10 @@ import {
   Copy,
   Download,
   Loader2,
-  Share2
+  Share2,
+  Play,
+  CheckCircle2,
+  Smartphone
 } from 'lucide-react';
 import { userManager } from '../game/managers/UserManager';
 import { AVATAR_OPTIONS, UserProfile } from '../types/user';
@@ -32,6 +35,9 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, initialTab = 'login' }) => {
   const [activeTab, setActiveTab] = useState<'switch' | 'login' | 'register' | 'sync'>(initialTab);
   const [usersList, setUsersList] = useState<UserProfile[]>(() => userManager.getAllUsers());
+  const [rememberedUsers, setRememberedUsers] = useState<UserProfile[]>(() => userManager.getRememberedUsers());
+  const [showManualLogin, setShowManualLogin] = useState<boolean>(() => userManager.getRememberedUsers().length === 0);
+  const [rememberMe, setRememberMe] = useState(true);
   const currentUser = userManager.getCurrentUser();
 
   // Login form state
@@ -64,6 +70,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
     clearMessages();
     setActiveTab(tab);
     setUsersList(userManager.getAllUsers());
+    setRememberedUsers(userManager.getRememberedUsers());
+  };
+
+  /**
+   * One-click instant login: switches profile, confirms with audio, and enters game.
+   * No password typing needed!
+   */
+  const handleOneClickLogin = (userId: string) => {
+    soundManager.playPowerup();
+    const res = userManager.quickLogin(userId);
+    if (res.success && res.user) {
+      setSuccessMsg(`Welcome back, ${res.user.username}! Entering combat zone...`);
+      onUserChanged(res.user);
+      setUsersList(userManager.getAllUsers());
+      setRememberedUsers(userManager.getRememberedUsers());
+      setTimeout(() => {
+        onClose();
+      }, 400);
+    } else {
+      setErrorMsg(res.message);
+    }
   };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -82,10 +109,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
         soundManager.playPowerup();
         setSuccessMsg(res.message);
         setUsersList(userManager.getAllUsers());
+        setRememberedUsers(userManager.getRememberedUsers());
         onUserChanged(res.user);
         setTimeout(() => {
           onClose();
-        }, 800);
+        }, 600);
       } else {
         soundManager.playEmptyClick();
         setErrorMsg(res.message);
@@ -115,10 +143,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
         soundManager.playPowerup();
         setSuccessMsg(res.message);
         setUsersList(userManager.getAllUsers());
+        setRememberedUsers(userManager.getRememberedUsers());
         onUserChanged(res.user);
         setTimeout(() => {
           onClose();
-        }, 900);
+        }, 700);
       } else {
         soundManager.playEmptyClick();
         setErrorMsg(res.message);
@@ -156,11 +185,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
       soundManager.playPowerup();
       setSuccessMsg(res.message);
       setUsersList(userManager.getAllUsers());
+      setRememberedUsers(userManager.getRememberedUsers());
       onUserChanged(res.user);
       setImportKeyInput('');
       setTimeout(() => {
         onClose();
-      }, 900);
+      }, 700);
     } else {
       soundManager.playEmptyClick();
       setErrorMsg(res.message);
@@ -168,16 +198,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
   };
 
   const handleQuickSwitch = (userId: string) => {
-    if (userId === currentUser.id) return;
-    soundManager.playPowerup();
-    userManager.switchUser(userId);
-    const updated = userManager.getCurrentUser();
-    onUserChanged(updated);
-    setUsersList(userManager.getAllUsers());
-    setSuccessMsg(`Switched operative to ${updated.username}`);
-    setTimeout(() => {
-      onClose();
-    }, 600);
+    handleOneClickLogin(userId);
   };
 
   const handleDeleteUser = (userId: string, username: string, e: React.MouseEvent) => {
@@ -189,6 +210,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
     if (res.success) {
       soundManager.playClick(0, 800, 0.3);
       setUsersList(userManager.getAllUsers());
+      setRememberedUsers(userManager.getRememberedUsers());
       onUserChanged(userManager.getCurrentUser());
       setSuccessMsg(res.message);
     } else {
@@ -515,24 +537,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {!isCurrent && (
-                        <button
-                          onClick={() => handleQuickSwitch(u.id)}
-                          style={{
-                            background: '#0284c7',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: 8,
-                            padding: '6px 12px',
-                            fontFamily: 'var(--font-display)',
-                            fontSize: '0.68rem',
-                            fontWeight: 800,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          PLAY AS
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOneClickLogin(u.id);
+                        }}
+                        className="btn-cyber btn-cyber-primary"
+                        style={{
+                          padding: '6px 14px',
+                          fontFamily: 'var(--font-display)',
+                          fontSize: '0.70rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5
+                        }}
+                      >
+                        <Play size={12} fill="currentColor" />
+                        <span>ENTER GAME</span>
+                      </button>
 
                       {usersList.length > 1 && (
                         <button
@@ -560,98 +585,326 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
 
         {/* --- TAB 2: LOGIN --- */}
         {activeTab === 'login' && (
-          <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.72rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#334155', marginBottom: 5 }}>
-                OPERATIVE CODENAME / USERNAME
-              </label>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <User size={16} color="#64748b" style={{ position: 'absolute', left: 12 }} />
-                <input
-                  type="text"
-                  placeholder="Enter your username (e.g. ApexSoldier)"
-                  value={loginUsername}
-                  onChange={(e) => setLoginUsername(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px 10px 38px',
-                    borderRadius: 10,
-                    border: '1.5px solid rgba(15, 23, 42, 0.15)',
-                    fontFamily: 'var(--font-sub)',
-                    fontSize: '0.88rem',
-                    outline: 'none',
-                    background: 'rgba(248, 250, 252, 0.8)'
-                  }}
-                  autoFocus
-                />
-              </div>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* 1. ONE-CLICK LOGIN FOR REMEMBERED USERS */}
+            {rememberedUsers.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <ShieldCheck size={16} color="#0284c7" />
+                    <span style={{ fontSize: '0.74rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#0f172a', letterSpacing: '0.04em' }}>
+                      SAVED OPERATIVE ON THIS DEVICE
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.64rem',
+                      color: '#059669',
+                      background: 'rgba(16, 185, 129, 0.12)',
+                      border: '1px solid rgba(16, 185, 129, 0.4)',
+                      padding: '2px 8px',
+                      borderRadius: 12,
+                      fontWeight: 800,
+                      fontFamily: 'var(--font-display)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                  >
+                    <CheckCircle2 size={11} color="#059669" />
+                    1-CLICK ACCESS (NO PASSWORD)
+                  </span>
+                </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '0.72rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#334155', marginBottom: 5 }}>
-                SECURITY PIN / PASSWORD
-              </label>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <KeyRound size={16} color="#64748b" style={{ position: 'absolute', left: 12 }} />
-                <input
-                  type={showLoginPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 38px 10px 38px',
-                    borderRadius: 10,
-                    border: '1.5px solid rgba(15, 23, 42, 0.15)',
-                    fontFamily: 'var(--font-sub)',
-                    fontSize: '0.88rem',
-                    outline: 'none',
-                    background: 'rgba(248, 250, 252, 0.8)'
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowLoginPassword(prev => !prev)}
-                  style={{
-                    position: 'absolute',
-                    right: 10,
-                    background: 'none',
-                    border: 'none',
-                    color: '#64748b',
-                    cursor: 'pointer',
-                    padding: 4
-                  }}
-                >
-                  {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {rememberedUsers.map((u) => {
+                    const avatar = AVATAR_OPTIONS.find(a => a.id === u.avatarId) || AVATAR_OPTIONS[0];
+                    const isCurrent = u.id === currentUser.id;
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="btn-cyber btn-cyber-primary"
-              style={{
-                padding: '12px 20px',
-                fontSize: '0.90rem',
-                justifyContent: 'center',
-                marginTop: 6,
-                opacity: isSubmitting ? 0.7 : 1,
-                cursor: isSubmitting ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  AUTHENTICATING WITH CLOUD...
-                </>
-              ) : (
-                <>
-                  <LogIn size={16} />
-                  AUTHENTICATE & LOG IN
-                </>
-              )}
-            </button>
+                    return (
+                      <div
+                        key={u.id}
+                        onClick={() => handleOneClickLogin(u.id)}
+                        style={{
+                          padding: '12px 16px',
+                          borderRadius: 14,
+                          border: isCurrent ? '2px solid #0284c7' : '1.5px solid rgba(15, 23, 42, 0.14)',
+                          background: isCurrent
+                            ? 'linear-gradient(135deg, rgba(2, 132, 199, 0.12), rgba(248, 250, 252, 0.95))'
+                            : 'rgba(248, 250, 252, 0.9)',
+                          boxShadow: isCurrent ? '0 6px 20px rgba(2, 132, 199, 0.15)' : 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 12,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+                          {/* Avatar */}
+                          <div
+                            style={{
+                              width: 44,
+                              height: 44,
+                              borderRadius: 12,
+                              background: `linear-gradient(135deg, ${avatar.color}, ${avatar.accentColor})`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#ffffff',
+                              flexShrink: 0,
+                              boxShadow: `0 3px 10px ${avatar.color}45`
+                            }}
+                          >
+                            <User size={22} strokeWidth={2.5} />
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '0.98rem', color: '#0f172a' }}>
+                                {u.username}
+                              </span>
+                              {isCurrent && (
+                                <span style={{ background: '#0284c7', color: '#ffffff', fontSize: '0.58rem', fontWeight: 800, padding: '1px 6px', borderRadius: 4 }}>
+                                  ACTIVE
+                                </span>
+                              )}
+                              <span style={{ background: 'rgba(15, 23, 42, 0.08)', color: '#475569', fontSize: '0.58rem', fontWeight: 800, padding: '1px 6px', borderRadius: 4 }}>
+                                {u.tier.replace('_', ' ')}
+                              </span>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.70rem', color: '#64748b', marginTop: 3, flexWrap: 'wrap' }}>
+                              <span>
+                                RECORD: <strong style={{ color: '#0284c7' }}>{u.highScore.toLocaleString()}</strong>
+                              </span>
+                              <span>•</span>
+                              <span>
+                                BEST: <strong style={{ color: '#f97316' }}>WAVE {u.highestWave}</strong>
+                              </span>
+                              <span>•</span>
+                              <span>
+                                KILLS: <strong style={{ color: '#10b981' }}>{u.totalKills}</strong>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Instant Enter Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOneClickLogin(u.id);
+                          }}
+                          className="btn-cyber btn-cyber-primary"
+                          style={{
+                            padding: '9px 18px',
+                            fontSize: '0.82rem',
+                            fontWeight: 900,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            flexShrink: 0,
+                            borderRadius: 10,
+                            boxShadow: '0 4px 14px rgba(2, 132, 199, 0.35)'
+                          }}
+                        >
+                          <Play size={14} fill="currentColor" />
+                          <span>ENTER GAME</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 2. MANUAL LOGIN EXPANDER OR FALLBACK */}
+            {rememberedUsers.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0' }}>
+                <div style={{ flex: 1, height: 1, background: 'rgba(15, 23, 42, 0.1)' }} />
+                <span style={{ fontSize: '0.66rem', color: '#94a3b8', fontWeight: 800, fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>
+                  OR LOG IN WITH ANOTHER ACCOUNT
+                </span>
+                <div style={{ flex: 1, height: 1, background: 'rgba(15, 23, 42, 0.1)' }} />
+              </div>
+            )}
+
+            {rememberedUsers.length > 0 && !showManualLogin ? (
+              <button
+                type="button"
+                onClick={() => setShowManualLogin(true)}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 10,
+                  border: '1.5px dashed rgba(2, 132, 199, 0.4)',
+                  background: 'rgba(2, 132, 199, 0.04)',
+                  color: '#0284c7',
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 800,
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <KeyRound size={15} />
+                <span>TYPE DIFFERENT CODENAME & PASSWORD</span>
+              </button>
+            ) : (
+              <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {rememberedUsers.length === 0 && (
+                  <div
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 10,
+                      background: 'rgba(2, 132, 199, 0.08)',
+                      border: '1px solid rgba(2, 132, 199, 0.25)',
+                      color: '#0369a1',
+                      fontSize: '0.74rem',
+                      fontFamily: 'var(--font-sub)',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8
+                    }}
+                  >
+                    <Smartphone size={16} color="#0284c7" />
+                    <span>
+                      Logging in from this phone or laptop for the first time? Enter your credentials once and we will remember you next time!
+                    </span>
+                  </div>
+                )}
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#334155', marginBottom: 5 }}>
+                    OPERATIVE CODENAME / USERNAME
+                  </label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <User size={16} color="#64748b" style={{ position: 'absolute', left: 12 }} />
+                    <input
+                      type="text"
+                      placeholder="Enter your username (e.g. ApexSoldier)"
+                      value={loginUsername}
+                      onChange={(e) => setLoginUsername(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px 10px 38px',
+                        borderRadius: 10,
+                        border: '1.5px solid rgba(15, 23, 42, 0.15)',
+                        fontFamily: 'var(--font-sub)',
+                        fontSize: '0.88rem',
+                        outline: 'none',
+                        background: 'rgba(248, 250, 252, 0.8)'
+                      }}
+                      autoFocus={rememberedUsers.length === 0}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontFamily: 'var(--font-display)', fontWeight: 800, color: '#334155', marginBottom: 5 }}>
+                    SECURITY PIN / PASSWORD
+                  </label>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <KeyRound size={16} color="#64748b" style={{ position: 'absolute', left: 12 }} />
+                    <input
+                      type={showLoginPassword ? 'text' : 'password'}
+                      placeholder="Enter your password"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 38px 10px 38px',
+                        borderRadius: 10,
+                        border: '1.5px solid rgba(15, 23, 42, 0.15)',
+                        fontFamily: 'var(--font-sub)',
+                        fontSize: '0.88rem',
+                        outline: 'none',
+                        background: 'rgba(248, 250, 252, 0.8)'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(prev => !prev)}
+                      style={{
+                        position: 'absolute',
+                        right: 10,
+                        background: 'none',
+                        border: 'none',
+                        color: '#64748b',
+                        cursor: 'pointer',
+                        padding: 4
+                      }}
+                    >
+                      {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Remember Me Checkbox */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    style={{ width: 16, height: 16, accentColor: '#0284c7', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 600 }}>
+                    Remember my login on this device (phone & laptop)
+                  </span>
+                </label>
+
+                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="btn-cyber btn-cyber-primary"
+                    style={{
+                      flex: 1,
+                      padding: '11px 18px',
+                      fontSize: '0.88rem',
+                      justifyContent: 'center',
+                      opacity: isSubmitting ? 0.7 : 1,
+                      cursor: isSubmitting ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        AUTHENTICATING...
+                      </>
+                    ) : (
+                      <>
+                        <LogIn size={16} />
+                        AUTHENTICATE & LOG IN
+                      </>
+                    )}
+                  </button>
+
+                  {rememberedUsers.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowManualLogin(false)}
+                      className="btn-cyber"
+                      style={{
+                        padding: '11px 14px',
+                        fontSize: '0.80rem',
+                        background: 'rgba(15, 23, 42, 0.06)',
+                        color: '#64748b'
+                      }}
+                    >
+                      CANCEL
+                    </button>
+                  )}
+                </div>
+              </form>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
               <button
@@ -664,9 +917,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
                   fontFamily: 'var(--font-display)',
                   fontSize: '0.75rem',
                   fontWeight: 800,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
                 }}
               >
+                <UserPlus size={14} />
                 + NEW OPERATIVE REGISTRATION
               </button>
 
@@ -687,7 +944,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
                 PLAY AS GUEST / SKIP
               </button>
             </div>
-          </form>
+          </div>
         )}
 
         {/* --- TAB 3: REGISTER NEW OPERATIVE --- */}

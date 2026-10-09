@@ -172,6 +172,42 @@ export class UserManager {
     return Array.from(this.users.values()).sort((a, b) => b.lastLoginAt - a.lastLoginAt);
   }
 
+  /**
+   * Retrieves all remembered user accounts on this device (phone/laptop).
+   * Filters out default dummy placeholder if real player accounts exist.
+   */
+  public getRememberedUsers(): UserProfile[] {
+    const all = Array.from(this.users.values()).sort((a, b) => b.lastLoginAt - a.lastLoginAt);
+    const realUsers = all.filter(u => u.id !== 'usr_default_01' || u.totalKills > 0 || u.highScore > 0);
+    return realUsers.length > 0 ? realUsers : all;
+  }
+
+  /**
+   * One-click login using a remembered local operative profile.
+   * No password re-typing needed!
+   */
+  public quickLogin(userId: string): { success: boolean; message: string; user?: UserProfile } {
+    const target = this.users.get(userId);
+    if (!target) {
+      return { success: false, message: 'Operative profile not found on this device.' };
+    }
+
+    target.lastLoginAt = Date.now();
+    this.currentUserId = target.id;
+    this.saveToStorage();
+
+    saveManager.loadFromUserData(target.saveData);
+    this.notifyLeaderboardChange();
+    this.refreshCloudLeaderboard().catch(() => {});
+    cloudAuthService.saveCloudUser(target).catch(() => {});
+
+    return {
+      success: true,
+      message: `Welcome back, ${target.username}!`,
+      user: target
+    };
+  }
+
   public async register(
     username: string,
     password: string,
@@ -231,6 +267,14 @@ export class UserManager {
       gamesPlayed: 0,
       saveData: JSON.parse(JSON.stringify(saveManager.getDefaultSaveData()))
     };
+
+    // Remove placeholder default user if it was never played
+    if (this.users.has('usr_default_01')) {
+      const def = this.users.get('usr_default_01');
+      if (def && def.totalKills === 0 && def.highScore === 0) {
+        this.users.delete('usr_default_01');
+      }
+    }
 
     this.users.set(newUser.id, newUser);
     this.currentUserId = newUser.id;
@@ -319,6 +363,13 @@ export class UserManager {
       }
 
       // Successful cloud verification & cross-device download!
+      if (this.users.has('usr_default_01')) {
+        const def = this.users.get('usr_default_01');
+        if (def && def.totalKills === 0 && def.highScore === 0) {
+          this.users.delete('usr_default_01');
+        }
+      }
+
       cloudUser.lastLoginAt = Date.now();
       this.users.set(cloudUser.id, cloudUser);
       this.currentUserId = cloudUser.id;
