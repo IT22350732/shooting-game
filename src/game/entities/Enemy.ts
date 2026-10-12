@@ -200,6 +200,8 @@ export class Enemy {
   private scaleFactor: number = 1.0;
   private theme: HumanTheme;
   private weaponTuck: number = 0;
+  private losCheckTimer: number = Math.random() * 0.12;
+  private cachedHasLineOfSight: boolean = true;
 
   constructor(
     id: string,
@@ -840,11 +842,16 @@ export class Enemy {
     const currentEnemyBuilding = buildingContext?.getBuildingAtPosition ? buildingContext.getBuildingAtPosition(this.position) : null;
     const isEnemyIndoors = currentEnemyBuilding !== null;
 
-    // Line of sight calculation: tests if solid building walls or tall obstacles block view to player
-    const eyeHeight = this.getHeight() * 0.82;
-    const enemyEyePos = new THREE.Vector3(this.position.x, this.position.y + eyeHeight, this.position.z);
-    const playerEyePos = new THREE.Vector3(playerPos.x, playerPos.y + 1.6, playerPos.z);
-    const hasLineOfSight = this.checkLineOfSight(enemyEyePos, playerEyePos, obstacles);
+    // Throttled Line of sight calculation: tests if solid building walls or tall obstacles block view to player
+    this.losCheckTimer -= delta;
+    if (this.losCheckTimer <= 0) {
+      this.losCheckTimer = 0.12;
+      const eyeHeight = this.getHeight() * 0.82;
+      const enemyEyePos = new THREE.Vector3(this.position.x, this.position.y + eyeHeight, this.position.z);
+      const playerEyePos = playerPos.clone();
+      this.cachedHasLineOfSight = this.checkLineOfSight(enemyEyePos, playerEyePos, obstacles);
+    }
+    const hasLineOfSight = this.cachedHasLineOfSight;
 
     // Tactical Target Acquisition: doorway waypoints or direct player tracking
     let aimTarget = playerPos;
@@ -1323,7 +1330,8 @@ export class Enemy {
 
     for (let i = 0; i < obstacles.length; i++) {
       const obs = obstacles[i];
-      if (obs.box.isEmpty()) continue;
+      // Skip stair ramps and floor slabs: they should never block line of sight!
+      if (obs.stairRamp || obs.isFloor) continue;
       // Skip waist-high cover obstacles so enemies can shoot over low crates, fences and car hoods
       if (obs.isCover && obs.box.max.y < 1.35) continue;
 

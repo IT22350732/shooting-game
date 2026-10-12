@@ -328,9 +328,9 @@ export class Player {
     newPos.z += this.velocity.z * delta;
     newPos.y += this.velocity.y * delta;
 
-    // Check landing on top of waist-high cover obstacles (crates, fences, cars)
+    // Check landing on top of waist-high cover obstacles, stair ramps, or elevated upfloor slabs
     let groundY = this.eyeHeight;
-    const searchDist = 3.0;
+    const searchDist = 4.5;
 
     const nearby = Player._nearbyObstacles;
     nearby.length = 0;
@@ -349,7 +349,83 @@ export class Player {
       }
       nearby.push(obs);
 
-      // Check standing on top of waist-high cover
+      // A. Smooth Stair Ramp Traversal (butter-smooth ascending & descending stairs)
+      if (obs.stairRamp) {
+        const sr = obs.stairRamp;
+        const dx = sr.p2.x - sr.p1.x;
+        const dz = sr.p2.z - sr.p1.z;
+        const lenSq = dx * dx + dz * dz;
+        if (lenSq > 0.0001) {
+          const len = Math.sqrt(lenSq);
+          const uX = dx / len;
+          const uZ = dz / len;
+          const perpX = -uZ;
+          const perpZ = uX;
+          const px = newPos.x - sr.p1.x;
+          const pz = newPos.z - sr.p1.z;
+          const along = px * uX + pz * uZ;
+          const across = px * perpX + pz * perpZ;
+          const halfW = sr.width / 2 + 0.35;
+
+          // Inside stair boundaries (with smooth approach & generous top transition onto deck)
+          if (along >= -0.45 && along <= len + 0.85 && Math.abs(across) <= halfW) {
+            const t = Math.max(0, Math.min(1, along / len));
+            const stepY = sr.bottomY + t * (sr.topY - sr.bottomY);
+            const stairEyeY = stepY + this.eyeHeight;
+
+            // Pick up whenever player is within vertical range of the ramp
+            if (this.position.y >= sr.bottomY + this.eyeHeight - 0.75 && this.position.y <= sr.topY + this.eyeHeight + 1.6) {
+              if (stairEyeY > groundY) groundY = stairEyeY;
+            }
+          }
+        }
+      }
+
+      // B. Elevated Mezzanine / Upfloor Slabs & Building Roofs
+      if (obs.isFloor) {
+        let inside = false;
+        let floorTop = obs.box.max.y;
+
+        if (obs.floorPlane) {
+          const fp = obs.floorPlane;
+          floorTop = fp.topY;
+          const lx = newPos.x - fp.center.x;
+          const lz = newPos.z - fp.center.z;
+          const rx = lx * Math.cos(-fp.rotY) - lz * Math.sin(-fp.rotY);
+          const rz = lx * Math.sin(-fp.rotY) + lz * Math.cos(-fp.rotY);
+          // Generous floor boundary tolerance (+0.45m) for seamless transition
+          if (
+            Math.abs(rx) <= fp.halfW + 0.45 &&
+            Math.abs(rz) <= fp.halfD + 0.45
+          ) {
+            inside = true;
+            // Pitched / Gable roof support: height rises toward central ridge along rx = 0
+            if (fp.pitchHeight && fp.halfW > 0) {
+              const slope = Math.max(0, 1 - Math.abs(rx) / fp.halfW);
+              floorTop = fp.topY + slope * fp.pitchHeight;
+            }
+          }
+        } else {
+          if (
+            newPos.x >= obs.box.min.x - 0.45 &&
+            newPos.x <= obs.box.max.x + 0.45 &&
+            newPos.z >= obs.box.min.z - 0.45 &&
+            newPos.z <= obs.box.max.z + 0.45
+          ) {
+            inside = true;
+          }
+        }
+
+        if (inside) {
+          const topY = floorTop + this.eyeHeight;
+          // Player landing on floor/roof from above or stepping onto it
+          if (this.position.y >= floorTop + this.eyeHeight - 0.90) {
+            if (topY > groundY) groundY = topY;
+          }
+        }
+      }
+
+      // C. Standing on top of waist-high cover (crates, fences, cars)
       if (obs.isCover && obs.box.max.y <= 2.2) {
         if (
           newPos.x >= obs.box.min.x - this.playerRadius * 0.6 &&
@@ -372,6 +448,37 @@ export class Player {
       this.isGrounded = true;
     }
 
+    // Overhead ceiling collision when jumping
+    if (this.velocity.y > 0) {
+      for (let i = 0; i < nearby.length; i++) {
+        const obs = nearby[i];
+        if (obs.ceilingY !== undefined) {
+          let insideCeiling = false;
+          if (obs.floorPlane) {
+            const fp = obs.floorPlane;
+            const lx = newPos.x - fp.center.x;
+            const lz = newPos.z - fp.center.z;
+            const rx = lx * Math.cos(-fp.rotY) - lz * Math.sin(-fp.rotY);
+            const rz = lx * Math.sin(-fp.rotY) + lz * Math.cos(-fp.rotY);
+            if (Math.abs(rx) <= fp.halfW && Math.abs(rz) <= fp.halfD) insideCeiling = true;
+          } else if (
+            newPos.x >= obs.box.min.x && newPos.x <= obs.box.max.x &&
+            newPos.z >= obs.box.min.z && newPos.z <= obs.box.max.z
+          ) {
+            insideCeiling = true;
+          }
+
+          if (insideCeiling) {
+            const headY = newPos.y + 0.15;
+            if (headY >= obs.ceilingY && this.position.y - this.eyeHeight < obs.ceilingY) {
+              newPos.y = obs.ceilingY - 0.15;
+              this.velocity.y = 0;
+            }
+          }
+        }
+      }
+    }
+
     // Perimeter boundary clamp
     const halfArena = (arenaSize / 2) - 1.5;
     newPos.x = Math.max(-halfArena, Math.min(halfArena, newPos.x));
@@ -386,6 +493,10 @@ export class Player {
       let collided = false;
       for (let i = 0; i < nearby.length; i++) {
         const obs = nearby[i];
+        // Skip horizontal blocking for stair ramps and elevated floor slabs:
+        // Stairs guide player smoothly via stairRamp, and floor slabs are walkable decks (never lateral walls!)
+        if (obs.stairRamp || obs.isFloor) continue;
+
         // Skip horizontal blocking if standing safely on top or obstacle is above head
         if (newPos.y > obs.box.max.y + this.eyeHeight - 0.05) continue;
         if (obs.box.max.y <= feetY + 0.05) continue;

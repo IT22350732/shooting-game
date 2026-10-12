@@ -2086,15 +2086,14 @@ export class GameEngine {
       this.animFrameId = requestAnimationFrame(animate);
 
       const targetFps = this.frameRateLimit || 60;
-      const frameInterval = 1000 / targetFps;
-
-      const elapsed = timestamp - this.lastFrameTimestamp;
-      // Allow a 1.5ms margin for browser display vsync fluctuations
-      if (elapsed < frameInterval - 1.5) {
-        return;
+      if (targetFps < 60) {
+        const frameInterval = 1000 / targetFps;
+        const elapsed = timestamp - this.lastFrameTimestamp;
+        if (elapsed < frameInterval - 2.0) {
+          return;
+        }
       }
-
-      this.lastFrameTimestamp = timestamp - (elapsed % frameInterval);
+      this.lastFrameTimestamp = timestamp;
 
       // Smooth FPS calculation
       this.fpsFrameCount++;
@@ -2105,7 +2104,8 @@ export class GameEngine {
         this.lastFpsSampleTime = timestamp;
       }
 
-      const delta = Math.min(0.1, this.clock.getDelta());
+      // Smooth, clamped delta without micro-stutters
+      const delta = Math.min(0.066, Math.max(0.001, this.clock.getDelta()));
       const now = performance.now() * 0.001;
 
       if (this.state === 'PLAYING') {

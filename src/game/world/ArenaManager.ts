@@ -4,10 +4,31 @@ import { TextureGenerator } from './TextureGenerator';
 import { soundManager } from '../../audio/SoundManager';
 import { DestructibleProp, DestructibleType, LootType } from '../entities/DestructibleProp';
 
+export interface StairRamp {
+  p1: THREE.Vector3;
+  p2: THREE.Vector3;
+  width: number;
+  bottomY: number;
+  topY: number;
+}
+
+export interface FloorPlane {
+  center: THREE.Vector3;
+  halfW: number;
+  halfD: number;
+  rotY: number;
+  topY: number;
+  pitchHeight?: number;
+}
+
 export interface ArenaObstacle {
   mesh: THREE.Mesh | THREE.Group;
   box: THREE.Box3;
   isCover: boolean;
+  isFloor?: boolean;
+  ceilingY?: number;
+  stairRamp?: StairRamp;
+  floorPlane?: FloorPlane;
 }
 
 export interface InteriorZone {
@@ -511,7 +532,34 @@ export class ArenaManager {
     this.addExplosiveBarrel(-34, 0, -14);
     this.addExplosiveBarrel(34, 0, 14);
     this.addExplosiveBarrel(-14, 0, 34);
-    this.addExplosiveBarrel(14, 0, -34);
+    // OUTDOOR ELEVATED PLATFORMS ("UPSTAIRS" & "UPFLOOR" OBSERVATION GANTRIES)
+    // North Observation Deck (overlooks Lakeside Cabin and North Street)
+    this.createOutdoorElevatedPlatform({
+      id: 'suburb-platform-north',
+      name: 'North Observation Deck',
+      x: -13,
+      z: -33,
+      rotY: 0,
+      width: 7.0,
+      depth: 5.0,
+      height: 3.4,
+      stairRun: 4.5,
+      theme: 'suburban'
+    });
+
+    // South Observation Deck (overlooks Suburban Workshop and South Street)
+    this.createOutdoorElevatedPlatform({
+      id: 'suburb-platform-south',
+      name: 'South Observation Deck',
+      x: 13,
+      z: 33,
+      rotY: Math.PI,
+      width: 7.0,
+      depth: 5.0,
+      height: 3.4,
+      stairRun: 4.5,
+      theme: 'suburban'
+    });
 
     // Neighborhood Perimeter Boundary Wall
     this.createRealBoundaryWalls(0x475569, 'stone');
@@ -757,6 +805,35 @@ export class ArenaManager {
     this.addExplosiveBarrel(-6, 0, 32);
     this.addExplosiveBarrel(6, 0, -32);
 
+    // OUTDOOR ELEVATED PLATFORMS ("UPSTAIRS" & "UPFLOOR" URBAN SKYWALK GANTRIES)
+    // North Skywalk Gantry (overlooks Police Precinct and Central Avenue)
+    this.createOutdoorElevatedPlatform({
+      id: 'city-platform-north',
+      name: 'North Skywalk Gantry',
+      x: -14,
+      z: -33,
+      rotY: 0,
+      width: 6.5,
+      depth: 5.0,
+      height: 3.4,
+      stairRun: 4.5,
+      theme: 'city'
+    });
+
+    // South Skywalk Gantry (overlooks Neon Diner and Southern Avenue)
+    this.createOutdoorElevatedPlatform({
+      id: 'city-platform-south',
+      name: 'South Skywalk Gantry',
+      x: 14,
+      z: 33,
+      rotY: Math.PI,
+      width: 6.5,
+      depth: 5.0,
+      height: 3.4,
+      stairRun: 4.5,
+      theme: 'city'
+    });
+
     this.createRealBoundaryWalls(0x1e293b, 'concrete');
 
     this.addSpawnPoints();
@@ -971,8 +1048,36 @@ export class ArenaManager {
     this.addExplosiveBarrel(6, 0, -6);
     this.addExplosiveBarrel(-34, 0, -9);
     this.addExplosiveBarrel(34, 0, 9);
-    this.addExplosiveBarrel(-9, 0, 34);
     this.addExplosiveBarrel(9, 0, -34);
+
+    // OUTDOOR ELEVATED PLATFORMS ("UPSTAIRS" & "UPFLOOR" DESERT OBSERVATION OUTPOSTS)
+    // North Desert Outpost (overlooks North Watchtower and Bazaar)
+    this.createOutdoorElevatedPlatform({
+      id: 'desert-platform-north',
+      name: 'North Desert Outpost',
+      x: -14,
+      z: -33,
+      rotY: 0,
+      width: 6.5,
+      depth: 5.0,
+      height: 3.4,
+      stairRun: 4.5,
+      theme: 'desert'
+    });
+
+    // South Desert Outpost (overlooks South Barracks and Desert Tavern)
+    this.createOutdoorElevatedPlatform({
+      id: 'desert-platform-south',
+      name: 'South Desert Outpost',
+      x: 14,
+      z: 33,
+      rotY: Math.PI,
+      width: 6.5,
+      depth: 5.0,
+      height: 3.4,
+      stairRun: 4.5,
+      theme: 'desert'
+    });
 
     this.createRealBoundaryWalls(0xd97706, 'adobe');
 
@@ -1195,8 +1300,36 @@ export class ArenaManager {
     this.addExplosiveBarrel(5, 0, -8);
     this.addExplosiveBarrel(-32, 0, -4);
     this.addExplosiveBarrel(32, 0, 4);
-    this.addExplosiveBarrel(-4, 0, 32);
     this.addExplosiveBarrel(4, 0, -32);
+
+    // OUTDOOR ELEVATED PLATFORMS ("UPSTAIRS" & "UPFLOOR" INDUSTRIAL CATWALK GANTRIES)
+    // North Yard Catwalk Gantry (overlooks Rail Control, Silos, and Depot Alpha)
+    this.createOutdoorElevatedPlatform({
+      id: 'ind-platform-north',
+      name: 'North Catwalk Gantry',
+      x: -12,
+      z: -32,
+      rotY: 0,
+      width: 7.0,
+      depth: 5.0,
+      height: 3.4,
+      stairRun: 4.5,
+      theme: 'industrial'
+    });
+
+    // South Yard Catwalk Gantry (overlooks Shipping Containers and Power Vault)
+    this.createOutdoorElevatedPlatform({
+      id: 'ind-platform-south',
+      name: 'South Catwalk Gantry',
+      x: 12,
+      z: 32,
+      rotY: Math.PI,
+      width: 7.0,
+      depth: 5.0,
+      height: 3.4,
+      stairRun: 4.5,
+      theme: 'industrial'
+    });
 
     this.createRealBoundaryWalls(0x334155, 'fence');
 
@@ -1206,6 +1339,441 @@ export class ArenaManager {
   // =========================================================================
   // REAL ARCHITECTURAL BUILDERS: HOUSES, BUILDINGS & STREET COVER
   // =========================================================================
+
+  /**
+   * Builds a tactical outdoor elevated observation platform & sniper gantry:
+   * 1. 4 heavy-duty industrial support pillars with ground footings, structural I-beams, and diagonal X-bracing.
+   * 2. An elevated small upfloor platform deck (y = 3.4m) with diamond-plate steel / non-slip decking.
+   * 3. An outdoor steel staircase ("upstairs") with 16 anti-slip treads, safety nosing, dual stringers,
+   *    and continuous safety handrails.
+   * 4. A smooth physical StairRamp collider allowing 100% fluid, zero-jitter ascent and descent.
+   * 5. Perimeter ballistic safety guardrails providing waist-high tactical cover with open sniper sightlines.
+   * 6. Upfloor tactical perks: fortified sandbag sniper nest, high-intensity swiveling floodlight,
+   *    destructible military ammo crate and tech safe, and a tactical comms antenna mast.
+   * 7. Open ground-level clearance underneath allowing players to run, take cover behind pillars, or flank.
+   */
+  public createOutdoorElevatedPlatform(options: {
+    id: string;
+    name?: string;
+    x: number;
+    z: number;
+    rotY?: number;
+    width?: number; // default 7.0
+    depth?: number; // default 5.0
+    height?: number; // default 3.4
+    theme?: 'suburban' | 'city' | 'desert' | 'industrial';
+    stairRun?: number; // default 4.5
+  }): THREE.Group {
+    const group = new THREE.Group();
+    group.position.set(options.x, 0, options.z);
+    const rotY = options.rotY || 0;
+    if (rotY) group.rotation.y = rotY;
+    this.arenaGroup.add(group);
+
+    const w = options.width || 7.0;
+    const d = options.depth || 5.0;
+    const h = options.height || 3.4;
+    const slabThick = 0.20;
+    const theme = options.theme || 'suburban';
+
+    // Theme color palettes
+    let deckColor = 0x334155;
+    let steelColor = 0x1e293b;
+    let accentColor = 0xeab308;
+    let glassColor = 0x38bdf8;
+
+    if (theme === 'suburban') {
+      deckColor = 0x475569;
+      steelColor = 0x1e293b;
+      accentColor = 0xd97706;
+      glassColor = 0x93c5fd;
+    } else if (theme === 'city') {
+      deckColor = 0x1e293b;
+      steelColor = 0x0f172a;
+      accentColor = 0x0284c7;
+      glassColor = 0x38bdf8;
+    } else if (theme === 'desert') {
+      deckColor = 0xb45309;
+      steelColor = 0x78350f;
+      accentColor = 0xf59e0b;
+      glassColor = 0xfde68a;
+    } else if (theme === 'industrial') {
+      deckColor = 0x3f3f46;
+      steelColor = 0x18181b;
+      accentColor = 0xfacc15;
+      glassColor = 0xa1a1aa;
+    }
+
+    const steelMat = new THREE.MeshStandardMaterial({
+      color: steelColor,
+      roughness: 0.5,
+      metalness: 0.8
+    });
+    const accentMat = new THREE.MeshStandardMaterial({
+      color: accentColor,
+      roughness: 0.3,
+      metalness: 0.7
+    });
+
+    // 1. ELEVATED DECK SLAB (THE "UPFLOOR")
+    const deckGeo = new THREE.BoxGeometry(w, slabThick, d);
+    const deckTex = TextureGenerator.createPanelTexture();
+    const deckMat = new THREE.MeshStandardMaterial({
+      map: deckTex,
+      color: deckColor,
+      roughness: 0.5,
+      metalness: 0.4
+    });
+    const deckMesh = new THREE.Mesh(deckGeo, deckMat);
+    deckMesh.position.set(0, h - slabThick / 2, 0);
+    deckMesh.castShadow = true;
+    deckMesh.receiveShadow = true;
+    group.add(deckMesh);
+
+    // Hazard warning nosing trim along deck edges
+    const trimFrontGeo = new THREE.BoxGeometry(w + 0.04, 0.06, 0.08);
+    const trimFront = new THREE.Mesh(trimFrontGeo, accentMat);
+    trimFront.position.set(0, h - 0.03, d / 2 + 0.02);
+    group.add(trimFront);
+
+    const trimBack = new THREE.Mesh(trimFrontGeo, accentMat);
+    trimBack.position.set(0, h - 0.03, -d / 2 - 0.02);
+    group.add(trimBack);
+
+    // Structural perimeter I-beams
+    const beamGeoX = new THREE.BoxGeometry(w, 0.22, 0.12);
+    const beamFront = new THREE.Mesh(beamGeoX, steelMat);
+    beamFront.position.set(0, h - slabThick - 0.11, d / 2 - 0.06);
+    group.add(beamFront);
+
+    const beamBack = new THREE.Mesh(beamGeoX, steelMat);
+    beamBack.position.set(0, h - slabThick - 0.11, -d / 2 + 0.06);
+    group.add(beamBack);
+
+    const beamGeoZ = new THREE.BoxGeometry(0.12, 0.22, d - 0.24);
+    const beamLeft = new THREE.Mesh(beamGeoZ, steelMat);
+    beamLeft.position.set(-w / 2 + 0.06, h - slabThick - 0.11, 0);
+    group.add(beamLeft);
+
+    const beamRight = new THREE.Mesh(beamGeoZ, steelMat);
+    beamRight.position.set(w / 2 - 0.06, h - slabThick - 0.11, 0);
+    group.add(beamRight);
+
+    // 2. SUPPORT PILLARS (WITH OPEN 3.2M GROUND CLEARANCE UNDERNEATH)
+    const pillarPositions = [
+      [-w / 2 + 0.35, -d / 2 + 0.35],
+      [w / 2 - 0.35, -d / 2 + 0.35],
+      [-w / 2 + 0.35, d / 2 - 0.35],
+      [w / 2 - 0.35, d / 2 - 0.35]
+    ];
+    const pillarH = h - slabThick;
+    const pillarGeo = new THREE.BoxGeometry(0.30, pillarH, 0.30);
+    const basePlateGeo = new THREE.BoxGeometry(0.50, 0.06, 0.50);
+
+    pillarPositions.forEach(([px, pz]) => {
+      const pillar = new THREE.Mesh(pillarGeo, steelMat);
+      pillar.position.set(px, pillarH / 2, pz);
+      pillar.castShadow = true;
+      pillar.receiveShadow = true;
+      group.add(pillar);
+
+      const plate = new THREE.Mesh(basePlateGeo, steelMat);
+      plate.position.set(px, 0.03, pz);
+      plate.receiveShadow = true;
+      group.add(plate);
+
+      group.updateMatrixWorld(true);
+      const pillarBox = new THREE.Box3().setFromObject(pillar);
+      this.obstacles.push({ mesh: pillar, box: pillarBox, isCover: false });
+    });
+
+    // 3. OUTDOOR STAIRCASE ("UPSTAIRS")
+    // Stair attaches to the front-right of the platform and descends towards +Z
+    const stairW = 2.0;
+    const stairRun = options.stairRun || 4.5;
+    const stairStartX = w / 2 - stairW / 2;
+    const zTop = d / 2;
+    const zBottom = zTop + stairRun;
+
+    const stairGroup = new THREE.Group();
+    const numSteps = 15;
+    const stepRise = h / numSteps;
+    const stepRun = stairRun / numSteps;
+
+    // Steps
+    const treadMat = new THREE.MeshStandardMaterial({
+      color: steelColor,
+      roughness: 0.5,
+      metalness: 0.8
+    });
+
+    for (let i = 0; i < numSteps; i++) {
+      const stepY = (i + 1) * stepRise;
+      const stepZ = zBottom - (i + 0.5) * stepRun;
+
+      const tGeo = new THREE.BoxGeometry(stairW - 0.04, 0.06, stepRun + 0.04);
+      const tMesh = new THREE.Mesh(tGeo, treadMat);
+      tMesh.position.set(stairStartX, stepY - 0.03, stepZ);
+      tMesh.castShadow = true;
+      tMesh.receiveShadow = true;
+      stairGroup.add(tMesh);
+
+      // Hazard nosing
+      const nGeo = new THREE.BoxGeometry(stairW - 0.03, 0.02, 0.04);
+      const nMesh = new THREE.Mesh(nGeo, accentMat);
+      nMesh.position.set(stairStartX, stepY - 0.01, stepZ + (stepRun + 0.04) / 2);
+      stairGroup.add(nMesh);
+    }
+
+    // Heavy channel stringers
+    const stairHypot = Math.hypot(stairRun, h);
+    const stairAngle = Math.atan2(h, stairRun);
+    const stringerGeo = new THREE.BoxGeometry(0.10, 0.24, stairHypot);
+
+    const leftStringer = new THREE.Mesh(stringerGeo, steelMat);
+    leftStringer.rotation.x = stairAngle;
+    leftStringer.position.set(stairStartX - stairW / 2 + 0.04, h / 2, (zBottom + zTop) / 2);
+    stairGroup.add(leftStringer);
+
+    const rightStringer = new THREE.Mesh(stringerGeo, steelMat);
+    rightStringer.rotation.x = stairAngle;
+    rightStringer.position.set(stairStartX + stairW / 2 - 0.04, h / 2, (zBottom + zTop) / 2);
+    stairGroup.add(rightStringer);
+
+    // Continuous handrails on stairs
+    const handrailGeo = new THREE.BoxGeometry(0.06, 0.06, stairHypot);
+    const handrailL = new THREE.Mesh(handrailGeo, steelMat);
+    handrailL.rotation.x = stairAngle;
+    handrailL.position.set(stairStartX - stairW / 2 + 0.04, h / 2 + 1.0, (zBottom + zTop) / 2);
+    stairGroup.add(handrailL);
+
+    const handrailR = new THREE.Mesh(handrailGeo, steelMat);
+    handrailR.rotation.x = stairAngle;
+    handrailR.position.set(stairStartX + stairW / 2 - 0.04, h / 2 + 1.0, (zBottom + zTop) / 2);
+    stairGroup.add(handrailR);
+
+    // Handrail stanchions (only 4 stanchions total for pristine performance)
+    const stanchionGeo = new THREE.CylinderGeometry(0.03, 0.03, 1.05, 8);
+    [0.15, 0.5, 0.85].forEach((ratio) => {
+      const stY = ratio * h + 0.5;
+      const stZ = zBottom - ratio * stairRun;
+
+      const stL = new THREE.Mesh(stanchionGeo, steelMat);
+      stL.position.set(stairStartX - stairW / 2 + 0.04, stY, stZ);
+      stairGroup.add(stL);
+
+      const stR = new THREE.Mesh(stanchionGeo, steelMat);
+      stR.position.set(stairStartX + stairW / 2 - 0.04, stY, stZ);
+      stairGroup.add(stR);
+    });
+
+    group.add(stairGroup);
+
+    // 4. PERIMETER BALLISTIC SAFETY GUARDRAILS (WITH 100% UNBLOCKABLE STAIRWAY ENTRANCE)
+    const railH = 1.10;
+    const postGeo = new THREE.BoxGeometry(0.08, railH, 0.08);
+    const railMeshGroup = new THREE.Group();
+
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: glassColor,
+      transparent: true,
+      opacity: 0.35,
+      roughness: 0.1,
+      metalness: 0.85
+    });
+
+    const createSingleRailing = (
+      length: number,
+      posX: number,
+      posZ: number,
+      rotAngle: number = 0
+    ) => {
+      const seg = new THREE.Group();
+      seg.position.set(posX, h, posZ);
+      if (rotAngle) seg.rotation.y = rotAngle;
+
+      // Ballistic glass panel
+      const glassGeo = new THREE.BoxGeometry(length - 0.08, railH - 0.15, 0.04);
+      const glass = new THREE.Mesh(glassGeo, glassMat);
+      glass.position.y = railH / 2;
+      seg.add(glass);
+
+      // Steel top rail
+      const topBarGeo = new THREE.BoxGeometry(length, 0.06, 0.06);
+      const topBar = new THREE.Mesh(topBarGeo, steelMat);
+      topBar.position.y = railH;
+      seg.add(topBar);
+
+      // Kickplate
+      const kickGeo = new THREE.BoxGeometry(length, 0.12, 0.03);
+      const kick = new THREE.Mesh(kickGeo, steelMat);
+      kick.position.y = 0.06;
+      seg.add(kick);
+
+      // Posts at ends
+      [-length / 2, length / 2].forEach((px) => {
+        const post = new THREE.Mesh(postGeo, steelMat);
+        post.position.set(px, railH / 2, 0);
+        seg.add(post);
+      });
+
+      railMeshGroup.add(seg);
+      group.add(railMeshGroup);
+
+      // Register individual Box3 obstacle ONLY for this specific solid rail segment
+      group.updateMatrixWorld(true);
+      const segBox = new THREE.Box3().setFromObject(seg);
+      this.obstacles.push({
+        mesh: seg,
+        box: segBox,
+        isCover: true
+      });
+    };
+
+    // A. Back Railing (full width -Z)
+    createSingleRailing(w, 0, -d / 2);
+
+    // B. Left Railing (full depth -X)
+    createSingleRailing(d, -w / 2, 0, Math.PI / 2);
+
+    // C. Right Railing (full depth +X)
+    createSingleRailing(d, w / 2, 0, Math.PI / 2);
+
+    // D. Front Railing (ONLY covers left section, leaving stair doorway 100% open on right!)
+    const frontRailSpan = w - stairW;
+    if (frontRailSpan > 0.4) {
+      createSingleRailing(frontRailSpan, -w / 2 + frontRailSpan / 2, d / 2);
+    }
+    // NOTICE: Front-Right (+Z from w/2 - stairW to w/2) HAS ZERO OBSTACLES! Player walks straight in!
+
+    // 5. UPFLOOR TACTICAL PERKS: SNIPER COVER, FLOODLIGHT, COMMS MAST
+    // A. Fortified sandbag sniper cover in front-left corner
+    const sandbagMat = new THREE.MeshStandardMaterial({
+      color: theme === 'desert' ? 0xd97706 : 0x78716c,
+      roughness: 0.85
+    });
+    const sandbagGeo = new THREE.BoxGeometry(0.80, 0.35, 0.35);
+    const sbMesh = new THREE.Mesh(sandbagGeo, sandbagMat);
+    sbMesh.position.set(-w / 2 + 0.6, h + 0.18, d / 2 - 0.35);
+    sbMesh.castShadow = true;
+    group.add(sbMesh);
+
+    group.updateMatrixWorld(true);
+    const sbBox = new THREE.Box3().setFromObject(sbMesh);
+    this.obstacles.push({ mesh: sbMesh, box: sbBox, isCover: true });
+
+    // B. High-intensity floodlight (optimized: emissive lens + soft lightweight PointLight)
+    const lampHousingGeo = new THREE.CylinderGeometry(0.20, 0.15, 0.30, 10);
+    lampHousingGeo.rotateX(Math.PI / 2);
+    const lampHousing = new THREE.Mesh(lampHousingGeo, steelMat);
+    lampHousing.position.set(-w / 2 + 0.2, h + railH + 0.4, d / 2 - 0.2);
+    lampHousing.rotation.y = -Math.PI / 4;
+    lampHousing.rotation.x = 0.3;
+    group.add(lampHousing);
+
+    const lampLensGeo = new THREE.CircleGeometry(0.18, 10);
+    const lampLensMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const lampLens = new THREE.Mesh(lampLensGeo, lampLensMat);
+    lampLens.position.set(0, 0, 0.16);
+    lampHousing.add(lampLens);
+
+    const floodPointLight = new THREE.PointLight(0xfffbeb, 1.2, 16);
+    floodPointLight.position.set(-w / 2 + 0.2, h + railH + 0.4, d / 2 - 0.2);
+    floodPointLight.castShadow = false;
+    group.add(floodPointLight);
+
+    // C. Comms antenna mast on rear corner
+    const mastGeo = new THREE.CylinderGeometry(0.04, 0.06, 3.8, 8);
+    const mast = new THREE.Mesh(mastGeo, steelMat);
+    mast.position.set(w / 2 - 0.2, h + 1.9, -d / 2 + 0.2);
+    group.add(mast);
+
+    const beaconGeo = new THREE.SphereGeometry(0.12, 8, 8);
+    const beaconMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+    const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+    beacon.position.set(w / 2 - 0.2, h + 3.85, -d / 2 + 0.2);
+    group.add(beacon);
+
+    // 6. REGISTER DECK & STAIR PHYSICS
+    group.updateMatrixWorld(true);
+
+    const yAxis = new THREE.Vector3(0, 1, 0);
+    const deckLocalCenter = new THREE.Vector3(0, h, 0);
+    const deckWorldCenter = deckLocalCenter.clone().applyAxisAngle(yAxis, rotY).add(group.position);
+    const deckBox = new THREE.Box3().setFromObject(deckMesh);
+
+    // Walkable elevated deck slab
+    this.obstacles.push({
+      mesh: deckMesh,
+      box: deckBox,
+      isFloor: true,
+      isCover: false,
+      ceilingY: h - slabThick,
+      floorPlane: {
+        center: deckWorldCenter,
+        halfW: w / 2,
+        halfD: d / 2,
+        rotY,
+        topY: h
+      }
+    });
+
+    // 100% butter-smooth mathematical stair ramp collider
+    const p1Local = new THREE.Vector3(stairStartX, 0.0, zBottom);
+    const p2Local = new THREE.Vector3(stairStartX, h, zTop);
+    const p1World = p1Local.clone().applyAxisAngle(yAxis, rotY).add(group.position);
+    const p2World = p2Local.clone().applyAxisAngle(yAxis, rotY).add(group.position);
+
+    const stairRamp: StairRamp = {
+      p1: p1World,
+      p2: p2World,
+      width: stairW + 0.3,
+      bottomY: 0.0,
+      topY: h
+    };
+    const stairBox = new THREE.Box3().setFromObject(stairGroup);
+
+    this.obstacles.push({
+      mesh: stairGroup,
+      box: stairBox,
+      isCover: false,
+      stairRamp
+    });
+
+    // 7. EXCLUSIVE UPFLOOR TACTICAL SUPPLY CRATES
+    const spawnPlatformProp = (
+      type: DestructibleType,
+      lx: number,
+      ly: number,
+      lz: number,
+      lrot: number,
+      loot: LootType,
+      suffix: string
+    ) => {
+      const v = new THREE.Vector3(lx, ly, lz);
+      v.applyAxisAngle(yAxis, rotY);
+      v.add(group.position);
+      const prop = new DestructibleProp(
+        `${options.id}-prop-${suffix}`,
+        type,
+        v,
+        rotY + lrot,
+        loot,
+        options.id
+      );
+      this.arenaGroup.add(prop.mesh);
+      this.destructibles.push(prop);
+      this.obstacles.push(prop.obstacle);
+    };
+
+    // Prop 1: Tactical Ammo Crate on the platform
+    spawnPlatformProp('loot_crate', -w / 2 + 1.2, h, -d / 2 + 1.1, 0.2, 'ammo_pack', 'deck-ammo');
+
+    // Prop 2: Armored Tech Safe on the platform
+    spawnPlatformProp('tech_safe', 0.2, h, -d / 2 + 1.1, -0.3, 'armor_pack', 'deck-safe');
+
+    return group;
+  }
 
   /**
    * Builds an authentic, fully hollow, enterable building with interior floor,
@@ -1474,7 +2042,7 @@ export class ArenaManager {
     this.doors.push(door);
     this.obstacles.push(door.obstacle);
 
-    // 6. Ceiling Slab
+    // 6. Ceiling Slab & Rooftop Base Floor
     const ceilingGeo = new THREE.BoxGeometry(w + 0.3, 0.2, d + 0.3);
     const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7, side: THREE.DoubleSide });
     const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
@@ -1483,7 +2051,13 @@ export class ArenaManager {
     ceiling.receiveShadow = true;
     group.add(ceiling);
 
-    // 7. Roof Styling
+    const bRotY = options.rotY || 0;
+    const roofBaseY = wallH + 0.2;
+    const roofCenterWorld = new THREE.Vector3(0, roofBaseY, 0)
+      .applyAxisAngle(new THREE.Vector3(0, 1, 0), bRotY)
+      .add(group.position);
+
+    // 7. Roof Styling & Walkable Rooftop Physics (allows jumping onto roof from elevated platforms)
     const roofColor = options.roofColor || '#334155';
     if (options.roofType === 'gable') {
       const roofH = 3.6;
@@ -1508,7 +2082,7 @@ export class ArenaManager {
       roofMesh.receiveShadow = true;
       group.add(roofMesh);
 
-      // Red brick chimney
+      // Red brick chimney (tactical rooftop sniper cover)
       const chimneyGeo = new THREE.BoxGeometry(1.0, roofH + 1.2, 1.0);
       const chimneyMat = new THREE.MeshStandardMaterial({
         map: TextureGenerator.createBrickTexture('#7f1d1d', '#94a3b8'),
@@ -1518,6 +2092,28 @@ export class ArenaManager {
       chimney.position.set(w * 0.28, wallH + roofH * 0.65, 0);
       chimney.castShadow = true;
       group.add(chimney);
+
+      group.updateMatrixWorld(true);
+      const chimneyBox = new THREE.Box3().setFromObject(chimney);
+      this.obstacles.push({ mesh: chimney, box: chimneyBox, isCover: true });
+
+      // Register Walkable Pitched Gable Roof Obstacle
+      const roofBox = new THREE.Box3().setFromObject(roofMesh);
+      this.obstacles.push({
+        mesh: roofMesh,
+        box: roofBox,
+        isFloor: true,
+        isCover: false,
+        ceilingY: wallH,
+        floorPlane: {
+          center: roofCenterWorld,
+          halfW: (w + 0.8) / 2,
+          halfD: (d + 0.8) / 2,
+          rotY: bRotY,
+          topY: roofBaseY,
+          pitchHeight: roofH
+        }
+      });
     } else if (options.roofType === 'cyber_tower') {
       // Skyscraper tower rising above enterable lobby
       const towerH = options.towerHeight || 24;
@@ -1534,6 +2130,23 @@ export class ArenaManager {
       group.updateMatrixWorld(true);
       const towerBox = new THREE.Box3().setFromObject(tower);
       this.obstacles.push({ mesh: tower, box: towerBox, isCover: false });
+
+      // Register Walkable Rooftop Terrace Floor Obstacle (around skyscraper tower base)
+      const ceilingBox = new THREE.Box3().setFromObject(ceiling);
+      this.obstacles.push({
+        mesh: ceiling,
+        box: ceilingBox,
+        isFloor: true,
+        isCover: false,
+        ceilingY: wallH,
+        floorPlane: {
+          center: roofCenterWorld,
+          halfW: (w + 0.3) / 2,
+          halfD: (d + 0.3) / 2,
+          rotY: bRotY,
+          topY: roofBaseY
+        }
+      });
 
       // Rooftop antenna mast with aircraft beacon
       const mastGeo = new THREE.CylinderGeometry(0.08, 0.15, 6, 8);
@@ -1564,6 +2177,26 @@ export class ArenaManager {
       const ac = new THREE.Mesh(acGeo, acMat);
       ac.position.set(w * 0.2, wallH + 0.8, -d * 0.15);
       group.add(ac);
+
+      group.updateMatrixWorld(true);
+      const ceilingBox = new THREE.Box3().setFromObject(ceiling);
+      this.obstacles.push({
+        mesh: ceiling,
+        box: ceilingBox,
+        isFloor: true,
+        isCover: false,
+        ceilingY: wallH,
+        floorPlane: {
+          center: roofCenterWorld,
+          halfW: (w + 0.3) / 2,
+          halfD: (d + 0.3) / 2,
+          rotY: bRotY,
+          topY: roofBaseY
+        }
+      });
+
+      const acBox = new THREE.Box3().setFromObject(ac);
+      this.obstacles.push({ mesh: ac, box: acBox, isCover: true });
     }
 
     // 8. Interior Illumination
@@ -1616,7 +2249,7 @@ export class ArenaManager {
     });
 
     // 10. Interior Tactical Furniture & Cover (Tactical gameplay inside!)
-    // Executive desk / dispatch terminal table against back interior wall
+    // Executive desk / dispatch terminal table
     const deskGeo = new THREE.BoxGeometry(2.4, 0.9, 1.1);
     const deskMat = new THREE.MeshStandardMaterial({ color: 0x3f3f46, roughness: 0.6 });
     const desk = new THREE.Mesh(deskGeo, deskMat);
