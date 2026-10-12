@@ -23,7 +23,7 @@ import { PauseModal } from './ui/PauseModal';
 import { TutorialModal } from './ui/TutorialModal';
 import { MobileControls } from './ui/MobileControls';
 import { IOSFullscreenModal } from './ui/IOSFullscreenModal';
-import { OPEN_IOS_GUIDE_EVENT } from './utils/fullscreen';
+import { OPEN_IOS_GUIDE_EVENT, initAutoFullscreen, enterFullscreen, isFullscreenActive } from './utils/fullscreen';
 import { userManager } from './game/managers/UserManager';
 import { soundManager } from './audio/SoundManager';
 import { AuthModal } from './ui/AuthModal';
@@ -101,6 +101,14 @@ export const App: React.FC = () => {
     const handleOpenGuide = () => setShowIOSGuide(true);
     window.addEventListener(OPEN_IOS_GUIDE_EVENT, handleOpenGuide);
     return () => window.removeEventListener(OPEN_IOS_GUIDE_EVENT, handleOpenGuide);
+  }, []);
+
+  // Automatically activate fullscreen mode when opening the game
+  useEffect(() => {
+    const cleanupFullscreen = initAutoFullscreen();
+    return () => {
+      cleanupFullscreen();
+    };
   }, []);
 
   // Run statistics for game over modal
@@ -190,6 +198,9 @@ export const App: React.FC = () => {
   const handleStartGame = (mode: GameMode, arena: ArenaId, mission?: MissionConfig) => {
     soundManager.playDeployStart();
     soundManager.playMusic('combat');
+    if (!isFullscreenActive()) {
+      enterFullscreen();
+    }
     if (engineRef.current) {
       if (mode === 'mission' && mission) {
         engineRef.current.startMission(mission);
@@ -215,6 +226,9 @@ export const App: React.FC = () => {
     if (nextMission && engineRef.current) {
       soundManager.playDeployStart();
       soundManager.playMusic('combat');
+      if (!isFullscreenActive()) {
+        enterFullscreen();
+      }
       engineRef.current.startMission(nextMission);
     }
   };
@@ -303,6 +317,9 @@ export const App: React.FC = () => {
           onRestart={() => {
             soundManager.playDeployStart();
             soundManager.playMusic('combat');
+            if (!isFullscreenActive()) {
+              enterFullscreen();
+            }
             if (engineRef.current) {
               if (activeMission) {
                 engineRef.current.startMission(activeMission);
@@ -346,6 +363,9 @@ export const App: React.FC = () => {
           onRestart={() => {
             soundManager.playDeployStart();
             soundManager.playMusic('combat');
+            if (!isFullscreenActive()) {
+              enterFullscreen();
+            }
             if (engineRef.current) {
               if (activeMission) {
                 engineRef.current.startMission(activeMission);
@@ -469,6 +489,9 @@ export const App: React.FC = () => {
           onLaunchMatch={(arena, mode) => {
             soundManager.playDeployStart();
             soundManager.playMusic('combat');
+            if (!isFullscreenActive()) {
+              enterFullscreen();
+            }
             setShowMultiplayer(false);
             if (engineRef.current) {
               engineRef.current.startMultiplayerGame(arena, mode);
