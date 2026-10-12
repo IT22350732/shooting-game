@@ -312,10 +312,10 @@ export class ArenaManager {
     this.arenaGroup.add(ground);
 
     // Seamless Intersecting Asphalt Streets with Vector-Sharp Markings (Zero Z-Fighting)
-    this.createStreetSystem(12);
+    this.createStreetSystem(12, 40.5);
 
     // Concrete Sidewalks bordering the streets
-    this.createSidewalkBorder(12);
+    this.createSidewalkBorder(12, 40.5);
 
     // REAL ENTERABLE HOUSES WITH WALKABLE INTERIORS & INTERACTIVE DOORS
     // House 1 (North-West): Red Brick Family Manor
@@ -562,8 +562,8 @@ export class ArenaManager {
     this.arenaGroup.add(ground);
 
     // Wide 4-Lane City Avenue & Intersecting Street with Vector-Sharp Markings (Zero Z-Fighting)
-    this.createStreetSystem(14);
-    this.createSidewalkBorder(14);
+    this.createStreetSystem(14, 42.0);
+    this.createSidewalkBorder(14, 42.0);
 
     // REAL ENTERABLE DOWNTOWN BUILDINGS WITH SKYSCRAPER TOWERS & INTERACTIVE DOORS
     // Building 1 (NW): Metro Lounge & Cafe
@@ -1243,7 +1243,19 @@ export class ArenaManager {
     const doorW = 2.0;
     const doorH = 2.7;
 
-    // 1. Interior Floor
+    // 0. Sub-Foundation Slab (Isolates indoor floor from outdoor terrain, grass & sidewalks)
+    const foundationGeo = new THREE.BoxGeometry(w + 0.4, 0.30, d + 0.4);
+    const foundationMat = new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      roughness: 0.85,
+      metalness: 0.1
+    });
+    const foundationMesh = new THREE.Mesh(foundationGeo, foundationMat);
+    foundationMesh.position.set(0, -0.09, 0);
+    foundationMesh.receiveShadow = true;
+    group.add(foundationMesh);
+
+    // 1. Interior Floor (Solid elevated floor at y = 0.04 with top surface at y = 0.08)
     let floorTex: THREE.Texture;
     if (options.interiorFloorType === 'wood') {
       floorTex = TextureGenerator.createWoodParquetFloorTexture();
@@ -1252,7 +1264,7 @@ export class ArenaManager {
     } else {
       floorTex = TextureGenerator.createSidewalkTexture();
     }
-    const floorGeo = new THREE.BoxGeometry(w - 0.2, 0.05, d - 0.2);
+    const floorGeo = new THREE.BoxGeometry(w - 0.1, 0.08, d - 0.1);
     const floorMat = new THREE.MeshStandardMaterial({
       map: floorTex,
       roughness: 0.5,
@@ -1260,7 +1272,7 @@ export class ArenaManager {
       side: THREE.DoubleSide
     });
     const floorMesh = new THREE.Mesh(floorGeo, floorMat);
-    floorMesh.position.set(0, 0.025, 0);
+    floorMesh.position.set(0, 0.04, 0);
     floorMesh.receiveShadow = true;
     group.add(floorMesh);
 
@@ -1285,30 +1297,33 @@ export class ArenaManager {
     });
 
     // 3. Perimeter Walls with Doorway Cutout on Front (+Z face)
+    // Wall height extends 0.25m underground to guarantee zero light bleeding or floor seam tears
     const wallMeshes: THREE.Mesh[] = [];
+    const wallTotalH = wallH + 0.25;
+    const wallY = wallTotalH / 2 - 0.25;
 
     // Back Wall (-Z)
-    const backGeo = new THREE.BoxGeometry(w, wallH, wallThick);
+    const backGeo = new THREE.BoxGeometry(w, wallTotalH, wallThick);
     const backMesh = new THREE.Mesh(backGeo, wallMat);
-    backMesh.position.set(0, wallH / 2, -d / 2 + wallThick / 2);
+    backMesh.position.set(0, wallY, -d / 2 + wallThick / 2);
     backMesh.castShadow = true;
     backMesh.receiveShadow = true;
     group.add(backMesh);
     wallMeshes.push(backMesh);
 
     // Left Wall (-X)
-    const leftGeo = new THREE.BoxGeometry(wallThick, wallH, d - wallThick * 2);
+    const leftGeo = new THREE.BoxGeometry(wallThick, wallTotalH, d - wallThick * 2);
     const leftMesh = new THREE.Mesh(leftGeo, wallMat);
-    leftMesh.position.set(-w / 2 + wallThick / 2, wallH / 2, 0);
+    leftMesh.position.set(-w / 2 + wallThick / 2, wallY, 0);
     leftMesh.castShadow = true;
     leftMesh.receiveShadow = true;
     group.add(leftMesh);
     wallMeshes.push(leftMesh);
 
     // Right Wall (+X)
-    const rightGeo = new THREE.BoxGeometry(wallThick, wallH, d - wallThick * 2);
+    const rightGeo = new THREE.BoxGeometry(wallThick, wallTotalH, d - wallThick * 2);
     const rightMesh = new THREE.Mesh(rightGeo, wallMat);
-    rightMesh.position.set(w / 2 - wallThick / 2, wallH / 2, 0);
+    rightMesh.position.set(w / 2 - wallThick / 2, wallY, 0);
     rightMesh.castShadow = true;
     rightMesh.receiveShadow = true;
     group.add(rightMesh);
@@ -1316,18 +1331,18 @@ export class ArenaManager {
 
     // Front Left Wall Panel (+Z, left of doorway)
     const panelW = (w - doorW) / 2;
-    const frontLGeo = new THREE.BoxGeometry(panelW, wallH, wallThick);
+    const frontLGeo = new THREE.BoxGeometry(panelW, wallTotalH, wallThick);
     const frontLMesh = new THREE.Mesh(frontLGeo, wallMat);
-    frontLMesh.position.set(-w / 2 + panelW / 2, wallH / 2, d / 2 - wallThick / 2);
+    frontLMesh.position.set(-w / 2 + panelW / 2, wallY, d / 2 - wallThick / 2);
     frontLMesh.castShadow = true;
     frontLMesh.receiveShadow = true;
     group.add(frontLMesh);
     wallMeshes.push(frontLMesh);
 
     // Front Right Wall Panel (+Z, right of doorway)
-    const frontRGeo = new THREE.BoxGeometry(panelW, wallH, wallThick);
+    const frontRGeo = new THREE.BoxGeometry(panelW, wallTotalH, wallThick);
     const frontRMesh = new THREE.Mesh(frontRGeo, wallMat);
-    frontRMesh.position.set(w / 2 - panelW / 2, wallH / 2, d / 2 - wallThick / 2);
+    frontRMesh.position.set(w / 2 - panelW / 2, wallY, d / 2 - wallThick / 2);
     frontRMesh.castShadow = true;
     frontRMesh.receiveShadow = true;
     group.add(frontRMesh);
@@ -1352,7 +1367,7 @@ export class ArenaManager {
       this.obstacles.push({ mesh, box, isCover: false });
     }
 
-    // 4. Door Frame
+    // 4. Door Frame & Entrance Sill Plate
     const trimColor = options.trimColor ? new THREE.Color(options.trimColor) : 0x1e293b;
     const frameMat = new THREE.MeshStandardMaterial({ color: trimColor, roughness: 0.5 });
     const postGeo = new THREE.BoxGeometry(0.12, doorH, wallThick + 0.08);
@@ -1370,8 +1385,56 @@ export class ArenaManager {
     topPost.position.set(0, doorH, d / 2 - wallThick / 2);
     group.add(topPost);
 
-    // 5. Interactive Door (with hinge pivot, Box3 obstacle, smooth swing & audio)
-    const localDoorPos = new THREE.Vector3(0, 0, d / 2 - wallThick / 2);
+    // Doorway threshold plate
+    const sillGeo = new THREE.BoxGeometry(doorW + 0.1, 0.05, wallThick + 0.08);
+    const sillMesh = new THREE.Mesh(sillGeo, frameMat);
+    sillMesh.position.set(0, 0.04, d / 2 - wallThick / 2);
+    sillMesh.receiveShadow = true;
+    group.add(sillMesh);
+
+    // 5. Interior Perimeter Baseboards (Skirting Boards)
+    // Eliminates all floor-to-wall intersection seams, shadow aliasing & z-fighting
+    const baseboardH = 0.14;
+    const baseboardThick = 0.04;
+    const baseboardMat = new THREE.MeshStandardMaterial({
+      color: trimColor,
+      roughness: 0.45,
+      metalness: 0.1
+    });
+    const baseboardY = 0.08 + baseboardH / 2;
+
+    // Back wall baseboard
+    const backBaseGeo = new THREE.BoxGeometry(w - wallThick * 2, baseboardH, baseboardThick);
+    const backBaseMesh = new THREE.Mesh(backBaseGeo, baseboardMat);
+    backBaseMesh.position.set(0, baseboardY, -d / 2 + wallThick + baseboardThick / 2);
+    group.add(backBaseMesh);
+
+    // Left wall baseboard
+    const sideBaseGeo = new THREE.BoxGeometry(baseboardThick, baseboardH, d - wallThick * 2);
+    const leftBaseMesh = new THREE.Mesh(sideBaseGeo, baseboardMat);
+    leftBaseMesh.position.set(-w / 2 + wallThick + baseboardThick / 2, baseboardY, 0);
+    group.add(leftBaseMesh);
+
+    // Right wall baseboard
+    const rightBaseMesh = new THREE.Mesh(sideBaseGeo, baseboardMat);
+    rightBaseMesh.position.set(w / 2 - wallThick - baseboardThick / 2, baseboardY, 0);
+    group.add(rightBaseMesh);
+
+    // Front wall baseboards (left & right of door frame)
+    const frontBaseW = panelW - wallThick;
+    if (frontBaseW > 0.1) {
+      const frontBaseGeo = new THREE.BoxGeometry(frontBaseW, baseboardH, baseboardThick);
+      const frontLBaseMesh = new THREE.Mesh(frontBaseGeo, baseboardMat);
+      frontLBaseMesh.position.set(-w / 2 + wallThick + frontBaseW / 2, baseboardY, d / 2 - wallThick - baseboardThick / 2);
+      group.add(frontLBaseMesh);
+
+      const frontRBaseMesh = new THREE.Mesh(frontBaseGeo, baseboardMat);
+      frontRBaseMesh.position.set(w / 2 - wallThick - frontBaseW / 2, baseboardY, d / 2 - wallThick - baseboardThick / 2);
+      group.add(frontRBaseMesh);
+    }
+
+    // 6. Interactive Door (with hinge pivot, Box3 obstacle, smooth swing & audio)
+    const localDoorPos = new THREE.Vector3(0, 0.08, d / 2 - wallThick / 2);
     const worldDoorPos = localDoorPos.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), options.rotY || 0).add(group.position);
 
     let doorMat: THREE.Material;
@@ -1557,7 +1620,7 @@ export class ArenaManager {
     const deskGeo = new THREE.BoxGeometry(2.4, 0.9, 1.1);
     const deskMat = new THREE.MeshStandardMaterial({ color: 0x3f3f46, roughness: 0.6 });
     const desk = new THREE.Mesh(deskGeo, deskMat);
-    desk.position.set(0, 0.45, -d / 2 + 1.3);
+    desk.position.set(0, 0.08 + 0.45, -d / 2 + 1.3);
     desk.castShadow = true;
     desk.receiveShadow = true;
     group.add(desk);
@@ -1617,19 +1680,19 @@ export class ArenaManager {
     };
 
     // Prop 1: Terracotta Pot on top of the desk (drops gold coin pack)
-    spawnBuildingProp('clay_pot', 0.5, 0.9, -d / 2 + 1.3, 0, 'coin_pack', 'pot-1');
+    spawnBuildingProp('clay_pot', 0.5, 0.08 + 0.9, -d / 2 + 1.3, 0, 'coin_pack', 'pot-1');
 
     // Prop 2: Wooden Loot Crate in back-left corner (drops medkit health pack)
-    spawnBuildingProp('loot_crate', -w / 2 + 1.25, 0, -d / 2 + 1.25, 0.1, 'health_pack', 'crate-1');
+    spawnBuildingProp('loot_crate', -w / 2 + 1.25, 0.08, -d / 2 + 1.25, 0.1, 'health_pack', 'crate-1');
 
     // Prop 3: Tactical Ammo Crate along side wall (drops ammo pack)
-    spawnBuildingProp('loot_crate', -w / 2 + 1.25, 0, -d / 2 + 2.5, -0.15, 'ammo_pack', 'crate-2');
+    spawnBuildingProp('loot_crate', -w / 2 + 1.25, 0.08, -d / 2 + 2.5, -0.15, 'ammo_pack', 'crate-2');
 
     // Prop 4: Armored Tech Safe in back-right corner (drops body armor pack)
-    spawnBuildingProp('tech_safe', w / 2 - 1.25, 0, -d / 2 + 1.25, -Math.PI / 4, 'armor_pack', 'safe-1');
+    spawnBuildingProp('tech_safe', w / 2 - 1.25, 0.08, -d / 2 + 1.25, -Math.PI / 4, 'armor_pack', 'safe-1');
 
     // Prop 5: Extra Clay Pot near front corner (drops coins)
-    spawnBuildingProp('clay_pot', w / 2 - 1.25, 0, d / 2 - 1.6, 0.4, 'coin_pack', 'pot-2');
+    spawnBuildingProp('clay_pot', w / 2 - 1.25, 0.08, d / 2 - 1.6, 0.4, 'coin_pack', 'pot-2');
 
     // Tactical Screen / Whiteboard on back interior wall
     const screenGeo = new THREE.BoxGeometry(2.2, 1.2, 0.06);
@@ -2343,12 +2406,13 @@ export class ArenaManager {
 
   /**
    * Seamless 4-way asphalt street system with vector-sharp procedural markings
-   * Zero overlapping geometry (no Z-fighting) and realistic road markings
+   * Zero overlapping geometry (no Z-fighting), stops cleanly before outer buildings
    */
-  private createStreetSystem(streetWidth: number = 12) {
+  private createStreetSystem(streetWidth: number = 12, avenueReach?: number) {
     const half = this.arenaSize / 2;
+    const reach = avenueReach ?? (half - 0.5);
     const iHalf = streetWidth / 2;
-    const armLength = half - iHalf;
+    const armLength = Math.max(2, reach - iHalf);
 
     const roadTex = TextureGenerator.createAsphaltRoadTexture();
     const roadMat = new THREE.MeshStandardMaterial({
@@ -2357,15 +2421,31 @@ export class ArenaManager {
       metalness: 0.08
     });
 
-    // 1. North-South Continuous Street (covers center intersection [-iHalf, iHalf])
-    const roadZGeo = new THREE.PlaneGeometry(streetWidth, this.arenaSize);
-    roadZGeo.rotateX(-Math.PI / 2);
-    const roadZ = new THREE.Mesh(roadZGeo, roadMat);
-    roadZ.position.set(0, 0.02, 0);
-    roadZ.receiveShadow = true;
-    this.arenaGroup.add(roadZ);
+    // 1. Center Intersection [-iHalf, iHalf] (covers the 4-way intersection without double drawing)
+    const centerGeo = new THREE.PlaneGeometry(streetWidth, streetWidth);
+    centerGeo.rotateX(-Math.PI / 2);
+    const centerMesh = new THREE.Mesh(centerGeo, roadMat);
+    centerMesh.position.set(0, 0.02, 0);
+    centerMesh.receiveShadow = true;
+    this.arenaGroup.add(centerMesh);
 
-    // 2. West Street Arm (runs from -half to -iHalf, no overlap with center)
+    // 2. North Street Arm (runs from -reach to -iHalf, stopping cleanly before North building)
+    const roadNorthGeo = new THREE.PlaneGeometry(streetWidth, armLength);
+    roadNorthGeo.rotateX(-Math.PI / 2);
+    const roadNorth = new THREE.Mesh(roadNorthGeo, roadMat);
+    roadNorth.position.set(0, 0.02, -(iHalf + armLength / 2));
+    roadNorth.receiveShadow = true;
+    this.arenaGroup.add(roadNorth);
+
+    // 3. South Street Arm (runs from iHalf to reach, stopping cleanly before South building)
+    const roadSouthGeo = new THREE.PlaneGeometry(streetWidth, armLength);
+    roadSouthGeo.rotateX(-Math.PI / 2);
+    const roadSouth = new THREE.Mesh(roadSouthGeo, roadMat);
+    roadSouth.position.set(0, 0.02, iHalf + armLength / 2);
+    roadSouth.receiveShadow = true;
+    this.arenaGroup.add(roadSouth);
+
+    // 4. West Street Arm (runs from -reach to -iHalf, stopping cleanly before West building)
     const roadWestGeo = new THREE.PlaneGeometry(armLength, streetWidth);
     roadWestGeo.rotateX(-Math.PI / 2);
     const roadWest = new THREE.Mesh(roadWestGeo, roadMat);
@@ -2373,7 +2453,7 @@ export class ArenaManager {
     roadWest.receiveShadow = true;
     this.arenaGroup.add(roadWest);
 
-    // 3. East Street Arm (runs from iHalf to half, no overlap with center)
+    // 5. East Street Arm (runs from iHalf to reach, stopping cleanly before East building)
     const roadEastGeo = new THREE.PlaneGeometry(armLength, streetWidth);
     roadEastGeo.rotateX(-Math.PI / 2);
     const roadEast = new THREE.Mesh(roadEastGeo, roadMat);
@@ -2407,9 +2487,9 @@ export class ArenaManager {
       markGroup.add(mesh);
     };
 
-    // A. Yellow Double Center Lines along each street segment (stops before crosswalks)
+    // A. Yellow Double Center Lines along each street segment (stops before crosswalks and terminates before reach)
     const crosswalkClearance = 3.6;
-    const stripeDist = half - (iHalf + crosswalkClearance);
+    const stripeDist = Math.max(1, (reach - 1.2) - (iHalf + crosswalkClearance));
     const centerDist = iHalf + crosswalkClearance + stripeDist / 2;
     const lineWidth = 0.14;
     const lineGap = 0.14;
@@ -2457,17 +2537,18 @@ export class ArenaManager {
   }
 
   /**
-   * Concrete Sidewalk Borders lining the streets
+   * Concrete Sidewalk Borders lining the streets, strictly terminating outside outer buildings
    */
-  private createSidewalkBorder(streetWidth: number = 12) {
+  private createSidewalkBorder(streetWidth: number = 12, avenueReach?: number) {
     const sidewalkTex = TextureGenerator.createSidewalkTexture();
     const mat = new THREE.MeshStandardMaterial({ map: sidewalkTex, roughness: 0.6 });
     const offset = streetWidth / 2 + 0.8;
     const half = this.arenaSize / 2;
-    const armLen = half - streetWidth / 2;
-    const centerArm = (streetWidth / 2 + half) / 2;
+    const reach = avenueReach ?? (half - 0.5);
+    const armLen = Math.max(2, reach - streetWidth / 2);
+    const centerArm = (streetWidth / 2 + reach) / 2;
 
-    // 4 Corner Sidewalk Strips
+    // 4 Corner Sidewalk Strips terminating outside building entrances
     [
       { x: -centerArm, z: -offset, w: armLen, d: 1.6 },
       { x: centerArm, z: -offset, w: armLen, d: 1.6 },
