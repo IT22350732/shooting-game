@@ -4,6 +4,7 @@ import { Radio } from 'lucide-react';
 export interface RadarPing {
   id: string;
   type: 'teammate' | 'enemy' | 'boss';
+  subType?: string;
   x: number;
   z: number;
   name?: string;

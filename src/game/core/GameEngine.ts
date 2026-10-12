@@ -38,6 +38,7 @@ import { voiceChatService } from '../multiplayer/VoiceChatService';
 import { RemotePlayer } from '../entities/RemotePlayer';
 import { NetworkPlayerState } from '../multiplayer/MultiplayerTypes';
 import { RadarPing } from '../../ui/multiplayer/TacticalRadar';
+import { ArenaBuildingInfo } from '../../ui/ArenaMiniMap';
 
 export interface HUDStats {
   health: number;
@@ -85,6 +86,8 @@ export interface HUDStats {
   playerPos?: { x: number; y: number; z: number };
   playerYaw?: number;
   interactionPrompt?: string | null;
+  arenaBuildings?: ArenaBuildingInfo[];
+  arenaSize?: number;
 }
 
 export interface GameEngineCallbacks {
@@ -2766,7 +2769,20 @@ export class GameEngine {
         radarPings: this.getRadarPings(),
         playerPos: { x: this.player.position.x, y: this.player.position.y, z: this.player.position.z },
         playerYaw: this.player.yaw,
-        interactionPrompt: this.currentInteractionPrompt
+        interactionPrompt: this.currentInteractionPrompt,
+        arenaBuildings: this.arena.interiorZones.map(z => ({
+          id: z.id,
+          name: z.name,
+          x: z.center.x,
+          z: z.center.z,
+          width: z.width,
+          depth: z.depth,
+          rotY: z.rotY,
+          doorX: z.doorWorldPos.x,
+          doorZ: z.doorWorldPos.z,
+          isDoorOpen: z.door.isOpen
+        })),
+        arenaSize: this.arena.arenaSize
       });
     }
 
@@ -2775,8 +2791,8 @@ export class GameEngine {
     this.callbacks.onPowerupChange(activeList);
   }
 
-  public getRadarPings(): Array<{ id: string; type: 'teammate' | 'enemy' | 'boss'; x: number; z: number; name?: string; distance?: number }> {
-    const pings: Array<{ id: string; type: 'teammate' | 'enemy' | 'boss'; x: number; z: number; name?: string; distance?: number }> = [];
+  public getRadarPings(): RadarPing[] {
+    const pings: RadarPing[] = [];
     const localPos = this.player.position;
     const localTeam = multiplayerService.localPlayer?.team || 'alpha';
 
@@ -2800,9 +2816,24 @@ export class GameEngine {
         pings.push({
           id: enemy.id,
           type: 'enemy',
+          subType: enemy.type,
           x: enemy.position.x,
           z: enemy.position.z
         });
+      }
+    }
+
+    if (this.mode === 'free_mode') {
+      for (const pt of this.practiceTargets) {
+        if (!pt.isDead) {
+          pings.push({
+            id: pt.id,
+            type: 'enemy',
+            subType: 'target',
+            x: pt.position.x,
+            z: pt.position.z
+          });
+        }
       }
     }
 

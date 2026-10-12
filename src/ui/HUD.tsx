@@ -34,9 +34,10 @@ import { useFullscreen } from '../utils/fullscreen';
 import { KillFeed } from './multiplayer/KillFeed';
 import { MultiplayerScoreboard } from './multiplayer/MultiplayerScoreboard';
 import { SquadVoiceHUD } from './multiplayer/SquadVoiceHUD';
-import { multiplayerService } from '../game/multiplayer/MultiplayerService';
 import { KillFeedEntry } from '../game/multiplayer/MultiplayerTypes';
+import { multiplayerService } from '../game/multiplayer/MultiplayerService';
 import { TacticalRadar, RadarPing } from './multiplayer/TacticalRadar';
+import { ArenaMiniMap, ArenaBuildingInfo } from './ArenaMiniMap';
 
 interface HUDProps {
   stats: {
@@ -85,6 +86,8 @@ interface HUDProps {
     shelterName?: string;
     isInsideBuilding?: boolean;
     isBuildingDoorOpen?: boolean;
+    arenaBuildings?: ArenaBuildingInfo[];
+    arenaSize?: number;
   };
   hitMarker: HitMarkerInfo | null;
   damageNumbers: FloatingDamageNumber[];
@@ -1304,19 +1307,9 @@ export const HUD: React.FC<HUDProps> = ({
             </div>
           </div>
         )}
-
-        {/* TACTICAL RADAR MINI-MAP FOR MULTIPLAYER */}
-        {stats.isMultiplayer && (
-          <TacticalRadar
-            pings={stats.radarPings}
-            playerPos={stats.playerPos}
-            playerYaw={stats.playerYaw}
-            isMobile={isMobileView}
-          />
-        )}
       </div>
 
-      {/* BOTTOM LEFT (DESKTOP) / TOP-LEFT (MOBILE): HEALTH, ARMOR & SQUAD VOICE */}
+      {/* BOTTOM LEFT (DESKTOP) / TOP-LEFT (MOBILE): LIVE TACTICAL ARENA MAP, HEALTH & ARMOR */}
       <div
         className="hud-player-status-container"
         style={{
@@ -1332,6 +1325,16 @@ export const HUD: React.FC<HUDProps> = ({
           pointerEvents: 'auto'
         }}
       >
+        {/* LIVE TACTICAL ARENA MAP (BOTTOM-LEFT CORNER) */}
+        <ArenaMiniMap
+          pings={stats.radarPings}
+          playerPos={stats.playerPos}
+          playerYaw={stats.playerYaw}
+          buildings={stats.arenaBuildings}
+          arenaSize={stats.arenaSize}
+          isMobile={isMobileView}
+        />
+
         <div
           className="glass-panel hud-health-panel"
           style={{
