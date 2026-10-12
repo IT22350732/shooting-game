@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Radio, Maximize2, Minimize2, Compass } from 'lucide-react';
+import { Radio } from 'lucide-react';
 import { RadarPing } from './multiplayer/TacticalRadar';
 
 export interface ArenaBuildingInfo {
@@ -32,9 +32,8 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
   arenaSize = 130,
   isMobile = false
 }) => {
-  const [zoomMode, setZoomMode] = useState<'local' | 'full'>('local');
-  // Default to 'heading' so the map arranges dynamically with player's direction when turning
-  const [mapOrientation, setMapOrientation] = useState<'heading' | 'north'>('heading');
+  const zoomMode = 'local';
+  const isHeadingUp = true;
   const [sweepAngle, setSweepAngle] = useState(0);
 
   // Smooth radar beam sweep animation
@@ -64,11 +63,8 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
     return pings.filter((p) => p.type === 'enemy' || p.type === 'boss').length;
   }, [pings]);
 
-  // Orientation settings
-  // In Heading-Up mode, the map rotates to align with player's gaze: forward view is always Top (-Y in SVG)
-  const isHeadingUp = mapOrientation === 'heading';
+  // Orientation settings: forward view is always Top (-Y in SVG)
   const mapRotDeg = (playerYaw * 180) / Math.PI;
-  // In North-Up mode, player arrow rotates: 0=N (Up), +90=E (Right), -90=W (Left), 180=S (Down)
   const playerYawDeg = (-playerYaw * 180) / Math.PI;
 
   // World to SVG Coordinate Conversion
@@ -135,13 +131,6 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
     return pts.join(' ');
   };
 
-  // Cardinal compass directions
-  const cardinals = [
-    { label: 'N', baseAngle: 0, color: '#0284c7' },
-    { label: 'E', baseAngle: 90, color: '#64748b' },
-    { label: 'S', baseAngle: 180, color: '#64748b' },
-    { label: 'W', baseAngle: 270, color: '#64748b' }
-  ];
 
   // Dynamic rotation center: in local mode revolves around screen center, in full sector view revolves around player coordinates
   const pCenter = worldToSvg(playerPos.x, playerPos.z);
@@ -193,87 +182,32 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
           </span>
         </div>
 
-        {/* Live Enemy Counter Pill & Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <div
+        {/* Live Enemy Counter Pill */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '2px 6px',
+            borderRadius: 4,
+            background: enemyCount > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+            border: `1px solid ${enemyCount > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`,
+            fontSize: isMobile ? '0.52rem' : '0.60rem',
+            fontWeight: 900,
+            color: enemyCount > 0 ? '#e11d48' : '#16a34a',
+            letterSpacing: 0.5
+          }}
+        >
+          <span
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              padding: '2px 5px',
-              borderRadius: 4,
-              background: enemyCount > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-              border: `1px solid ${enemyCount > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`,
-              fontSize: isMobile ? '0.52rem' : '0.60rem',
-              fontWeight: 900,
-              color: enemyCount > 0 ? '#e11d48' : '#16a34a',
-              letterSpacing: 0.5
+              width: 5,
+              height: 5,
+              borderRadius: '50%',
+              background: enemyCount > 0 ? '#e11d48' : '#16a34a',
+              boxShadow: `0 0 5px ${enemyCount > 0 ? '#e11d48' : '#16a34a'}`
             }}
-          >
-            <span
-              style={{
-                width: 5,
-                height: 5,
-                borderRadius: '50%',
-                background: enemyCount > 0 ? '#e11d48' : '#16a34a',
-                boxShadow: `0 0 5px ${enemyCount > 0 ? '#e11d48' : '#16a34a'}`
-              }}
-            />
-            <span>{enemyCount > 0 ? `${enemyCount}` : 'CLEAR'}</span>
-          </div>
-
-          {/* Orientation Mode Toggle (North-Up vs Heading-Up) */}
-          <button
-            onClick={() => setMapOrientation((prev) => (prev === 'north' ? 'heading' : 'north'))}
-            title={mapOrientation === 'north' ? 'North-Up: Fixed map, rotating player marker' : 'Heading-Up: Rotating map aligned to player direction'}
-            style={{
-              background: mapOrientation === 'heading' ? 'rgba(2, 132, 199, 0.18)' : 'rgba(2, 132, 199, 0.08)',
-              border: `1px solid ${mapOrientation === 'heading' ? 'rgba(2, 132, 199, 0.5)' : 'rgba(2, 132, 199, 0.25)'}`,
-              borderRadius: 4,
-              color: '#0284c7',
-              fontSize: '0.52rem',
-              fontWeight: 900,
-              padding: '2px 5px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 3
-            }}
-          >
-            <Compass size={9} />
-            <span>{mapOrientation === 'north' ? 'N-UP' : 'HEAD'}</span>
-          </button>
-
-          {/* Zoom Toggle Button */}
-          <button
-            onClick={() => setZoomMode((prev) => (prev === 'local' ? 'full' : 'local'))}
-            title={zoomMode === 'local' ? 'Switch to Full Sector View' : 'Switch to Tactical Local View'}
-            style={{
-              background: 'rgba(2, 132, 199, 0.08)',
-              border: '1px solid rgba(2, 132, 199, 0.25)',
-              borderRadius: 4,
-              color: '#0284c7',
-              fontSize: '0.52rem',
-              fontWeight: 900,
-              padding: '2px 5px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 3
-            }}
-          >
-            {zoomMode === 'local' ? (
-              <>
-                <Maximize2 size={9} />
-                <span>50M</span>
-              </>
-            ) : (
-              <>
-                <Minimize2 size={9} />
-                <span>ALL</span>
-              </>
-            )}
-          </button>
+          />
+          <span>{enemyCount > 0 ? `${enemyCount}` : 'CLEAR'}</span>
         </div>
       </div>
 
@@ -513,57 +447,7 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
             );
           })()}
 
-          {/* DYNAMIC CARDINAL COMPASS HEADINGS (N / S / E / W) */}
-          {cardinals.map((c) => {
-            const angleDeg = isHeadingUp ? (c.baseAngle + mapRotDeg) : c.baseAngle;
-            const angleRad = (angleDeg * Math.PI) / 180;
-            const labelRadius = radius + 3;
-            const tx = cx + Math.sin(angleRad) * labelRadius;
-            const ty = cy - Math.cos(angleRad) * labelRadius;
-
-            // Keep within visible SVG bounds
-            const clampedX = Math.max(8, Math.min(mapWidth - 8, tx));
-            const clampedY = Math.max(10, Math.min(mapHeight - 4, ty + 3));
-
-            return (
-              <text
-                key={c.label}
-                x={clampedX}
-                y={clampedY}
-                fill={c.color}
-                fontSize={c.label === 'N' ? '8' : '7.5'}
-                fontWeight="900"
-                textAnchor="middle"
-                style={{ pointerEvents: 'none' }}
-              >
-                {c.label}
-              </text>
-            );
-          })}
         </svg>
-      </div>
-
-      {/* FOOTER BAR: SECTOR COORDINATES (LIGHT THEME) */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '4px 10px',
-          background: 'rgba(248, 250, 252, 0.94)',
-          borderTop: '1px solid rgba(2, 132, 199, 0.15)',
-          fontSize: isMobile ? '0.52rem' : '0.60rem',
-          color: '#64748b',
-          fontWeight: 700
-        }}
-      >
-        <span>
-          LOC: <strong style={{ color: '#0284c7' }}>{Math.round(playerPos.x)}</strong>,{' '}
-          <strong style={{ color: '#0284c7' }}>{Math.round(playerPos.z)}</strong>
-        </span>
-        <span style={{ color: '#64748b', fontWeight: 800 }}>
-          {zoomMode === 'local' ? (isHeadingUp ? '50M HEADING' : '50M NORTH') : (isHeadingUp ? 'SECTOR HEADING' : 'SECTOR 130M')}
-        </span>
       </div>
     </div>
   );
