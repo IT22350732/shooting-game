@@ -32,8 +32,6 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
   arenaSize = 130,
   isMobile = false
 }) => {
-  const zoomMode = 'local';
-  const isHeadingUp = true;
   const [sweepAngle, setSweepAngle] = useState(0);
 
   // Smooth radar beam sweep animation
@@ -50,13 +48,13 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
   // Dimensions
   const mapWidth = isMobile ? 175 : 250;
   const mapHeight = isMobile ? 140 : 175;
-  const padding = 12;
   const cx = mapWidth / 2;
   const cy = mapHeight / 2;
-  const radius = Math.min(mapWidth, mapHeight) / 2 - padding;
+  const maxBoxDiagonal = Math.hypot(mapWidth, mapHeight);
 
-  // Range in world meters
-  const viewRange = zoomMode === 'local' ? 52 : Math.max(68, arenaSize / 2 + 5);
+  // Range in world meters: distance from center to vertical bounds (~48m)
+  const viewRangeY = 48;
+  const scale = cy / viewRangeY;
 
   // Active enemies count
   const enemyCount = useMemo(() => {
@@ -65,41 +63,19 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
 
   // Orientation settings: forward view is always Top (-Y in SVG)
   const mapRotDeg = (playerYaw * 180) / Math.PI;
-  const playerYawDeg = (-playerYaw * 180) / Math.PI;
 
   // World to SVG Coordinate Conversion
   const worldToSvg = (wx: number, wz: number): { x: number; y: number; isVisible: boolean } => {
-    let dx = wx;
-    let dz = wz;
-
-    if (zoomMode === 'local') {
-      dx = wx - playerPos.x;
-      dz = wz - playerPos.z;
-    }
-
-    const maxVisual = radius;
-    const scale = maxVisual / viewRange;
+    const dx = wx - playerPos.x;
+    const dz = wz - playerPos.z;
 
     const sx = cx + dx * scale;
     const sy = cy + dz * scale; // in 3D: -Z is North (up), +Z is South (down)
 
-    // Direction-invariant visibility test so objects stay visible at any player yaw / when turning back
-    let isVisible = true;
-    if (zoomMode === 'local') {
-      const distMeters = Math.hypot(dx, dz);
-      isVisible = distMeters <= viewRange * 1.45;
-    } else if (isHeadingUp) {
-      const rad = (mapRotDeg * Math.PI) / 180;
-      const cosR = Math.cos(rad);
-      const sinR = Math.sin(rad);
-      const pCenterX = cx + (playerPos.x * maxVisual) / viewRange;
-      const pCenterY = cy + (playerPos.z * maxVisual) / viewRange;
-      const rx = (sx - pCenterX) * cosR - (sy - pCenterY) * sinR + pCenterX;
-      const ry = (sx - pCenterX) * sinR + (sy - pCenterY) * cosR + pCenterY;
-      isVisible = rx >= -25 && rx <= mapWidth + 25 && ry >= -25 && ry <= mapHeight + 25;
-    } else {
-      isVisible = sx >= -25 && sx <= mapWidth + 25 && sy >= -25 && sy <= mapHeight + 25;
-    }
+    // Visibility test: keep anything within rotated view box diagonal + safety buffer visible
+    const distMeters = Math.hypot(dx, dz);
+    const maxVisibleMeters = (maxBoxDiagonal / 2 + 35) / scale;
+    const isVisible = distMeters <= maxVisibleMeters;
 
     return { x: sx, y: sy, isVisible };
   };
@@ -130,12 +106,6 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
 
     return pts.join(' ');
   };
-
-
-  // Dynamic rotation center: in local mode revolves around screen center, in full sector view revolves around player coordinates
-  const pCenter = worldToSvg(playerPos.x, playerPos.z);
-  const rotCenterX = zoomMode === 'local' ? cx : pCenter.x;
-  const rotCenterY = zoomMode === 'local' ? cy : pCenter.y;
 
   return (
     <div
@@ -241,52 +211,33 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
             </radialGradient>
           </defs>
 
-          {/* ROTATING WORLD CONTAINER (Rotates in Heading-Up mode to align with player's gaze) */}
-          <g transform={isHeadingUp ? `rotate(${mapRotDeg} ${rotCenterX} ${rotCenterY})` : undefined}>
-            {/* Tactical Grid Background (Light cyan) */}
+          {/* ROTATING WORLD CONTAINER (Heading-Up mode aligned with player's gaze) */}
+          <g transform={`rotate(${mapRotDeg} ${cx} ${cy})`}>
+            {/* Tactical Grid Background (Light cyan) - Spans full rotated box */}
             <g opacity="0.12">
-              {[-60, -40, -20, 0, 20, 40, 60].map((coord) => {
+              {[-120, -90, -60, -30, 0, 30, 60, 90, 120].map((coord) => {
                 const s = worldToSvg(coord, coord);
                 return (
                   <React.Fragment key={coord}>
-                    <line x1={s.x} y1={-80} x2={s.x} y2={mapHeight + 80} stroke="#0284c7" strokeWidth="0.8" strokeDasharray="3,4" />
-                    <line x1={-80} y1={s.y} x2={mapWidth + 80} y2={s.y} stroke="#0284c7" strokeWidth="0.8" strokeDasharray="3,4" />
+                    <line x1={s.x} y1={-150} x2={s.x} y2={mapHeight + 150} stroke="#0284c7" strokeWidth="0.8" strokeDasharray="3,4" />
+                    <line x1={-150} y1={s.y} x2={mapWidth + 150} y2={s.y} stroke="#0284c7" strokeWidth="0.8" strokeDasharray="3,4" />
                   </React.Fragment>
                 );
               })}
             </g>
 
-            {/* Concentric Range Rings */}
-            <circle cx={cx} cy={cy} r={radius * 0.45} fill="none" stroke="rgba(2, 132, 199, 0.16)" strokeWidth="0.8" strokeDasharray="2,3" />
-            <circle cx={cx} cy={cy} r={radius * 0.9} fill="none" stroke="rgba(2, 132, 199, 0.22)" strokeWidth="1" strokeDasharray="4,4" />
+            {/* Concentric Range Rings (25m and 50m tactical distance) */}
+            <circle cx={cx} cy={cy} r={25 * scale} fill="none" stroke="rgba(2, 132, 199, 0.16)" strokeWidth="0.8" strokeDasharray="2,3" />
+            <circle cx={cx} cy={cy} r={50 * scale} fill="none" stroke="rgba(2, 132, 199, 0.22)" strokeWidth="1" strokeDasharray="4,4" />
 
-            {/* Arena Outer Boundary Box */}
-            {(() => {
-              const halfA = arenaSize / 2;
-              const tl = worldToSvg(-halfA, -halfA);
-              const tr = worldToSvg(halfA, -halfA);
-              const br = worldToSvg(halfA, halfA);
-              const bl = worldToSvg(-halfA, halfA);
-              const boundaryPts = `${tl.x},${tl.y} ${tr.x},${tr.y} ${br.x},${br.y} ${bl.x},${bl.y}`;
-              return (
-                <polygon
-                  points={boundaryPts}
-                  fill="none"
-                  stroke="rgba(2, 132, 199, 0.35)"
-                  strokeWidth="1.2"
-                  strokeDasharray="5,4"
-                />
-              );
-            })()}
-
-            {/* Roads & Avenues (Light gray with subtle yellow dash) */}
+            {/* Roads & Avenues (Light gray with subtle yellow dash) - Spans full screen across map box */}
             {(() => {
               const roadW = 8;
-              const rTop = worldToSvg(0, -arenaSize / 2);
-              const rBottom = worldToSvg(0, arenaSize / 2);
-              const rLeft = worldToSvg(-arenaSize / 2, 0);
-              const rRight = worldToSvg(arenaSize / 2, 0);
-              const scale = radius / viewRange;
+              const extent = Math.max(arenaSize, 180);
+              const rTop = worldToSvg(0, -extent);
+              const rBottom = worldToSvg(0, extent);
+              const rLeft = worldToSvg(-extent, 0);
+              const rRight = worldToSvg(extent, 0);
               return (
                 <g opacity="0.6">
                   <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#e2e8f0" strokeWidth={roadW * scale} />
@@ -326,12 +277,12 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
                     />
                   )}
 
-                  {/* Building Label (counter-rotated in Heading-Up mode so text stays horizontal) */}
+                  {/* Building Label (counter-rotated so text stays upright and readable) */}
                   {centerSvg.isVisible && (
                     <text
                       x={centerSvg.x}
                       y={centerSvg.y + 3}
-                      transform={isHeadingUp ? `rotate(${-mapRotDeg} ${centerSvg.x} ${centerSvg.y + 3})` : undefined}
+                      transform={`rotate(${-mapRotDeg} ${centerSvg.x} ${centerSvg.y + 3})`}
                       fill="#334155"
                       fontSize={isMobile ? '6.5' : '7.5'}
                       fontWeight="900"
@@ -370,7 +321,7 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
                     <text
                       x={svg.x}
                       y={svg.y - 8}
-                      transform={isHeadingUp ? `rotate(${-mapRotDeg} ${svg.x} ${svg.y - 8})` : undefined}
+                      transform={`rotate(${-mapRotDeg} ${svg.x} ${svg.y - 8})`}
                       fill="#d97706"
                       fontSize="7"
                       fontWeight="900"
@@ -401,51 +352,39 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
             })}
           </g>
 
-          {/* Radar Scanning Sweep Beam */}
-          {zoomMode === 'local' && (
-            <g transform={`rotate(${sweepAngle} ${cx} ${cy})`}>
-              <line
-                x1={cx}
-                y1={cy}
-                x2={cx}
-                y2={cy - radius}
-                stroke="url(#arenaRadarSweepLight)"
-                strokeWidth="2.5"
-              />
-            </g>
-          )}
+          {/* Radar Scanning Sweep Beam - Sweeps across full box area */}
+          <g transform={`rotate(${sweepAngle} ${cx} ${cy})`}>
+            <line
+              x1={cx}
+              y1={cy}
+              x2={cx}
+              y2={cy - maxBoxDiagonal}
+              stroke="url(#arenaRadarSweepLight)"
+              strokeWidth="2.5"
+            />
+          </g>
 
           {/* PLAYER MARKER (Accurate Directional Vision Cone & Pointer Arrow) */}
-          {(() => {
-            // In Heading-Up mode, player is centered looking straight UP (0 deg) because world rotates underneath.
-            // In North-Up mode, marker translates to player position and rotates by playerYawDeg.
-            const posX = isHeadingUp && zoomMode === 'local' ? cx : pCenter.x;
-            const posY = isHeadingUp && zoomMode === 'local' ? cy : pCenter.y;
-            const rotDeg = isHeadingUp ? 0 : playerYawDeg;
+          <g transform={`translate(${cx}, ${cy})`}>
+            {/* Forward Vision Flashlight Arc */}
+            <path
+              d="M 0 0 L -18 -38 A 42 42 0 0 1 18 -38 Z"
+              fill="url(#playerVisionConeLight)"
+              stroke="rgba(2, 132, 199, 0.25)"
+              strokeWidth="0.6"
+            />
 
-            return (
-              <g transform={`translate(${posX}, ${posY}) rotate(${rotDeg})`}>
-                {/* Forward Vision Flashlight Arc */}
-                <path
-                  d="M 0 0 L -18 -38 A 42 42 0 0 1 18 -38 Z"
-                  fill="url(#playerVisionConeLight)"
-                  stroke="rgba(2, 132, 199, 0.25)"
-                  strokeWidth="0.6"
-                />
+            {/* Player Aura Ring */}
+            <circle cx={0} cy={0} r={5.5} fill="rgba(2, 132, 199, 0.25)" />
 
-                {/* Player Aura Ring */}
-                <circle cx={0} cy={0} r={5.5} fill="rgba(2, 132, 199, 0.25)" />
-
-                {/* Player Directional Arrow */}
-                <polygon
-                  points="0,-7 5,5 0,2 -5,5"
-                  fill="#0284c7"
-                  stroke="#ffffff"
-                  strokeWidth="1"
-                />
-              </g>
-            );
-          })()}
+            {/* Player Directional Arrow */}
+            <polygon
+              points="0,-7 5,5 0,2 -5,5"
+              fill="#0284c7"
+              stroke="#ffffff"
+              strokeWidth="1"
+            />
+          </g>
 
         </svg>
       </div>
