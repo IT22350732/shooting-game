@@ -33,7 +33,8 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
   isMobile = false
 }) => {
   const [zoomMode, setZoomMode] = useState<'local' | 'full'>('local');
-  const [mapOrientation, setMapOrientation] = useState<'north' | 'heading'>('north');
+  // Default to 'heading' so the map arranges dynamically with player's direction when turning
+  const [mapOrientation, setMapOrientation] = useState<'heading' | 'north'>('heading');
   const [sweepAngle, setSweepAngle] = useState(0);
 
   // Smooth radar beam sweep animation
@@ -64,11 +65,10 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
   }, [pings]);
 
   // Orientation settings
-  // In Heading-Up mode (local zoom only), rotate world clockwise by playerYaw so forward view is always Top (SVG -Y)
-  const isHeadingUp = mapOrientation === 'heading' && zoomMode === 'local';
+  // In Heading-Up mode, the map rotates to align with player's gaze: forward view is always Top (-Y in SVG)
+  const isHeadingUp = mapOrientation === 'heading';
   const mapRotDeg = (playerYaw * 180) / Math.PI;
-  // In North-Up mode, Three.js player yaw decreases when turning right (East) and increases when turning left (West).
-  // In SVG, positive rotate() is clockwise. Thus -playerYaw accurately maps: 0=N (Up), +90=E (Right), -90=W (Left), 180=S (Down).
+  // In North-Up mode, player arrow rotates: 0=N (Up), +90=E (Right), -90=W (Left), 180=S (Down)
   const playerYawDeg = (-playerYaw * 180) / Math.PI;
 
   // World to SVG Coordinate Conversion
@@ -87,7 +87,23 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
     const sx = cx + dx * scale;
     const sy = cy + dz * scale; // in 3D: -Z is North (up), +Z is South (down)
 
-    const isVisible = sx >= 2 && sx <= mapWidth - 2 && sy >= 2 && sy <= mapHeight - 2;
+    // Direction-invariant visibility test so objects stay visible at any player yaw / when turning back
+    let isVisible = true;
+    if (zoomMode === 'local') {
+      const distMeters = Math.hypot(dx, dz);
+      isVisible = distMeters <= viewRange * 1.45;
+    } else if (isHeadingUp) {
+      const rad = (mapRotDeg * Math.PI) / 180;
+      const cosR = Math.cos(rad);
+      const sinR = Math.sin(rad);
+      const pCenterX = cx + (playerPos.x * maxVisual) / viewRange;
+      const pCenterY = cy + (playerPos.z * maxVisual) / viewRange;
+      const rx = (sx - pCenterX) * cosR - (sy - pCenterY) * sinR + pCenterX;
+      const ry = (sx - pCenterX) * sinR + (sy - pCenterY) * cosR + pCenterY;
+      isVisible = rx >= -25 && rx <= mapWidth + 25 && ry >= -25 && ry <= mapHeight + 25;
+    } else {
+      isVisible = sx >= -25 && sx <= mapWidth + 25 && sy >= -25 && sy <= mapHeight + 25;
+    }
 
     return { x: sx, y: sy, isVisible };
   };
@@ -126,6 +142,11 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
     { label: 'S', baseAngle: 180, color: '#64748b' },
     { label: 'W', baseAngle: 270, color: '#64748b' }
   ];
+
+  // Dynamic rotation center: in local mode revolves around screen center, in full sector view revolves around player coordinates
+  const pCenter = worldToSvg(playerPos.x, playerPos.z);
+  const rotCenterX = zoomMode === 'local' ? cx : pCenter.x;
+  const rotCenterY = zoomMode === 'local' ? cy : pCenter.y;
 
   return (
     <div
@@ -286,16 +307,16 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
             </radialGradient>
           </defs>
 
-          {/* ROTATING WORLD CONTAINER (Rotates in Heading-Up mode) */}
-          <g transform={isHeadingUp ? `rotate(${mapRotDeg} ${cx} ${cy})` : undefined}>
+          {/* ROTATING WORLD CONTAINER (Rotates in Heading-Up mode to align with player's gaze) */}
+          <g transform={isHeadingUp ? `rotate(${mapRotDeg} ${rotCenterX} ${rotCenterY})` : undefined}>
             {/* Tactical Grid Background (Light cyan) */}
             <g opacity="0.12">
-              {[-40, -20, 0, 20, 40].map((coord) => {
+              {[-60, -40, -20, 0, 20, 40, 60].map((coord) => {
                 const s = worldToSvg(coord, coord);
                 return (
                   <React.Fragment key={coord}>
-                    <line x1={s.x} y1="0" x2={s.x} y2={mapHeight} stroke="#0284c7" strokeWidth="0.8" strokeDasharray="3,4" />
-                    <line x1="0" y1={s.y} x2={mapWidth} y2={s.y} stroke="#0284c7" strokeWidth="0.8" strokeDasharray="3,4" />
+                    <line x1={s.x} y1={-80} x2={s.x} y2={mapHeight + 80} stroke="#0284c7" strokeWidth="0.8" strokeDasharray="3,4" />
+                    <line x1={-80} y1={s.y} x2={mapWidth + 80} y2={s.y} stroke="#0284c7" strokeWidth="0.8" strokeDasharray="3,4" />
                   </React.Fragment>
                 );
               })}
@@ -462,11 +483,10 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
 
           {/* PLAYER MARKER (Accurate Directional Vision Cone & Pointer Arrow) */}
           {(() => {
-            const pSvg = worldToSvg(playerPos.x, playerPos.z);
-            // In Heading-Up mode, player is in center looking straight UP (0 deg) because world rotates underneath.
-            // In North-Up mode, marker translates to player position and rotates accurately by playerYawDeg (-playerYaw).
-            const posX = isHeadingUp ? cx : pSvg.x;
-            const posY = isHeadingUp ? cy : pSvg.y;
+            // In Heading-Up mode, player is centered looking straight UP (0 deg) because world rotates underneath.
+            // In North-Up mode, marker translates to player position and rotates by playerYawDeg.
+            const posX = isHeadingUp && zoomMode === 'local' ? cx : pCenter.x;
+            const posY = isHeadingUp && zoomMode === 'local' ? cy : pCenter.y;
             const rotDeg = isHeadingUp ? 0 : playerYawDeg;
 
             return (
@@ -495,14 +515,14 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
 
           {/* DYNAMIC CARDINAL COMPASS HEADINGS (N / S / E / W) */}
           {cardinals.map((c) => {
-            const angleDeg = isHeadingUp ? (c.baseAngle + mapRotDeg) % 360 : c.baseAngle;
+            const angleDeg = isHeadingUp ? (c.baseAngle + mapRotDeg) : c.baseAngle;
             const angleRad = (angleDeg * Math.PI) / 180;
             const labelRadius = radius + 3;
             const tx = cx + Math.sin(angleRad) * labelRadius;
             const ty = cy - Math.cos(angleRad) * labelRadius;
 
             // Keep within visible SVG bounds
-            const clampedX = Math.max(7, Math.min(mapWidth - 7, tx));
+            const clampedX = Math.max(8, Math.min(mapWidth - 8, tx));
             const clampedY = Math.max(10, Math.min(mapHeight - 4, ty + 3));
 
             return (
@@ -542,7 +562,7 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
           <strong style={{ color: '#0284c7' }}>{Math.round(playerPos.z)}</strong>
         </span>
         <span style={{ color: '#64748b', fontWeight: 800 }}>
-          {zoomMode === 'local' ? (isHeadingUp ? '50M HEADING' : '50M RADAR') : 'SECTOR 130M'}
+          {zoomMode === 'local' ? (isHeadingUp ? '50M HEADING' : '50M NORTH') : (isHeadingUp ? 'SECTOR HEADING' : 'SECTOR 130M')}
         </span>
       </div>
     </div>
