@@ -97,7 +97,7 @@ export class InteractiveDoor {
 
     // Closed doorway obstacle Box3
     const halfW = doorWidth / 2;
-    const halfT = 0.35;
+    const halfT = 0.40;
     this.closedBox = new THREE.Box3();
     const corners = [
       new THREE.Vector3(-halfW, 0, -halfT),
@@ -193,8 +193,8 @@ export class ArenaManager {
       if (z.rotY) {
         local.applyAxisAngle(ArenaManager._yAxis, -z.rotY);
       }
-      const halfW = (z.width - 0.7) / 2;
-      const halfD = (z.depth - 0.7) / 2;
+      const halfW = (z.width - 1.0) / 2;
+      const halfD = (z.depth - 1.0) / 2;
       if (
         local.x >= -halfW &&
         local.x <= halfW &&
@@ -216,8 +216,8 @@ export class ArenaManager {
       if (z.rotY) {
         local.applyAxisAngle(ArenaManager._yAxis, -z.rotY);
       }
-      const halfW = (z.width - 0.7) / 2;
-      const halfD = (z.depth - 0.7) / 2;
+      const halfW = (z.width - 1.0) / 2;
+      const halfD = (z.depth - 1.0) / 2;
       if (
         local.x >= -halfW &&
         local.x <= halfW &&
@@ -1239,7 +1239,7 @@ export class ArenaManager {
     const w = options.width;
     const d = options.depth;
     const wallH = options.height || 4.2;
-    const wallThick = 0.35;
+    const wallThick = 0.50;
     const doorW = 2.0;
     const doorH = 2.7;
 
@@ -1568,8 +1568,8 @@ export class ArenaManager {
 
     // Register Interior Sanctuary Zone for immunity & safe room detection
     const bRot = options.rotY || 0;
-    const doorApproachLocal = new THREE.Vector3(0, 0, d / 2 + 2.2);
-    const doorInsideLocal = new THREE.Vector3(0, 0, d / 2 - 1.6);
+    const doorApproachLocal = new THREE.Vector3(0, 0, d / 2 + 2.5);
+    const doorInsideLocal = new THREE.Vector3(0, 0, d / 2 - 1.8);
     const doorApproachPos = doorApproachLocal.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), bRot).add(group.position);
     const doorInsidePos = doorInsideLocal.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), bRot).add(group.position);
 

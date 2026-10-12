@@ -135,6 +135,9 @@ export class Enemy {
   private static _rightVec = new THREE.Vector3();
   private static _yUpAxis = new THREE.Vector3(0, 1, 0);
   private static _nearbyObstacles: ArenaObstacle[] = [];
+  private static _losRay = new THREE.Ray();
+  private static _losHit = new THREE.Vector3();
+  private static _losDir = new THREE.Vector3();
 
   public id: string;
   public type: EnemyType;
@@ -196,6 +199,7 @@ export class Enemy {
   private deathTimer: number = 0;
   private scaleFactor: number = 1.0;
   private theme: HumanTheme;
+  private weaponTuck: number = 0;
 
   constructor(
     id: string,
@@ -373,8 +377,8 @@ export class Enemy {
     // Root of Human Body
     this.mesh.add(this.humanGroup);
 
-    // 0. Ground Tactical Aura Ring (Distinct high-visibility glow under human enemy feet)
-    const ringGeo = new THREE.RingGeometry(0.55 * s, 0.68 * s, 32);
+    // 0. Ground Tactical Aura Ring (Distinct high-visibility glow under human enemy feet, safely within collision cylinder)
+    const ringGeo = new THREE.RingGeometry(0.36 * s, 0.46 * s, 32);
     const ringMat = new THREE.MeshBasicMaterial({
       color: theme.highlightHex,
       side: THREE.DoubleSide,
@@ -836,6 +840,12 @@ export class Enemy {
     const currentEnemyBuilding = buildingContext?.getBuildingAtPosition ? buildingContext.getBuildingAtPosition(this.position) : null;
     const isEnemyIndoors = currentEnemyBuilding !== null;
 
+    // Line of sight calculation: tests if solid building walls or tall obstacles block view to player
+    const eyeHeight = this.getHeight() * 0.82;
+    const enemyEyePos = new THREE.Vector3(this.position.x, this.position.y + eyeHeight, this.position.z);
+    const playerEyePos = new THREE.Vector3(playerPos.x, playerPos.y + 1.6, playerPos.z);
+    const hasLineOfSight = this.checkLineOfSight(enemyEyePos, playerEyePos, obstacles);
+
     // Tactical Target Acquisition: doorway waypoints or direct player tracking
     let aimTarget = playerPos;
     let moveTarget = playerPos;
@@ -851,24 +861,26 @@ export class Enemy {
         const distToApproach = this.position.distanceTo(playerBuilding.doorApproachPos);
         const distToInside = this.position.distanceTo(playerBuilding.doorInsidePos);
 
-        // Commit forward toward doorInsidePos once in approach funnel (< 3.2m to door or closer to inside than approach)
-        // Prevents any back-and-forth oscillation at the entrance!
-        if (distToInside < distToApproach || distToDoor < 3.2) {
+        // Commit forward toward doorInsidePos once safely on the entrance approach / porch
+        // Prevents any diagonal cutting into exterior walls!
+        const isAtDoorApproach = distToApproach < 2.4 || (distToDoor < 2.2 && distToInside < distToApproach);
+        if (isAtDoorApproach) {
           moveTarget = playerBuilding.doorInsidePos;
-          aimTarget = playerPos;
+          aimTarget = hasLineOfSight ? playerPos : playerBuilding.doorInsidePos;
         } else {
           moveTarget = playerBuilding.doorApproachPos;
-          aimTarget = playerBuilding.doorApproachPos;
+          aimTarget = hasLineOfSight ? playerPos : playerBuilding.doorApproachPos;
         }
       } else {
         // Player is inside and door is CLOSED: enemies outside CANNOT enter!
         const distToApproach = this.position.distanceTo(playerBuilding.doorApproachPos);
         if (distToApproach > 4.5) {
           moveTarget = playerBuilding.doorApproachPos;
+          aimTarget = playerBuilding.doorApproachPos;
         } else {
           moveTarget = this.position;
+          aimTarget = hasLineOfSight ? playerBuilding.doorWorldPos : playerBuilding.doorApproachPos;
         }
-        aimTarget = playerBuilding.doorWorldPos;
       }
     } else if (isEnemyIndoors && currentEnemyBuilding) {
       // Enemy is inside building, but player is OUTSIDE!
@@ -879,9 +891,9 @@ export class Enemy {
         const distToInside = this.position.distanceTo(currentEnemyBuilding.doorInsidePos);
         const distToApproach = this.position.distanceTo(currentEnemyBuilding.doorApproachPos);
 
-        if (distToApproach < distToInside || distToDoor < 3.2) {
+        if (distToApproach < distToInside || distToDoor < 2.2) {
           moveTarget = currentEnemyBuilding.doorApproachPos;
-          aimTarget = playerPos;
+          aimTarget = hasLineOfSight ? playerPos : currentEnemyBuilding.doorApproachPos;
         } else {
           moveTarget = currentEnemyBuilding.doorInsidePos;
           aimTarget = currentEnemyBuilding.doorInsidePos;
@@ -891,15 +903,13 @@ export class Enemy {
         moveTarget = this.position;
         aimTarget = currentEnemyBuilding.doorWorldPos;
       }
+    } else {
+      aimTarget = hasLineOfSight ? playerPos : moveTarget;
     }
 
     const distToPlayer = this.position.distanceTo(playerPos);
     const distToMoveTarget = this.position.distanceTo(moveTarget);
     this.stateTimer += delta;
-
-    // Turn toward target
-    const targetAngle = Math.atan2(aimTarget.x - this.position.x, aimTarget.z - this.position.z);
-    this.mesh.rotation.y = THREE.MathUtils.lerp(this.mesh.rotation.y, targetAngle, delta * 8);
 
     // 3. Exploder Fuse Logic & Blinking Chest Core
     if (this.type === 'exploder') {
@@ -991,8 +1001,64 @@ export class Enemy {
       }
     }
 
-    // Close-range emergency melee strike if player is within 1.8m
-    const canMelee = !isPlayerInBuilding || isEnemyInPlayerBuilding || isDoorOpen;
+    const isMoving = moveDir.lengthSq() > 0.01;
+
+    // Turn toward target (if navigating around walls without line of sight, face movement direction to avoid staring into walls)
+    if (!hasLineOfSight && isMoving) {
+      aimTarget = this.position.clone().add(moveDir);
+    }
+    const targetAngle = Math.atan2(aimTarget.x - this.position.x, aimTarget.z - this.position.z);
+    this.mesh.rotation.y = THREE.MathUtils.lerp(this.mesh.rotation.y, targetAngle, delta * 8);
+
+    // Spatial pre-filter nearby obstacles for collision and forward weapon clearance
+    const searchDist = 3.2;
+    const curX = this.position.x;
+    const curZ = this.position.z;
+    const nearby = Enemy._nearbyObstacles;
+    nearby.length = 0;
+
+    for (let i = 0; i < obstacles.length; i++) {
+      const obs = obstacles[i];
+      if (obs.box.isEmpty()) continue;
+      if (obs.box.min.y > 1.85 || obs.box.max.y < 0.08) continue;
+      if (
+        curX < obs.box.min.x - searchDist ||
+        curX > obs.box.max.x + searchDist ||
+        curZ < obs.box.min.z - searchDist ||
+        curZ > obs.box.max.z + searchDist
+      ) {
+        continue;
+      }
+      nearby.push(obs);
+    }
+
+    // Dynamic forward weapon clearance / Low-Ready posture: detect obstacles directly ahead
+    let forwardObstacleDist = 999;
+    const forwardX = Math.sin(this.mesh.rotation.y);
+    const forwardZ = Math.cos(this.mesh.rotation.y);
+    const checkY = this.position.y + this.getHeight() * 0.6;
+
+    for (let i = 0; i < nearby.length; i++) {
+      const b = nearby[i].box;
+      if (checkY < b.min.y || checkY > b.max.y) continue;
+      for (const d of [0.45 * this.scaleFactor, 0.80 * this.scaleFactor, 1.15 * this.scaleFactor]) {
+        const px = this.position.x + forwardX * d;
+        const pz = this.position.z + forwardZ * d;
+        if (px >= b.min.x - 0.04 && px <= b.max.x + 0.04 && pz >= b.min.z - 0.04 && pz <= b.max.z + 0.04) {
+          forwardObstacleDist = Math.min(forwardObstacleDist, d);
+          break;
+        }
+      }
+    }
+
+    const maxTuckDist = 1.15 * this.scaleFactor;
+    const targetTuck = forwardObstacleDist < maxTuckDist
+      ? THREE.MathUtils.clamp((maxTuckDist - forwardObstacleDist) / (0.70 * this.scaleFactor), 0, 1)
+      : 0;
+    this.weaponTuck = THREE.MathUtils.lerp(this.weaponTuck, targetTuck, Math.min(1.0, delta * 14));
+
+    // Close-range emergency melee strike if player is within 1.8m and line of sight is clear
+    const canMelee = (!isPlayerInBuilding || isEnemyInPlayerBuilding || isDoorOpen) && hasLineOfSight;
     if (distToPlayer < 1.8 && this.attackCooldown <= 0 && canMelee) {
       this.attackCooldown = 0.8;
       if (onPlayerHit) {
@@ -1000,70 +1066,68 @@ export class Enemy {
       }
     }
 
-    // Ranged Fire Attack (Shooting at player)
-    const canShoot = !isPlayerInBuilding || isEnemyInPlayerBuilding || isDoorOpen;
+    // Ranged Fire Attack (Shooting at player only with clear line of sight and non-obstructed barrel)
+    const canShoot = (!isPlayerInBuilding || isEnemyInPlayerBuilding || isDoorOpen) && hasLineOfSight && this.weaponTuck < 0.45;
     if (canShoot && this.attackCooldown <= 0 && distToPlayer <= this.attackRange) {
       this.attackCooldown = this.attackInterval + (Math.random() * 0.3 - 0.15);
 
-        if (onShoot) {
-          const shootOrigin = this.position.clone();
-          shootOrigin.y += this.getHeight() * 0.62;
+      if (onShoot) {
+        const shootOrigin = this.position.clone();
+        shootOrigin.y += this.getHeight() * 0.62;
 
-          let soundType: 'rifle' | 'shotgun' | 'smg' | 'sniper' | 'plasma' = 'rifle';
-          let speed = 28;
-          let spread = 0.05;
-          let isPlasma = false;
+        let soundType: 'rifle' | 'shotgun' | 'smg' | 'sniper' | 'plasma' = 'rifle';
+        let speed = 28;
+        let spread = 0.05;
+        let isPlasma = false;
 
-          switch (this.type) {
-            case 'ranged':
-              soundType = 'sniper';
-              speed = 38;
-              spread = 0.02;
-              break;
-            case 'fast':
-              soundType = 'smg';
-              speed = 30;
-              spread = 0.07;
-              break;
-            case 'shield':
-              soundType = 'smg';
-              speed = 26;
-              spread = 0.05;
-              break;
-            case 'tank':
-              soundType = 'shotgun';
-              speed = 22;
-              spread = 0.04;
-              isPlasma = true;
-              break;
-            case 'elite':
-              soundType = 'rifle';
-              speed = 34;
-              spread = 0.03;
-              break;
-            case 'basic':
-            default:
-              soundType = 'rifle';
-              speed = 28;
-              spread = 0.05;
-              break;
-          }
-
-          onShoot({
-            origin: shootOrigin,
-            target: playerPos.clone().add(new THREE.Vector3(0, 0.35, 0)),
-            damage: this.damage,
-            speed,
-            spread,
-            soundType,
-            isPlasma
-          });
+        switch (this.type) {
+          case 'ranged':
+            soundType = 'sniper';
+            speed = 38;
+            spread = 0.02;
+            break;
+          case 'fast':
+            soundType = 'smg';
+            speed = 30;
+            spread = 0.07;
+            break;
+          case 'shield':
+            soundType = 'smg';
+            speed = 26;
+            spread = 0.05;
+            break;
+          case 'tank':
+            soundType = 'shotgun';
+            speed = 22;
+            spread = 0.04;
+            isPlasma = true;
+            break;
+          case 'elite':
+            soundType = 'rifle';
+            speed = 34;
+            spread = 0.03;
+            break;
+          case 'basic':
+          default:
+            soundType = 'rifle';
+            speed = 28;
+            spread = 0.05;
+            break;
         }
+
+        onShoot({
+          origin: shootOrigin,
+          target: playerPos.clone().add(new THREE.Vector3(0, 0.35, 0)),
+          damage: this.damage,
+          speed,
+          spread,
+          soundType,
+          isPlasma
+        });
       }
+    }
 
-    const isMoving = moveDir.lengthSq() > 0.01;
-
-    // 5. Natural Human Walk, Run & Combat Animations
+    // 5. Natural Human Walk, Run & Combat Animations with Weapon Obstacle Clearance
     const animRate = this.type === 'fast' ? 14 : (this.type === 'tank' ? 6 : 9);
 
     if (isMoving) {
@@ -1086,28 +1150,41 @@ export class Enemy {
       const forwardLean = this.type === 'fast' ? 0.32 : (this.type === 'exploder' ? 0.26 : 0.12);
       this.torsoGroup.rotation.x = forwardLean;
 
-      // Arm swing dynamics
+      // Arm swing & weapon carry dynamics (safely tucks down when near obstacle)
       if (this.type === 'shield') {
-        // Shield bearer holds riot shield firmly in front
-        this.leftArmGroup.rotation.x = -Math.PI / 3.4;
-        this.leftForearmGroup.rotation.x = -Math.PI / 10;
-        this.rightArmGroup.rotation.x = Math.sin(this.walkCycle) * 0.45;
+        // Shield bearer holds riot shield firmly in front, tucks inward near obstacles
+        this.leftArmGroup.rotation.x = THREE.MathUtils.lerp(-Math.PI / 3.4, -Math.PI / 6, this.weaponTuck);
+        this.leftForearmGroup.rotation.x = THREE.MathUtils.lerp(-Math.PI / 10, -Math.PI / 4, this.weaponTuck);
+        this.rightArmGroup.rotation.x = Math.sin(this.walkCycle) * 0.45 * (1 - this.weaponTuck * 0.7);
+        if (this.shieldMesh) {
+          this.shieldMesh.position.z = THREE.MathUtils.lerp(0.35 * this.scaleFactor, 0.16 * this.scaleFactor, this.weaponTuck);
+        }
       } else if (this.theme.hasWeapon) {
-        // Weapon bearer keeps gun raised aiming forward, subtle recoil/bob
-        this.rightArmGroup.rotation.x = -Math.PI / 2.3 + Math.sin(this.walkCycle * 2) * 0.04;
-        this.leftArmGroup.rotation.x = -Math.sin(this.walkCycle) * 0.55;
-      } else if (this.type === 'fast') {
-        // Sprinter pumps both arms vigorously
-        this.leftArmGroup.rotation.x = -Math.sin(this.walkCycle) * 0.95;
-        this.rightArmGroup.rotation.x = Math.sin(this.walkCycle) * 0.95;
-      } else if (this.type === 'exploder') {
-        // Bomb infiltrator runs frantically with arms waving
-        this.leftArmGroup.rotation.x = -Math.PI / 1.9 + Math.sin(this.walkCycle * 2) * 0.3;
-        this.rightArmGroup.rotation.x = -Math.PI / 1.9 - Math.sin(this.walkCycle * 2) * 0.3;
+        // Weapon bearer: aim forward, or lower into low-ready when near obstacle to prevent clipping
+        const baseAimAngle = -Math.PI / 2.3;
+        const lowReadyAngle = -0.32;
+        const weaponAngle = THREE.MathUtils.lerp(baseAimAngle, lowReadyAngle, this.weaponTuck);
+        const bob = Math.sin(this.walkCycle * 2) * 0.04 * (1 - this.weaponTuck);
+        this.rightArmGroup.rotation.x = weaponAngle + bob;
+        this.leftArmGroup.rotation.x = THREE.MathUtils.lerp(-Math.sin(this.walkCycle) * 0.55, -0.2, this.weaponTuck);
+        if (this.weaponMesh) {
+          const normalZ = 0.22 * this.scaleFactor;
+          const tuckedZ = 0.06 * this.scaleFactor;
+          const targetZ = THREE.MathUtils.lerp(normalZ, tuckedZ, this.weaponTuck);
+          this.weaponMesh.position.z = THREE.MathUtils.lerp(this.weaponMesh.position.z, targetZ, delta * 14);
+        }
       } else {
-        // Standard opposite arm swing
-        this.leftArmGroup.rotation.x = -Math.sin(this.walkCycle) * 0.65;
-        this.rightArmGroup.rotation.x = Math.sin(this.walkCycle) * 0.65;
+        const swingMult = 1 - this.weaponTuck * 0.65;
+        if (this.type === 'fast') {
+          this.leftArmGroup.rotation.x = -Math.sin(this.walkCycle) * 0.95 * swingMult;
+          this.rightArmGroup.rotation.x = Math.sin(this.walkCycle) * 0.95 * swingMult;
+        } else if (this.type === 'exploder') {
+          this.leftArmGroup.rotation.x = THREE.MathUtils.lerp(-Math.PI / 1.9 + Math.sin(this.walkCycle * 2) * 0.3, -0.2, this.weaponTuck);
+          this.rightArmGroup.rotation.x = THREE.MathUtils.lerp(-Math.PI / 1.9 - Math.sin(this.walkCycle * 2) * 0.3, -0.2, this.weaponTuck);
+        } else {
+          this.leftArmGroup.rotation.x = -Math.sin(this.walkCycle) * 0.65 * swingMult;
+          this.rightArmGroup.rotation.x = Math.sin(this.walkCycle) * 0.65 * swingMult;
+        }
       }
     } else {
       // Idle Human Breathing & Stance Recovery
@@ -1124,20 +1201,25 @@ export class Enemy {
       this.headGroup.rotation.x = Math.sin(this.stateTimer * 2.0) * 0.015;
 
       if (this.theme.hasWeapon) {
-        this.rightArmGroup.rotation.x = -Math.PI / 2.3;
+        const baseAimAngle = -Math.PI / 2.3;
+        const lowReadyAngle = -0.32;
+        this.rightArmGroup.rotation.x = THREE.MathUtils.lerp(baseAimAngle, lowReadyAngle, this.weaponTuck);
+        if (this.weaponMesh) {
+          const normalZ = 0.22 * this.scaleFactor;
+          const tuckedZ = 0.06 * this.scaleFactor;
+          this.weaponMesh.position.z = THREE.MathUtils.lerp(this.weaponMesh.position.z, THREE.MathUtils.lerp(normalZ, tuckedZ, this.weaponTuck), delta * 14);
+        }
       }
     }
 
     // 6. Attack Gun Recoil & Punch Animation
     const isAttacking = this.attackCooldown > (this.attackInterval - 0.22);
-    if (isAttacking && this.theme.hasWeapon) {
+    if (isAttacking && this.theme.hasWeapon && this.weaponTuck < 0.3) {
       // Gun recoil kickback
       this.rightArmGroup.rotation.x = -Math.PI / 2.05;
       if (this.weaponMesh) {
         this.weaponMesh.position.z = 0.16 * this.scaleFactor;
       }
-    } else if (this.weaponMesh) {
-      this.weaponMesh.position.z = THREE.MathUtils.lerp(this.weaponMesh.position.z, 0.22 * this.scaleFactor, delta * 12);
     }
 
     if (isAttacking && !this.theme.hasWeapon && this.type !== 'shield') {
@@ -1156,28 +1238,8 @@ export class Enemy {
       nextPos.addScaledVector(moveDir, this.speed * delta);
     }
 
-    const enemyRadius = 0.38 * this.scaleFactor;
-    const searchDist = 3.2;
-    const curX = this.position.x;
-    const curZ = this.position.z;
-
-    const nearby = Enemy._nearbyObstacles;
-    nearby.length = 0;
-
-    for (let i = 0; i < obstacles.length; i++) {
-      const obs = obstacles[i];
-      if (obs.box.isEmpty()) continue;
-      if (obs.box.min.y > 1.85 || obs.box.max.y < 0.08) continue;
-      if (
-        curX < obs.box.min.x - searchDist ||
-        curX > obs.box.max.x + searchDist ||
-        curZ < obs.box.min.z - searchDist ||
-        curZ > obs.box.max.z + searchDist
-      ) {
-        continue;
-      }
-      nearby.push(obs);
-    }
+    // Robust collision radius keeping body, shoulders, and gear safely outside walls
+    const enemyRadius = 0.50 * this.scaleFactor;
 
     if (nearby.length > 0) {
       const closestPoint = Enemy._closestPoint;
@@ -1248,6 +1310,29 @@ export class Enemy {
     this.position.y = THREE.MathUtils.lerp(this.position.y, targetY, delta * 14);
 
     this.mesh.position.copy(this.position);
+  }
+
+  /**
+   * Fast AABB raycast check to determine if solid building walls or tall obstacles block view to target
+   */
+  private checkLineOfSight(eyePos: THREE.Vector3, targetPos: THREE.Vector3, obstacles: ArenaObstacle[]): boolean {
+    const dist = eyePos.distanceTo(targetPos);
+    if (dist < 0.8) return true;
+    Enemy._losDir.subVectors(targetPos, eyePos).normalize();
+    Enemy._losRay.set(eyePos, Enemy._losDir);
+
+    for (let i = 0; i < obstacles.length; i++) {
+      const obs = obstacles[i];
+      if (obs.box.isEmpty()) continue;
+      // Skip waist-high cover obstacles so enemies can shoot over low crates, fences and car hoods
+      if (obs.isCover && obs.box.max.y < 1.35) continue;
+
+      const hit = Enemy._losRay.intersectBox(obs.box, Enemy._losHit);
+      if (hit && eyePos.distanceTo(hit) < dist - 0.35) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public dispose() {
