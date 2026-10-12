@@ -1374,6 +1374,7 @@ export class ArenaManager {
     const d = options.depth || 5.0;
     const h = options.height || 3.4;
     const slabThick = 0.20;
+    const stairW = 2.0;
     const theme = options.theme || 'suburban';
 
     // Theme color palettes
@@ -1430,15 +1431,24 @@ export class ArenaManager {
     deckMesh.receiveShadow = true;
     group.add(deckMesh);
 
-    // Hazard warning nosing trim along deck edges
-    const trimFrontGeo = new THREE.BoxGeometry(w + 0.04, 0.06, 0.08);
-    const trimFront = new THREE.Mesh(trimFrontGeo, accentMat);
-    trimFront.position.set(0, h - 0.03, d / 2 + 0.02);
-    group.add(trimFront);
+    // Hazard warning nosing trim along deck edges (perimeter only, strictly clear of stair opening)
+    const trimThick = 0.04;
+    const trimH = 0.06;
 
-    const trimBack = new THREE.Mesh(trimFrontGeo, accentMat);
-    trimBack.position.set(0, h - 0.03, -d / 2 - 0.02);
+    // Rear deck edge fascia trim
+    const trimBackGeo = new THREE.BoxGeometry(w, trimH, trimThick);
+    const trimBack = new THREE.Mesh(trimBackGeo, accentMat);
+    trimBack.position.set(0, h - trimH / 2, -d / 2 - trimThick / 2);
     group.add(trimBack);
+
+    // Front deck edge fascia trim (ONLY along guardrail section, stopping cleanly before stair opening)
+    const frontRailSpan = w - stairW;
+    if (frontRailSpan > 0.4) {
+      const trimFrontGeo = new THREE.BoxGeometry(frontRailSpan, trimH, trimThick);
+      const trimFront = new THREE.Mesh(trimFrontGeo, accentMat);
+      trimFront.position.set(-w / 2 + frontRailSpan / 2, h - trimH / 2, d / 2 + trimThick / 2);
+      group.add(trimFront);
+    }
 
     // Structural perimeter I-beams
     const beamGeoX = new THREE.BoxGeometry(w, 0.22, 0.12);
@@ -1489,16 +1499,18 @@ export class ArenaManager {
 
     // 3. OUTDOOR STAIRCASE ("UPSTAIRS")
     // Stair attaches to the front-right of the platform and descends towards +Z
-    const stairW = 2.0;
     const stairRun = options.stairRun || 4.5;
     const stairStartX = w / 2 - stairW / 2;
     const zTop = d / 2;
     const zBottom = zTop + stairRun;
 
     const stairGroup = new THREE.Group();
-    const numSteps = 15;
-    const stepRise = h / numSteps;
-    const stepRun = stairRun / numSteps;
+    // Authentic architectural stair design: an N-riser flight has (N - 1) intermediate treads,
+    // with the upper deck floor slab acting as the final landing and top riser.
+    const numRisers = 15;
+    const numTreads = numRisers - 1; // 14 intermediate steps
+    const stepRise = h / numRisers;
+    const stepRun = stairRun / numRisers;
 
     // Steps
     const treadMat = new THREE.MeshStandardMaterial({
@@ -1507,11 +1519,11 @@ export class ArenaManager {
       metalness: 0.8
     });
 
-    for (let i = 0; i < numSteps; i++) {
+    for (let i = 0; i < numTreads; i++) {
       const stepY = (i + 1) * stepRise;
       const stepZ = zBottom - (i + 0.5) * stepRun;
 
-      const tGeo = new THREE.BoxGeometry(stairW - 0.04, 0.06, stepRun + 0.04);
+      const tGeo = new THREE.BoxGeometry(stairW - 0.04, 0.06, stepRun + 0.02);
       const tMesh = new THREE.Mesh(tGeo, treadMat);
       tMesh.position.set(stairStartX, stepY - 0.03, stepZ);
       tMesh.castShadow = true;
@@ -1521,9 +1533,34 @@ export class ArenaManager {
       // Hazard nosing
       const nGeo = new THREE.BoxGeometry(stairW - 0.03, 0.02, 0.04);
       const nMesh = new THREE.Mesh(nGeo, accentMat);
-      nMesh.position.set(stairStartX, stepY - 0.01, stepZ + (stepRun + 0.04) / 2);
+      nMesh.position.set(stairStartX, stepY - 0.01, stepZ + (stepRun + 0.02) / 2);
       stairGroup.add(nMesh);
     }
+
+    // Top riser vertical backplate (seamlessly closes the riser gap below the platform lip)
+    const topRiserGeo = new THREE.BoxGeometry(stairW - 0.04, stepRise, 0.03);
+    const topRiser = new THREE.Mesh(topRiserGeo, steelMat);
+    topRiser.position.set(stairStartX, h - stepRise / 2, d / 2 + 0.015);
+    topRiser.castShadow = true;
+    topRiser.receiveShadow = true;
+    stairGroup.add(topRiser);
+
+    // Architectural anti-slip landing threshold sill plate (crisp elevation, zero z-fighting)
+    const sillThick = 0.014;
+    const sillDepth = 0.14;
+    const sillGeo = new THREE.BoxGeometry(stairW - 0.04, sillThick, sillDepth);
+    const sillMesh = new THREE.Mesh(sillGeo, steelMat);
+    sillMesh.position.set(stairStartX, h + sillThick / 2, d / 2 - 0.02);
+    sillMesh.castShadow = true;
+    sillMesh.receiveShadow = true;
+    stairGroup.add(sillMesh);
+
+    // High-visibility safety warning nosing strip on the threshold sill edge
+    const nosingLipGeo = new THREE.BoxGeometry(stairW - 0.03, sillThick + 0.01, 0.04);
+    const nosingLipMesh = new THREE.Mesh(nosingLipGeo, accentMat);
+    nosingLipMesh.position.set(stairStartX, h + sillThick / 2, d / 2 + sillDepth / 2 - 0.04);
+    nosingLipMesh.castShadow = true;
+    stairGroup.add(nosingLipMesh);
 
     // Heavy channel stringers
     const stairHypot = Math.hypot(stairRun, h);
@@ -1618,7 +1655,6 @@ export class ArenaManager {
       });
 
       railMeshGroup.add(seg);
-      group.add(railMeshGroup);
 
       // Register individual Box3 obstacle ONLY for this specific solid rail segment
       group.updateMatrixWorld(true);
@@ -1640,10 +1676,10 @@ export class ArenaManager {
     createSingleRailing(d, w / 2, 0, Math.PI / 2);
 
     // D. Front Railing (ONLY covers left section, leaving stair doorway 100% open on right!)
-    const frontRailSpan = w - stairW;
     if (frontRailSpan > 0.4) {
       createSingleRailing(frontRailSpan, -w / 2 + frontRailSpan / 2, d / 2);
     }
+    group.add(railMeshGroup);
     // NOTICE: Front-Right (+Z from w/2 - stairW to w/2) HAS ZERO OBSTACLES! Player walks straight in!
 
     // 5. UPFLOOR TACTICAL PERKS: SNIPER COVER, FLOODLIGHT, COMMS MAST
