@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Radio, Maximize2, Minimize2 } from 'lucide-react';
+import { Radio, Maximize2, Minimize2, Compass } from 'lucide-react';
 import { RadarPing } from './multiplayer/TacticalRadar';
 
 export interface ArenaBuildingInfo {
@@ -33,6 +33,7 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
   isMobile = false
 }) => {
   const [zoomMode, setZoomMode] = useState<'local' | 'full'>('local');
+  const [mapOrientation, setMapOrientation] = useState<'north' | 'heading'>('north');
   const [sweepAngle, setSweepAngle] = useState(0);
 
   // Smooth radar beam sweep animation
@@ -61,6 +62,14 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
   const enemyCount = useMemo(() => {
     return pings.filter((p) => p.type === 'enemy' || p.type === 'boss').length;
   }, [pings]);
+
+  // Orientation settings
+  // In Heading-Up mode (local zoom only), rotate world clockwise by playerYaw so forward view is always Top (SVG -Y)
+  const isHeadingUp = mapOrientation === 'heading' && zoomMode === 'local';
+  const mapRotDeg = (playerYaw * 180) / Math.PI;
+  // In North-Up mode, Three.js player yaw decreases when turning right (East) and increases when turning left (West).
+  // In SVG, positive rotate() is clockwise. Thus -playerYaw accurately maps: 0=N (Up), +90=E (Right), -90=W (Left), 180=S (Down).
+  const playerYawDeg = (-playerYaw * 180) / Math.PI;
 
   // World to SVG Coordinate Conversion
   const worldToSvg = (wx: number, wz: number): { x: number; y: number; isVisible: boolean } => {
@@ -98,8 +107,9 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
     ];
 
     const pts = corners.map((c) => {
-      const rx = c.lx * cosR - c.lz * sinR;
-      const rz = c.lx * sinR + c.lz * cosR;
+      // Three.js right-handed rotation around Y: x' = x*cos + z*sin, z' = -x*sin + z*cos
+      const rx = c.lx * cosR + c.lz * sinR;
+      const rz = -c.lx * sinR + c.lz * cosR;
       const wx = b.x + rx;
       const wz = b.z + rz;
       const svg = worldToSvg(wx, wz);
@@ -108,6 +118,14 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
 
     return pts.join(' ');
   };
+
+  // Cardinal compass directions
+  const cardinals = [
+    { label: 'N', baseAngle: 0, color: '#0284c7' },
+    { label: 'E', baseAngle: 90, color: '#64748b' },
+    { label: 'S', baseAngle: 180, color: '#64748b' },
+    { label: 'W', baseAngle: 270, color: '#64748b' }
+  ];
 
   return (
     <div
@@ -155,17 +173,17 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
         </div>
 
         {/* Live Enemy Counter Pill & Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 4,
-              padding: '2px 6px',
+              padding: '2px 5px',
               borderRadius: 4,
               background: enemyCount > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
               border: `1px solid ${enemyCount > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`,
-              fontSize: isMobile ? '0.54rem' : '0.62rem',
+              fontSize: isMobile ? '0.52rem' : '0.60rem',
               fontWeight: 900,
               color: enemyCount > 0 ? '#e11d48' : '#16a34a',
               letterSpacing: 0.5
@@ -173,15 +191,37 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
           >
             <span
               style={{
-                width: 6,
-                height: 6,
+                width: 5,
+                height: 5,
                 borderRadius: '50%',
                 background: enemyCount > 0 ? '#e11d48' : '#16a34a',
-                boxShadow: `0 0 6px ${enemyCount > 0 ? '#e11d48' : '#16a34a'}`
+                boxShadow: `0 0 5px ${enemyCount > 0 ? '#e11d48' : '#16a34a'}`
               }}
             />
-            <span>{enemyCount > 0 ? `${enemyCount} HOSTILES` : 'CLEAR'}</span>
+            <span>{enemyCount > 0 ? `${enemyCount}` : 'CLEAR'}</span>
           </div>
+
+          {/* Orientation Mode Toggle (North-Up vs Heading-Up) */}
+          <button
+            onClick={() => setMapOrientation((prev) => (prev === 'north' ? 'heading' : 'north'))}
+            title={mapOrientation === 'north' ? 'North-Up: Fixed map, rotating player marker' : 'Heading-Up: Rotating map aligned to player direction'}
+            style={{
+              background: mapOrientation === 'heading' ? 'rgba(2, 132, 199, 0.18)' : 'rgba(2, 132, 199, 0.08)',
+              border: `1px solid ${mapOrientation === 'heading' ? 'rgba(2, 132, 199, 0.5)' : 'rgba(2, 132, 199, 0.25)'}`,
+              borderRadius: 4,
+              color: '#0284c7',
+              fontSize: '0.52rem',
+              fontWeight: 900,
+              padding: '2px 5px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3
+            }}
+          >
+            <Compass size={9} />
+            <span>{mapOrientation === 'north' ? 'N-UP' : 'HEAD'}</span>
+          </button>
 
           {/* Zoom Toggle Button */}
           <button
@@ -192,9 +232,9 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
               border: '1px solid rgba(2, 132, 199, 0.25)',
               borderRadius: 4,
               color: '#0284c7',
-              fontSize: '0.54rem',
+              fontSize: '0.52rem',
               fontWeight: 900,
-              padding: '2px 6px',
+              padding: '2px 5px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -246,93 +286,165 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
             </radialGradient>
           </defs>
 
-          {/* Tactical Grid Background (Light cyan) */}
-          <g opacity="0.12">
-            {[-40, -20, 0, 20, 40].map((coord) => {
-              const s = worldToSvg(coord, coord);
+          {/* ROTATING WORLD CONTAINER (Rotates in Heading-Up mode) */}
+          <g transform={isHeadingUp ? `rotate(${mapRotDeg} ${cx} ${cy})` : undefined}>
+            {/* Tactical Grid Background (Light cyan) */}
+            <g opacity="0.12">
+              {[-40, -20, 0, 20, 40].map((coord) => {
+                const s = worldToSvg(coord, coord);
+                return (
+                  <React.Fragment key={coord}>
+                    <line x1={s.x} y1="0" x2={s.x} y2={mapHeight} stroke="#0284c7" strokeWidth="0.8" strokeDasharray="3,4" />
+                    <line x1="0" y1={s.y} x2={mapWidth} y2={s.y} stroke="#0284c7" strokeWidth="0.8" strokeDasharray="3,4" />
+                  </React.Fragment>
+                );
+              })}
+            </g>
+
+            {/* Concentric Range Rings */}
+            <circle cx={cx} cy={cy} r={radius * 0.45} fill="none" stroke="rgba(2, 132, 199, 0.16)" strokeWidth="0.8" strokeDasharray="2,3" />
+            <circle cx={cx} cy={cy} r={radius * 0.9} fill="none" stroke="rgba(2, 132, 199, 0.22)" strokeWidth="1" strokeDasharray="4,4" />
+
+            {/* Arena Outer Boundary Box */}
+            {(() => {
+              const halfA = arenaSize / 2;
+              const tl = worldToSvg(-halfA, -halfA);
+              const tr = worldToSvg(halfA, -halfA);
+              const br = worldToSvg(halfA, halfA);
+              const bl = worldToSvg(-halfA, halfA);
+              const boundaryPts = `${tl.x},${tl.y} ${tr.x},${tr.y} ${br.x},${br.y} ${bl.x},${bl.y}`;
               return (
-                <React.Fragment key={coord}>
-                  <line x1={s.x} y1="0" x2={s.x} y2={mapHeight} stroke="#0284c7" strokeWidth="0.8" strokeDasharray="3,4" />
-                  <line x1="0" y1={s.y} x2={mapWidth} y2={s.y} stroke="#0284c7" strokeWidth="0.8" strokeDasharray="3,4" />
-                </React.Fragment>
+                <polygon
+                  points={boundaryPts}
+                  fill="none"
+                  stroke="rgba(2, 132, 199, 0.35)"
+                  strokeWidth="1.2"
+                  strokeDasharray="5,4"
+                />
+              );
+            })()}
+
+            {/* Roads & Avenues (Light gray with subtle yellow dash) */}
+            {(() => {
+              const roadW = 8;
+              const rTop = worldToSvg(0, -arenaSize / 2);
+              const rBottom = worldToSvg(0, arenaSize / 2);
+              const rLeft = worldToSvg(-arenaSize / 2, 0);
+              const rRight = worldToSvg(arenaSize / 2, 0);
+              const scale = radius / viewRange;
+              return (
+                <g opacity="0.6">
+                  <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#e2e8f0" strokeWidth={roadW * scale} />
+                  <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#e2e8f0" strokeWidth={roadW * scale} />
+                  {/* Yellow centerlines */}
+                  <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.75" />
+                  <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.75" />
+                </g>
+              );
+            })()}
+
+            {/* Enterable Buildings (Clean light fill with crisp cyan outline) */}
+            {buildings.map((b) => {
+              const polyPts = getBuildingPolygon(b);
+              const centerSvg = worldToSvg(b.x, b.z);
+              const doorSvg = worldToSvg(b.doorX, b.doorZ);
+
+              return (
+                <g key={b.id}>
+                  {/* Building Footprint */}
+                  <polygon
+                    points={polyPts}
+                    fill="rgba(241, 245, 249, 0.95)"
+                    stroke="#0284c7"
+                    strokeWidth="1.4"
+                  />
+
+                  {/* Building Doorway Notch */}
+                  {doorSvg.isVisible && (
+                    <circle
+                      cx={doorSvg.x}
+                      cy={doorSvg.y}
+                      r={2.2}
+                      fill={b.isDoorOpen ? '#16a34a' : '#0284c7'}
+                      stroke="#ffffff"
+                      strokeWidth="0.8"
+                    />
+                  )}
+
+                  {/* Building Label (counter-rotated in Heading-Up mode so text stays horizontal) */}
+                  {centerSvg.isVisible && (
+                    <text
+                      x={centerSvg.x}
+                      y={centerSvg.y + 3}
+                      transform={isHeadingUp ? `rotate(${-mapRotDeg} ${centerSvg.x} ${centerSvg.y + 3})` : undefined}
+                      fill="#334155"
+                      fontSize={isMobile ? '6.5' : '7.5'}
+                      fontWeight="900"
+                      textAnchor="middle"
+                      style={{ pointerEvents: 'none' }}
+                    >
+                      {b.name.replace(/Villa|Bungalow|Residence|Depot|Station/i, '').trim() || b.name}
+                    </text>
+                  )}
+                </g>
               );
             })}
+
+            {/* ENEMIES & COMBATANTS */}
+            {pings.map((ping) => {
+              const svg = worldToSvg(ping.x, ping.z);
+              if (!svg.isVisible) return null;
+
+              if (ping.type === 'teammate') {
+                return (
+                  <g key={ping.id}>
+                    <circle cx={svg.x} cy={svg.y} r={4.5} fill="rgba(2, 132, 199, 0.22)" />
+                    <circle cx={svg.x} cy={svg.y} r={2.5} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
+                  </g>
+                );
+              } else if (ping.type === 'boss') {
+                return (
+                  <g key={ping.id}>
+                    <circle cx={svg.x} cy={svg.y} r={7} fill="rgba(217, 119, 6, 0.25)" />
+                    <polygon
+                      points={`${svg.x},${svg.y - 6} ${svg.x + 6},${svg.y} ${svg.x},${svg.y + 6} ${svg.x - 6},${svg.y}`}
+                      fill="#d97706"
+                      stroke="#ffffff"
+                      strokeWidth="1.2"
+                    />
+                    <text
+                      x={svg.x}
+                      y={svg.y - 8}
+                      transform={isHeadingUp ? `rotate(${-mapRotDeg} ${svg.x} ${svg.y - 8})` : undefined}
+                      fill="#d97706"
+                      fontSize="7"
+                      fontWeight="900"
+                      textAnchor="middle"
+                    >
+                      BOSS
+                    </text>
+                  </g>
+                );
+              } else {
+                // Hostile Enemy Combatant - PURE RED DOT
+                return (
+                  <g key={ping.id}>
+                    {/* Glowing red threat aura */}
+                    <circle cx={svg.x} cy={svg.y} r={5.5} fill="rgba(225, 29, 72, 0.25)" />
+                    {/* Core red threat ping */}
+                    <circle
+                      cx={svg.x}
+                      cy={svg.y}
+                      r={3.2}
+                      fill="#e11d48"
+                      stroke="#ffffff"
+                      strokeWidth="1"
+                    />
+                  </g>
+                );
+              }
+            })}
           </g>
-
-          {/* Concentric Range Rings */}
-          <circle cx={cx} cy={cy} r={radius * 0.45} fill="none" stroke="rgba(2, 132, 199, 0.16)" strokeWidth="0.8" strokeDasharray="2,3" />
-          <circle cx={cx} cy={cy} r={radius * 0.9} fill="none" stroke="rgba(2, 132, 199, 0.22)" strokeWidth="1" strokeDasharray="4,4" />
-
-          {/* Arena Outer Boundary Box */}
-          {(() => {
-            const halfA = arenaSize / 2;
-            const tl = worldToSvg(-halfA, -halfA);
-            const tr = worldToSvg(halfA, -halfA);
-            const br = worldToSvg(halfA, halfA);
-            const bl = worldToSvg(-halfA, halfA);
-            const boundaryPts = `${tl.x},${tl.y} ${tr.x},${tr.y} ${br.x},${br.y} ${bl.x},${bl.y}`;
-            return (
-              <polygon
-                points={boundaryPts}
-                fill="none"
-                stroke="rgba(2, 132, 199, 0.35)"
-                strokeWidth="1.2"
-                strokeDasharray="5,4"
-              />
-            );
-          })()}
-
-          {/* Roads & Avenues (Light gray with subtle yellow dash) */}
-          {(() => {
-            const roadW = 8;
-            const rTop = worldToSvg(0, -arenaSize / 2);
-            const rBottom = worldToSvg(0, arenaSize / 2);
-            const rLeft = worldToSvg(-arenaSize / 2, 0);
-            const rRight = worldToSvg(arenaSize / 2, 0);
-            const scale = radius / viewRange;
-            return (
-              <g opacity="0.6">
-                <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#e2e8f0" strokeWidth={roadW * scale} />
-                <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#e2e8f0" strokeWidth={roadW * scale} />
-                {/* Yellow centerlines */}
-                <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.75" />
-                <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.75" />
-              </g>
-            );
-          })()}
-
-          {/* Enterable Buildings (Clean light fill with crisp cyan outline) */}
-          {buildings.map((b) => {
-            const polyPts = getBuildingPolygon(b);
-            const centerSvg = worldToSvg(b.x, b.z);
-
-            return (
-              <g key={b.id}>
-                {/* Building Footprint */}
-                <polygon
-                  points={polyPts}
-                  fill="rgba(241, 245, 249, 0.95)"
-                  stroke="#0284c7"
-                  strokeWidth="1.4"
-                />
-
-                {/* Building Label */}
-                {centerSvg.isVisible && (
-                  <text
-                    x={centerSvg.x}
-                    y={centerSvg.y + 3}
-                    fill="#334155"
-                    fontSize={isMobile ? '6.5' : '7.5'}
-                    fontWeight="900"
-                    textAnchor="middle"
-                    style={{ pointerEvents: 'none' }}
-                  >
-                    {b.name.replace(/Villa|Bungalow|Residence|Depot|Station/i, '').trim() || b.name}
-                  </text>
-                )}
-              </g>
-            );
-          })}
 
           {/* Radar Scanning Sweep Beam */}
           {zoomMode === 'local' && (
@@ -348,67 +460,17 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
             </g>
           )}
 
-          {/* ENEMIES: EXCLUSIVELY SHOWN AS PURE CRISP RED DOTS */}
-          {pings.map((ping) => {
-            const svg = worldToSvg(ping.x, ping.z);
-            if (!svg.isVisible) return null;
-
-            if (ping.type === 'teammate') {
-              return (
-                <g key={ping.id}>
-                  <circle cx={svg.x} cy={svg.y} r={4.5} fill="rgba(2, 132, 199, 0.22)" />
-                  <circle cx={svg.x} cy={svg.y} r={2.5} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
-                </g>
-              );
-            } else if (ping.type === 'boss') {
-              return (
-                <g key={ping.id}>
-                  <circle cx={svg.x} cy={svg.y} r={7} fill="rgba(217, 119, 6, 0.25)" />
-                  <polygon
-                    points={`${svg.x},${svg.y - 6} ${svg.x + 6},${svg.y} ${svg.x},${svg.y + 6} ${svg.x - 6},${svg.y}`}
-                    fill="#d97706"
-                    stroke="#ffffff"
-                    strokeWidth="1.2"
-                  />
-                  <text
-                    x={svg.x}
-                    y={svg.y - 8}
-                    fill="#d97706"
-                    fontSize="7"
-                    fontWeight="900"
-                    textAnchor="middle"
-                  >
-                    BOSS
-                  </text>
-                </g>
-              );
-            } else {
-              // Hostile Enemy Combatant - PURE RED DOT
-              return (
-                <g key={ping.id}>
-                  {/* Glowing red threat aura */}
-                  <circle cx={svg.x} cy={svg.y} r={5.5} fill="rgba(225, 29, 72, 0.25)" />
-                  {/* Core red threat ping */}
-                  <circle
-                    cx={svg.x}
-                    cy={svg.y}
-                    r={3.2}
-                    fill="#e11d48"
-                    stroke="#ffffff"
-                    strokeWidth="1"
-                  />
-                </g>
-              );
-            }
-          })}
-
-          {/* PLAYER MARKER (With Directional Vision Cone) */}
+          {/* PLAYER MARKER (Accurate Directional Vision Cone & Pointer Arrow) */}
           {(() => {
             const pSvg = worldToSvg(playerPos.x, playerPos.z);
-            const yawDeg = (playerYaw * 180) / Math.PI;
+            // In Heading-Up mode, player is in center looking straight UP (0 deg) because world rotates underneath.
+            // In North-Up mode, marker translates to player position and rotates accurately by playerYawDeg (-playerYaw).
+            const posX = isHeadingUp ? cx : pSvg.x;
+            const posY = isHeadingUp ? cy : pSvg.y;
+            const rotDeg = isHeadingUp ? 0 : playerYawDeg;
 
             return (
-              <g transform={`translate(${pSvg.x}, ${pSvg.y}) rotate(${yawDeg})`}>
+              <g transform={`translate(${posX}, ${posY}) rotate(${rotDeg})`}>
                 {/* Forward Vision Flashlight Arc */}
                 <path
                   d="M 0 0 L -18 -38 A 42 42 0 0 1 18 -38 Z"
@@ -431,19 +493,33 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
             );
           })()}
 
-          {/* CARDINAL COMPASS HEADINGS (N / S / E / W) */}
-          <text x={cx} y={11} fill="#0284c7" fontSize="8" fontWeight="900" textAnchor="middle">
-            N
-          </text>
-          <text x={cx} y={mapHeight - 4} fill="#64748b" fontSize="7.5" fontWeight="900" textAnchor="middle">
-            S
-          </text>
-          <text x={mapWidth - 8} y={cy + 3} fill="#64748b" fontSize="7.5" fontWeight="900" textAnchor="middle">
-            E
-          </text>
-          <text x={8} y={cy + 3} fill="#64748b" fontSize="7.5" fontWeight="900" textAnchor="middle">
-            W
-          </text>
+          {/* DYNAMIC CARDINAL COMPASS HEADINGS (N / S / E / W) */}
+          {cardinals.map((c) => {
+            const angleDeg = isHeadingUp ? (c.baseAngle + mapRotDeg) % 360 : c.baseAngle;
+            const angleRad = (angleDeg * Math.PI) / 180;
+            const labelRadius = radius + 3;
+            const tx = cx + Math.sin(angleRad) * labelRadius;
+            const ty = cy - Math.cos(angleRad) * labelRadius;
+
+            // Keep within visible SVG bounds
+            const clampedX = Math.max(7, Math.min(mapWidth - 7, tx));
+            const clampedY = Math.max(10, Math.min(mapHeight - 4, ty + 3));
+
+            return (
+              <text
+                key={c.label}
+                x={clampedX}
+                y={clampedY}
+                fill={c.color}
+                fontSize={c.label === 'N' ? '8' : '7.5'}
+                fontWeight="900"
+                textAnchor="middle"
+                style={{ pointerEvents: 'none' }}
+              >
+                {c.label}
+              </text>
+            );
+          })}
         </svg>
       </div>
 
@@ -465,8 +541,11 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
           LOC: <strong style={{ color: '#0284c7' }}>{Math.round(playerPos.x)}</strong>,{' '}
           <strong style={{ color: '#0284c7' }}>{Math.round(playerPos.z)}</strong>
         </span>
-        <span style={{ color: '#64748b', fontWeight: 800 }}>{zoomMode === 'local' ? '50M RADAR' : 'SECTOR 130M'}</span>
+        <span style={{ color: '#64748b', fontWeight: 800 }}>
+          {zoomMode === 'local' ? (isHeadingUp ? '50M HEADING' : '50M RADAR') : 'SECTOR 130M'}
+        </span>
       </div>
     </div>
   );
 };
+
