@@ -521,6 +521,84 @@ export class TextureGenerator {
   }
 
   /**
+   * Natural Tree Bark Texture with vertical organic furrows
+   */
+  public static createBarkTexture(baseColor: string = '#5c3a21', furrowColor: string = '#2e1b0f'): THREE.CanvasTexture {
+    const key = `bark_${baseColor}_${furrowColor}`;
+    if (this.cache.has(key)) return this.cache.get(key)!;
+
+    const size = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(0, 0, size, size);
+
+    // Deep vertical bark fissures & grain
+    for (let x = 0; x < size; x += 12) {
+      const furrowW = 2 + Math.random() * 5;
+      const xOffset = x + (Math.random() - 0.5) * 8;
+      ctx.fillStyle = furrowColor;
+      ctx.fillRect(xOffset, 0, furrowW, size);
+
+      // Highlighted bark ridge
+      ctx.fillStyle = '#8b5a2b';
+      ctx.fillRect(xOffset + furrowW, 0, 1.5, size);
+    }
+
+    // Wood pores and organic noise
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    for (let i = 0; i < 2500; i++) {
+      ctx.fillRect(Math.random() * size, Math.random() * size, 2, 4 + Math.random() * 8);
+    }
+
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 2, 4);
+    this.cache.set(key, texture);
+    return texture;
+  }
+
+  /**
+   * Lush Organic Tree Leaves Foliage Texture
+   */
+  public static createFoliageTexture(baseColor: string = '#15803d', highlightColor: string = '#22c55e'): THREE.CanvasTexture {
+    const key = `foliage_${baseColor}_${highlightColor}`;
+    if (this.cache.has(key)) return this.cache.get(key)!;
+
+    const size = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(0, 0, size, size);
+
+    // Leaf cluster speckles
+    ctx.fillStyle = highlightColor;
+    for (let i = 0; i < 3500; i++) {
+      const rx = Math.random() * size;
+      const ry = Math.random() * size;
+      const rw = 2 + Math.random() * 4;
+      const rh = 2 + Math.random() * 4;
+      ctx.fillRect(rx, ry, rw, rh);
+    }
+
+    // Deep shadow foliage accents
+    ctx.fillStyle = '#14532d';
+    for (let i = 0; i < 2500; i++) {
+      const rx = Math.random() * size;
+      const ry = Math.random() * size;
+      ctx.fillRect(rx, ry, 3, 3);
+    }
+
+    const texture = this.finalizeTexture(new THREE.CanvasTexture(canvas), true, 4, 4);
+    this.cache.set(key, texture);
+    return texture;
+  }
+
+  /**
    * Desert Sun-Dried Adobe Clay Texture
    */
   public static createAdobeTexture(): THREE.CanvasTexture {

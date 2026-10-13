@@ -243,15 +243,16 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
               const polyPts = getBuildingPolygon(b);
               const centerSvg = worldToSvg(b.x, b.z);
               const doorSvg = worldToSvg(b.doorX, b.doorZ);
+              const isTreehouse = b.id.toLowerCase().includes('treehouse') || b.name.toLowerCase().includes('tree');
 
               return (
                 <g key={b.id}>
                   {/* Building Footprint */}
                   <polygon
                     points={polyPts}
-                    fill="rgba(241, 245, 249, 0.95)"
-                    stroke="#0284c7"
-                    strokeWidth="1.4"
+                    fill={isTreehouse ? 'rgba(220, 252, 231, 0.95)' : 'rgba(241, 245, 249, 0.95)'}
+                    stroke={isTreehouse ? '#16a34a' : '#0284c7'}
+                    strokeWidth={isTreehouse ? '1.8' : '1.4'}
                   />
 
                   {/* Building Doorway Notch */}
@@ -260,7 +261,7 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
                       cx={doorSvg.x}
                       cy={doorSvg.y}
                       r={2.2}
-                      fill={b.isDoorOpen ? '#16a34a' : '#0284c7'}
+                      fill={b.isDoorOpen ? '#16a34a' : (isTreehouse ? '#15803d' : '#0284c7')}
                       stroke="#ffffff"
                       strokeWidth="0.8"
                     />
@@ -272,13 +273,15 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
                       x={centerSvg.x}
                       y={centerSvg.y + 3}
                       transform={`rotate(${-mapRotDeg} ${centerSvg.x} ${centerSvg.y + 3})`}
-                      fill="#334155"
-                      fontSize={isMobile ? '6.5' : '7.5'}
+                      fill={isTreehouse ? '#166534' : '#334155'}
+                      fontSize={isMobile ? '6.0' : '7.0'}
                       fontWeight="900"
                       textAnchor="middle"
                       style={{ pointerEvents: 'none' }}
                     >
-                      {b.name.replace(/Villa|Bungalow|Residence|Depot|Station/i, '').trim() || b.name}
+                      {isTreehouse
+                        ? 'TREEHOUSE'
+                        : (b.name.replace(/Villa|Bungalow|Residence|Depot|Station/i, '').trim() || b.name)}
                     </text>
                   )}
                 </g>
