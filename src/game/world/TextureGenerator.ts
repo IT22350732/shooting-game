@@ -35,7 +35,6 @@ export class TextureGenerator {
       texture.wrapT = THREE.RepeatWrapping;
       texture.repeat.set(repeatX, repeatY);
     }
-    texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = this.currentAnisotropy;
     texture.generateMipmaps = true;
     texture.minFilter = THREE.LinearMipmapLinearFilter;

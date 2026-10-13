@@ -299,7 +299,7 @@ export class ArenaManager {
     const hemiLight = new THREE.HemisphereLight(0xbae6fd, 0xdcfce7, 0.85);
     this.arenaGroup.add(hemiLight);
 
-    const isLow = this.graphicsQuality === 'low';
+    const isLow = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
     const sun = new THREE.DirectionalLight(0xfffbeb, 1.75);
     sun.position.set(38, 55, 28);
     sun.castShadow = !isLow;
@@ -630,7 +630,7 @@ export class ArenaManager {
     const hemi = new THREE.HemisphereLight(0x60a5fa, 0xf1f5f9, 0.85);
     this.arenaGroup.add(hemi);
 
-    const isLowCity = this.graphicsQuality === 'low';
+    const isLowCity = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
     const sun = new THREE.DirectionalLight(0xffffff, 1.8);
     sun.position.set(-32, 58, 25);
     sun.castShadow = !isLowCity;
@@ -932,7 +932,7 @@ export class ArenaManager {
     const hemi = new THREE.HemisphereLight(0xfef08a, 0xfde68a, 0.9);
     this.arenaGroup.add(hemi);
 
-    const isLowDesert = this.graphicsQuality === 'low';
+    const isLowDesert = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
     const sun = new THREE.DirectionalLight(0xfffbeb, 1.85);
     sun.position.set(42, 60, 22);
     sun.castShadow = !isLowDesert;
@@ -1206,7 +1206,7 @@ export class ArenaManager {
     const hemi = new THREE.HemisphereLight(0x94a3b8, 0xffffff, 0.85);
     this.arenaGroup.add(hemi);
 
-    const isLowIndustrial = this.graphicsQuality === 'low';
+    const isLowIndustrial = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
     const sun = new THREE.DirectionalLight(0xffffff, 1.8);
     sun.position.set(-30, 55, 30);
     sun.castShadow = !isLowIndustrial;
