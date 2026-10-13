@@ -3171,7 +3171,13 @@ export class ArenaManager {
       mul2.position.set(width / 4, baseSillH + glassPaneH / 2, 0);
       wallSection.add(mul2);
 
-      cabinWallMeshes.push(glass);
+      // Solid physical wall barrier collider across full room height (roomH)
+      const barrierGeo = new THREE.BoxGeometry(width, roomH, roomWallThick);
+      const barrierMat = new THREE.MeshBasicMaterial({ visible: false });
+      const barrier = new THREE.Mesh(barrierGeo, barrierMat);
+      barrier.position.set(0, roomH / 2, 0);
+      wallSection.add(barrier);
+      cabinWallMeshes.push(barrier);
     };
 
     // Back Glass Wall (-Z)
@@ -3203,7 +3209,13 @@ export class ArenaManager {
     flGlass.position.set(0, baseSillH + glassPaneH / 2, 0);
     flGlass.renderOrder = 10;
     flSection.add(flGlass);
-    cabinWallMeshes.push(flGlass);
+
+    const flBarrierGeo = new THREE.BoxGeometry(frontSideW, roomH, roomWallThick);
+    const flBarrierMat = new THREE.MeshBasicMaterial({ visible: false });
+    const flBarrier = new THREE.Mesh(flBarrierGeo, flBarrierMat);
+    flBarrier.position.set(0, roomH / 2, 0);
+    flSection.add(flBarrier);
+    cabinWallMeshes.push(flBarrier);
 
     // Front Right Glass Panel
     const frSection = new THREE.Group();
@@ -3222,7 +3234,13 @@ export class ArenaManager {
     frGlass.position.set(0, baseSillH + glassPaneH / 2, 0);
     frGlass.renderOrder = 10;
     frSection.add(frGlass);
-    cabinWallMeshes.push(frGlass);
+
+    const frBarrierGeo = new THREE.BoxGeometry(frontSideW, roomH, roomWallThick);
+    const frBarrierMat = new THREE.MeshBasicMaterial({ visible: false });
+    const frBarrier = new THREE.Mesh(frBarrierGeo, frBarrierMat);
+    frBarrier.position.set(0, roomH / 2, 0);
+    frSection.add(frBarrier);
+    cabinWallMeshes.push(frBarrier);
 
     // Doorway Lintel Header
     const lintelH = roomH - doorH;
@@ -3304,6 +3322,29 @@ export class ArenaManager {
     roof.castShadow = true;
     roof.receiveShadow = true;
     cabinGroup.add(roof);
+
+    // Register Walkable Pitched Roof Floor Obstacle & Interior Ceiling Barrier
+    group.updateMatrixWorld(true);
+    const roofBox = new THREE.Box3().setFromObject(roof);
+    const roofLocalCenter = new THREE.Vector3(roomCenterX, 0, roomCenterZ);
+    const roofCenterWorld = roofLocalCenter.clone().applyAxisAngle(yAxis, bRot).add(group.position);
+    const roofBaseY = deckH + roomH + 0.1;
+
+    this.obstacles.push({
+      mesh: roof,
+      box: roofBox,
+      isFloor: true,
+      isCover: false,
+      ceilingY: deckH + roomH,
+      floorPlane: {
+        center: roofCenterWorld,
+        halfW: halfRW,
+        halfD: (roomD + 0.8) / 2,
+        rotY: bRot,
+        topY: roofBaseY,
+        pitchHeight: roofH
+      }
+    });
 
     // 10. WARM COZY INTERIOR LANTERN & TACTICAL LOOKOUT PROPS
     const lanternGeo = new THREE.CylinderGeometry(0.12, 0.14, 0.28, 8);
