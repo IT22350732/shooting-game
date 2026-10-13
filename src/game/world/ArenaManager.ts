@@ -1584,7 +1584,7 @@ export class ArenaManager {
     group.add(trimBack);
 
     // Front deck edge fascia trim (ONLY along guardrail section, stopping cleanly before stair opening)
-    const frontRailSpan = w - stairW;
+    const frontRailSpan = w - stairW - 0.15;
     if (frontRailSpan > 0.4) {
       const trimFrontGeo = new THREE.BoxGeometry(frontRailSpan, trimH, trimThick);
       const trimFront = new THREE.Mesh(trimFrontGeo, accentMat);
@@ -1616,7 +1616,7 @@ export class ArenaManager {
       [-w / 2 + 0.35, -d / 2 + 0.35],
       [w / 2 - 0.35, -d / 2 + 0.35],
       [-w / 2 + 0.35, d / 2 - 0.35],
-      [w / 2 - 0.35, d / 2 - 0.35]
+      [w / 2 - stairW - 0.35, d / 2 - 0.35]
     ];
     const pillarH = h - slabThick;
     const pillarGeo = new THREE.BoxGeometry(0.30, pillarH, 0.30);
@@ -1856,8 +1856,8 @@ export class ArenaManager {
     // B. Left Wall (full depth -X)
     createSingleRailing(d, -w / 2, 0, Math.PI / 2);
 
-    // C. Right Wall (full depth +X)
-    createSingleRailing(d, w / 2, 0, Math.PI / 2);
+    // C. Right Wall (stops cleanly before stair landing opening)
+    createSingleRailing(d - 0.20, w / 2, -0.10, Math.PI / 2);
 
     // D. Front Wall (covers left section, leaving stair doorway open on right!)
     if (frontRailSpan > 0.4) {

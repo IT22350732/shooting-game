@@ -330,6 +330,7 @@ export class Player {
 
     // Check landing on top of waist-high cover obstacles, stair ramps, or elevated upfloor slabs
     let groundY = this.eyeHeight;
+    let onActiveStair = false;
     const searchDist = 7.0;
 
     const nearby = Player._nearbyObstacles;
@@ -364,18 +365,43 @@ export class Player {
           const px = newPos.x - sr.p1.x;
           const pz = newPos.z - sr.p1.z;
           const along = px * uX + pz * uZ;
-          const across = px * perpX + pz * perpZ;
-          const halfW = sr.width / 2 + 0.35;
+          let across = px * perpX + pz * perpZ;
+
+          // PHYSICAL STAIR FENCE RETENTION:
+          // Stair width is sr.width. The stair fences/handrails sit at across = ±(sr.width / 2).
+          // When the player gets close to or touches the stair fence, the fence physically stops
+          // them from falling off, keeping them safely on the steps and allowing them to slide
+          // smoothly along the fence without dropping down!
+          const maxFenceAcross = Math.max(0.45, (sr.width / 2) - 0.06);
+          const rampSupportHalfW = sr.width / 2 + 0.95; // Wide support zone so height NEVER drops when near fence
+
+          if (along >= -0.20 && along <= len + 0.60) {
+            const currentStepY = sr.bottomY + Math.max(0, Math.min(1, along / len)) * (sr.topY - sr.bottomY);
+            const playerFeetY = this.position.y - this.eyeHeight;
+            const isVaultingOverFence = playerFeetY > currentStepY + 1.15 && this.velocity.y > 0;
+
+            if (!isVaultingOverFence && Math.abs(across) > maxFenceAcross) {
+              across = Math.sign(across) * maxFenceAcross;
+              newPos.x = sr.p1.x + along * uX + across * perpX;
+              newPos.z = sr.p1.z + along * uZ + across * perpZ;
+            }
+          }
 
           // Inside stair boundaries (with smooth approach & generous top transition onto deck)
-          if (along >= -0.45 && along <= len + 0.85 && Math.abs(across) <= halfW) {
+          if (along >= -0.55 && along <= len + 1.25 && Math.abs(across) <= rampSupportHalfW) {
             const t = Math.max(0, Math.min(1, along / len));
             const stepY = sr.bottomY + t * (sr.topY - sr.bottomY);
             const stairEyeY = stepY + this.eyeHeight;
 
             // Pick up whenever player is within vertical range of the ramp
-            if (this.position.y >= sr.bottomY + this.eyeHeight - 0.75 && this.position.y <= sr.topY + this.eyeHeight + 1.6) {
-              if (stairEyeY > groundY) groundY = stairEyeY;
+            if (
+              this.position.y >= sr.bottomY + this.eyeHeight - 1.20 &&
+              this.position.y <= sr.topY + this.eyeHeight + 2.0
+            ) {
+              if (stairEyeY > groundY) {
+                groundY = stairEyeY;
+                onActiveStair = true;
+              }
             }
           }
         }
@@ -496,6 +522,9 @@ export class Player {
         // Skip horizontal blocking for stair ramps and elevated floor slabs:
         // Stairs guide player smoothly via stairRamp, and floor slabs are walkable decks (never lateral walls!)
         if (obs.stairRamp || obs.isFloor) continue;
+
+        // When climbing stairs, bypass ground obstacles situated underneath the staircase footprint
+        if (onActiveStair && obs.box.max.y < groundY - this.eyeHeight + 0.35) continue;
 
         // Skip horizontal blocking if player is vertically outside the obstacle:
         // A. Entirely above the obstacle (standing on top, jumping over, or vaulting over low barrier)
