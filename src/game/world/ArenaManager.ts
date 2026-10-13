@@ -1610,8 +1610,8 @@ export class ArenaManager {
     group.add(stairGroup);
 
     // 4. PERIMETER BALLISTIC SAFETY WALLS (WITH 100% UNBLOCKABLE STAIRWAY ENTRANCE)
-    // Fortified architectural perimeter walls: stops player from clipping or passing through, zero graphic issues.
-    const railH = 1.45;
+    // Fortified architectural perimeter walls: stops player from clipping or passing through while walking, allows vaulting/jumping outside.
+    const railH = 1.15;
     const postGeo = new THREE.BoxGeometry(0.12, railH, 0.12);
     const railMeshGroup = new THREE.Group();
     group.add(railMeshGroup); // Attached immediately to group hierarchy so all matrix transforms are preserved!
@@ -1689,13 +1689,13 @@ export class ArenaManager {
         seg.add(post);
       }
 
-      // Invisible solid physical barrier collider mesh:
-      // Depth = 0.38m (generous physical thickness prevents any tunneling)
-      // Height = 3.6m (extends from deck y=0 to y=3.6m so players cannot jump over or through)
-      const barrierGeo = new THREE.BoxGeometry(length, 3.6, 0.38);
+      // Solid physical barrier collider mesh:
+      // Depth = 0.28m (prevents tunneling through the wall while walking/running)
+      // Height = railH (allows clean vaulting/jumping outside when player presses jump)
+      const barrierGeo = new THREE.BoxGeometry(length, railH, 0.28);
       const barrierMat = new THREE.MeshBasicMaterial({ visible: false });
       const barrierMesh = new THREE.Mesh(barrierGeo, barrierMat);
-      barrierMesh.position.set(0, 1.8, 0);
+      barrierMesh.position.set(0, railH / 2, 0);
       seg.add(barrierMesh);
 
       railMeshGroup.add(seg);

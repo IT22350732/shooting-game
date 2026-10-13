@@ -393,10 +393,10 @@ export class Player {
           const lz = newPos.z - fp.center.z;
           const rx = lx * Math.cos(-fp.rotY) - lz * Math.sin(-fp.rotY);
           const rz = lx * Math.sin(-fp.rotY) + lz * Math.cos(-fp.rotY);
-          // Generous floor boundary tolerance (+0.45m) for seamless transition
+          // Floor boundary tolerance (+0.08m): supports deck edges while allowing immediate fall when jumping outside
           if (
-            Math.abs(rx) <= fp.halfW + 0.45 &&
-            Math.abs(rz) <= fp.halfD + 0.45
+            Math.abs(rx) <= fp.halfW + 0.08 &&
+            Math.abs(rz) <= fp.halfD + 0.08
           ) {
             inside = true;
             // Pitched / Gable roof support: height rises toward central ridge along rx = 0
@@ -497,8 +497,11 @@ export class Player {
         // Stairs guide player smoothly via stairRamp, and floor slabs are walkable decks (never lateral walls!)
         if (obs.stairRamp || obs.isFloor) continue;
 
-        // Skip horizontal blocking if player is entirely above or entirely below obstacle
-        if (obs.box.max.y <= feetY + 0.05) continue; // Obstacle is beneath player feet (standing on top or jumped clear)
+        // Skip horizontal blocking if player is vertically outside the obstacle:
+        // A. Entirely above the obstacle (standing on top, jumping over, or vaulting over low barrier)
+        const jumpClearance = (this.velocity.y > 0 && !this.isGrounded) ? 0.35 : 0.05;
+        if (obs.box.max.y <= feetY + jumpClearance) continue; // Obstacle is beneath player feet or cleared during jump vault
+        // B. Entirely below the obstacle (underneath arch/ceiling)
         if (obs.box.min.y >= newPos.y + 0.15) continue; // Obstacle is above player head (underneath arch/ceiling)
 
         const clampX = THREE.MathUtils.clamp(newPos.x, obs.box.min.x, obs.box.max.x);
