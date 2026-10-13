@@ -12,6 +12,7 @@ export class Player {
   public position: THREE.Vector3 = new THREE.Vector3(0, 1.8, 12);
   public velocity: THREE.Vector3 = new THREE.Vector3();
   public isGrounded: boolean = true;
+  public onStairRamp: boolean = false;
   private readonly playerRadius = 0.38;
   public stance: 'stand' | 'crouch' | 'prone' = 'stand';
   public targetEyeHeight: number = 1.75;
@@ -93,6 +94,7 @@ export class Player {
     this.stance = 'stand';
     this.targetEyeHeight = 1.75;
     this.eyeHeight = 1.75;
+    this.onStairRamp = false;
   }
 
   public setStance(newStance: 'stand' | 'crouch' | 'prone') {
@@ -362,46 +364,92 @@ export class Player {
           const uZ = dz / len;
           const perpX = -uZ;
           const perpZ = uX;
+
+          // Proposed position in stair-aligned coordinates
           const px = newPos.x - sr.p1.x;
           const pz = newPos.z - sr.p1.z;
           const along = px * uX + pz * uZ;
           let across = px * perpX + pz * perpZ;
 
-          // PHYSICAL STAIR FENCE RETENTION & JUMP-OUT SUPPORT:
-          // Stair width is sr.width. The stair fences/handrails sit at across = ±(sr.width / 2).
-          // When walking (grounded), the fence physically stops the player from falling off.
-          // When jumping (airborne / jump key pressed), the player can vault/leap over the fence to the outside!
-          const maxFenceAcross = Math.max(0.45, (sr.width / 2) - 0.06);
-          const rampSupportHalfW = sr.width / 2 + 0.95; // Wide support zone so height NEVER drops when near fence
+          // Previous position in stair-aligned coordinates
+          const prevPx = this.position.x - sr.p1.x;
+          const prevPz = this.position.z - sr.p1.z;
+          const prevAlong = prevPx * uX + prevPz * uZ;
+          const prevAcross = prevPx * perpX + prevPz * perpZ;
+
+          const prevFeetY = this.position.y - this.eyeHeight;
+          const proposedFeetY = newPos.y - this.eyeHeight;
+
+          // Authentic geometric stair boundaries
+          const stairHalfW = Math.max(0.45, (sr.width - 0.3) / 2);
+          const maxFenceAcross = Math.max(0.40, stairHalfW - 0.06);
+
+          // Step height at player's previous and current location along ramp
+          const prevT = Math.max(0, Math.min(1, prevAlong / len));
+          const prevStepY = sr.bottomY + prevT * (sr.topY - sr.bottomY);
+          const t = Math.max(0, Math.min(1, along / len));
+          const stepY = sr.bottomY + t * (sr.topY - sr.bottomY);
+
+          // Did the player start this frame already walking/standing on this staircase?
+          const wasAtStairHeight = Math.abs(prevFeetY - prevStepY) <= 0.45;
+          const wasInsideStairs =
+            this.onStairRamp &&
+            wasAtStairHeight &&
+            Math.abs(prevAcross) <= maxFenceAcross + 0.08 &&
+            prevAlong >= -0.35 &&
+            prevAlong <= len + 0.45;
+
+          // Legitimate entry conditions:
+          // 1. Walking into bottom entrance from ground level
+          const entersBottom =
+            Math.abs(prevFeetY - sr.bottomY) <= 0.45 &&
+            along >= -0.40 && along <= 0.45 &&
+            Math.abs(across) <= maxFenceAcross;
+
+          // 2. Walking into top entrance from elevated deck level
+          const entersTop =
+            Math.abs(prevFeetY - sr.topY) <= 0.45 &&
+            along >= len - 0.45 && along <= len + 0.50 &&
+            Math.abs(across) <= maxFenceAcross;
+
+          // 3. Falling / landing from above directly onto the stair treads
+          const landsFromAbove =
+            this.velocity.y <= 0 &&
+            along >= 0.0 && along <= len &&
+            Math.abs(across) <= maxFenceAcross &&
+            prevFeetY >= stepY - 0.15 && proposedFeetY <= stepY + 0.25;
+
           const isJumping = !this.isGrounded || this.velocity.y > 0;
 
-          if (along >= -0.20 && along <= len + 0.60) {
-            // While walking on steps, retain player between handrails.
-            // When jumping, allow leaping freely over the handrail to the outside!
-            if (!isJumping && Math.abs(across) > maxFenceAcross) {
-              across = Math.sign(across) * maxFenceAcross;
-              newPos.x = sr.p1.x + along * uX + across * perpX;
-              newPos.z = sr.p1.z + along * uZ + across * perpZ;
+          if (wasInsideStairs || entersBottom || entersTop || landsFromAbove) {
+            // Player is legitimately navigating the staircase!
+            if (wasInsideStairs) {
+              if (!isJumping && Math.abs(across) > maxFenceAcross) {
+                // While walking, retain player between handrails
+                across = Math.sign(across) * maxFenceAcross;
+                newPos.x = sr.p1.x + along * uX + across * perpX;
+                newPos.z = sr.p1.z + along * uZ + across * perpZ;
+              }
             }
-          }
 
-          // Inside stair boundaries (with smooth approach & generous top transition onto deck)
-          // If the player intentionally jumped outside the fence, release stair support so they fall naturally!
-          const jumpedOutside = isJumping && Math.abs(across) > maxFenceAcross;
+            const jumpedOutside = isJumping && Math.abs(across) > maxFenceAcross;
 
-          if (!jumpedOutside && along >= -0.55 && along <= len + 1.25 && Math.abs(across) <= rampSupportHalfW) {
-            const t = Math.max(0, Math.min(1, along / len));
-            const stepY = sr.bottomY + t * (sr.topY - sr.bottomY);
-            const stairEyeY = stepY + this.eyeHeight;
-
-            // Pick up whenever player is within vertical range of the ramp
-            if (
-              this.position.y >= sr.bottomY + this.eyeHeight - 1.20 &&
-              this.position.y <= sr.topY + this.eyeHeight + 2.0
-            ) {
+            if (!jumpedOutside && along >= -0.40 && along <= len + 0.50 && Math.abs(across) <= maxFenceAcross + 0.10) {
+              const stairEyeY = stepY + this.eyeHeight;
               if (stairEyeY > groundY) {
                 groundY = stairEyeY;
                 onActiveStair = true;
+              }
+            }
+          } else {
+            // Player is OUTSIDE the staircase:
+            // Physically block player from penetrating through side handrails/stringers
+            if (along > 0.15 && along < len - 0.15) {
+              const sideBarrierAcross = stairHalfW + this.playerRadius * 0.75;
+              if (Math.abs(across) < sideBarrierAcross && Math.abs(prevAcross) >= maxFenceAcross) {
+                across = Math.sign(across) * sideBarrierAcross;
+                newPos.x = sr.p1.x + along * uX + across * perpX;
+                newPos.z = sr.p1.z + along * uZ + across * perpZ;
               }
             }
           }
@@ -467,6 +515,8 @@ export class Player {
         }
       }
     }
+
+    this.onStairRamp = onActiveStair;
 
     // Floor / Obstacle-top collision
     if (newPos.y <= groundY) {
