@@ -111,7 +111,7 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        border: '1px solid rgba(34, 197, 94, 0.35)',
+        border: '1.5px solid #334155',
         boxShadow: '0 10px 30px rgba(15, 23, 42, 0.10), 0 1px 3px rgba(15, 23, 42, 0.05)',
         background: 'rgba(255, 255, 255, 0.88)',
         backdropFilter: 'blur(20px)',
@@ -129,7 +129,7 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
           justifyContent: 'space-between',
           padding: isMobile ? '4px 8px' : '6px 12px',
           background: 'rgba(248, 250, 252, 0.94)',
-          borderBottom: '1px solid rgba(34, 197, 94, 0.20)'
+          borderBottom: '1.5px solid #334155'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -218,29 +218,7 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
 
           {/* DYNAMIC ROTATING WORLD LAYER (Rotates with player heading so forward is always UP) */}
           <g transform={`rotate(${mapRotDeg} ${cx} ${cy})`}>
-            {/* Arena Playable Area & Perimeter Boundary Wall */}
-            {(() => {
-              const p1 = worldToSvg(-half, -half);
-              const p2 = worldToSvg(half, -half);
-              const p3 = worldToSvg(half, half);
-              const p4 = worldToSvg(-half, half);
-              return (
-                <g>
-                  {/* Playable arena slab highlight */}
-                  <polygon
-                    points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
-                    fill="rgba(255, 255, 255, 0.25)"
-                  />
-                  {/* Solid Perimeter Wall enclosing the arena */}
-                  <polygon
-                    points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
-                    fill="none"
-                    stroke="#334155"
-                    strokeWidth="2.8"
-                  />
-                </g>
-              );
-            })()}
+
 
             {/* Roads & Avenues */}
             {(() => {
@@ -397,15 +375,15 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
             />
           </g>
 
-          {/* Crisp border framing the minimap window */}
+          {/* SOLID PERIMETER BOUNDARY WALLS (The 4 outer walls framing the arena map box) */}
           <rect
-            x="1"
-            y="1"
-            width={mapWidth - 2}
-            height={mapHeight - 2}
+            x="1.5"
+            y="1.5"
+            width={mapWidth - 3}
+            height={mapHeight - 3}
             fill="none"
-            stroke="rgba(34, 197, 94, 0.35)"
-            strokeWidth="2"
+            stroke="#334155"
+            strokeWidth="3"
             rx="4"
             ry="4"
           />
