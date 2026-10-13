@@ -181,240 +181,251 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
         </div>
       </div>
 
-      {/* MAP SVG DISPLAY (CLEAN LIGHT CANVAS WITH LIGHT GREEN FLOOR) */}
+      {/* MAP SVG DISPLAY (MAP AREA STRICTLY WITHIN PERIMETER WALLS) */}
       <div
         style={{
           position: 'relative',
           width: mapWidth,
           height: mapHeight,
-          background: 'radial-gradient(ellipse at center, #f0fdf4 0%, #dcfce7 100%)',
+          background: '#090d16',
           overflow: 'hidden'
         }}
       >
-        <svg
-          width={mapWidth}
-          height={mapHeight}
-          viewBox={`0 0 ${mapWidth} ${mapHeight}`}
-          style={{ width: '100%', height: '100%', display: 'block' }}
-        >
-          <defs>
-            {/* Light Green Arena Floor Pattern */}
-            <pattern id="arenaFloorPattern" width="16" height="16" patternUnits="userSpaceOnUse">
-              <rect width="16" height="16" fill="#ecfdf5" />
-              <path d="M 16 0 L 0 0 0 16" fill="none" stroke="rgba(34, 197, 94, 0.14)" strokeWidth="0.8" />
-            </pattern>
+        {(() => {
+          const half = arenaSize / 2;
+          const arenaLeft = cx + (-half - playerPos.x) * scale;
+          const arenaTop = cy + (-half - playerPos.z) * scale;
+          const arenaDim = arenaSize * scale;
 
-            {/* Subtle light radar sweep gradient */}
-            <linearGradient id="arenaRadarSweepLight" x1="0" y1="1" x2="0" y2="0">
-              <stop offset="0%" stopColor="rgba(34, 197, 94, 0)" />
-              <stop offset="100%" stopColor="rgba(34, 197, 94, 0.28)" />
-            </linearGradient>
+          return (
+            <svg
+              width={mapWidth}
+              height={mapHeight}
+              viewBox={`0 0 ${mapWidth} ${mapHeight}`}
+              style={{ width: '100%', height: '100%', display: 'block' }}
+            >
+              <defs>
+                {/* Playable Area Clip: strictly bounds map display inside the perimeter walls */}
+                <clipPath id="arenaPlayableAreaClip">
+                  <rect x={arenaLeft} y={arenaTop} width={arenaDim} height={arenaDim} />
+                </clipPath>
 
-            {/* Player Vision Cone Gradient */}
-            <radialGradient id="playerVisionConeLight" cx="0%" cy="100%" r="100%">
-              <stop offset="0%" stopColor="rgba(2, 132, 199, 0.35)" />
-              <stop offset="100%" stopColor="rgba(2, 132, 199, 0)" />
-            </radialGradient>
-          </defs>
+                {/* Out-of-bounds tactical void pattern for areas outside the walls */}
+                <pattern id="outOfBoundsPattern" width="12" height="12" patternUnits="userSpaceOnUse">
+                  <rect width="12" height="12" fill="#090d16" />
+                  <path d="M 0 12 L 12 0 M 6 18 L 18 6 M -6 6 L 6 -6" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="0.8" />
+                </pattern>
 
-          {/* ROTATING WORLD CONTAINER (Heading-Up mode aligned with player's gaze) */}
-          <g transform={`rotate(${mapRotDeg} ${cx} ${cy})`}>
-            {/* Arena Floor (Light Green Terrain with Outer Perimeter Boundary) */}
-            {(() => {
-              const half = arenaSize / 2;
-              const p1 = worldToSvg(-half, -half);
-              const p2 = worldToSvg(half, -half);
-              const p3 = worldToSvg(half, half);
-              const p4 = worldToSvg(-half, half);
-              return (
-                <g>
-                  {/* Light Green Arena Floor Slab */}
-                  <polygon
-                    points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
-                    fill="url(#arenaFloorPattern)"
-                    stroke="#86efac"
-                    strokeWidth="1.6"
-                  />
-                  {/* Outer Perimeter Wall Boundary Border */}
-                  <polygon
-                    points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
-                    fill="none"
-                    stroke="#22c55e"
-                    strokeWidth="2.5"
-                    strokeDasharray="6,3"
-                    opacity="0.85"
-                  />
-                </g>
-              );
-            })()}
+                {/* Light Green Arena Floor Pattern */}
+                <pattern id="arenaFloorPattern" width="16" height="16" patternUnits="userSpaceOnUse">
+                  <rect width="16" height="16" fill="#ecfdf5" />
+                  <path d="M 16 0 L 0 0 0 16" fill="none" stroke="rgba(34, 197, 94, 0.15)" strokeWidth="0.8" />
+                </pattern>
 
-            {/* Tactical Grid Background (Light green) - Spans full rotated box */}
-            <g opacity="0.15">
-              {[-120, -90, -60, -30, 0, 30, 60, 90, 120].map((coord) => {
-                const s = worldToSvg(coord, coord);
-                return (
-                  <React.Fragment key={coord}>
-                    <line x1={s.x} y1={-150} x2={s.x} y2={mapHeight + 150} stroke="#16a34a" strokeWidth="0.8" strokeDasharray="3,4" />
-                    <line x1={-150} y1={s.y} x2={mapWidth + 150} y2={s.y} stroke="#16a34a" strokeWidth="0.8" strokeDasharray="3,4" />
-                  </React.Fragment>
-                );
-              })}
-            </g>
+                {/* Subtle light radar sweep gradient */}
+                <linearGradient id="arenaRadarSweepLight" x1="0" y1="1" x2="0" y2="0">
+                  <stop offset="0%" stopColor="rgba(34, 197, 94, 0)" />
+                  <stop offset="100%" stopColor="rgba(34, 197, 94, 0.28)" />
+                </linearGradient>
 
-            {/* Roads & Avenues (Clean off-white with yellow dashed centerlines) */}
-            {(() => {
-              const roadW = 8;
-              const extent = Math.max(arenaSize, 180);
-              const rTop = worldToSvg(0, -extent);
-              const rBottom = worldToSvg(0, extent);
-              const rLeft = worldToSvg(-extent, 0);
-              const rRight = worldToSvg(extent, 0);
-              return (
-                <g opacity="0.75">
-                  <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f1f5f9" strokeWidth={roadW * scale} />
-                  <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f1f5f9" strokeWidth={roadW * scale} />
-                  {/* Yellow centerlines */}
-                  <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.8" />
-                  <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.8" />
-                </g>
-              );
-            })()}
+                {/* Player Vision Cone Gradient */}
+                <radialGradient id="playerVisionConeLight" cx="0%" cy="100%" r="100%">
+                  <stop offset="0%" stopColor="rgba(2, 132, 199, 0.35)" />
+                  <stop offset="100%" stopColor="rgba(2, 132, 199, 0)" />
+                </radialGradient>
+              </defs>
 
-            {/* Enterable Buildings (Clean light fill with crisp cyan outline) */}
-            {buildings.map((b) => {
-              const polyPts = getBuildingPolygon(b);
-              const centerSvg = worldToSvg(b.x, b.z);
-              const doorSvg = worldToSvg(b.doorX, b.doorZ);
+              {/* Base background outside the walls (Out of Bounds) */}
+              <rect width={mapWidth} height={mapHeight} fill="#090d16" />
+              <rect width={mapWidth} height={mapHeight} fill="url(#outOfBoundsPattern)" />
 
-              return (
-                <g key={b.id}>
-                  {/* Building Footprint */}
-                  <polygon
-                    points={polyPts}
-                    fill="rgba(241, 245, 249, 0.95)"
-                    stroke="#0284c7"
-                    strokeWidth="1.4"
-                  />
+              {/* ROTATING WORLD CONTAINER (Heading-Up mode aligned with player's gaze) */}
+              <g transform={`rotate(${mapRotDeg} ${cx} ${cy})`}>
+                {/* MAP AREA STRICTLY WITHIN WALLS */}
+                <g clipPath="url(#arenaPlayableAreaClip)">
+                  {/* Light Green Arena Floor */}
+                  <rect x={arenaLeft} y={arenaTop} width={arenaDim} height={arenaDim} fill="#dcfce7" />
+                  <rect x={arenaLeft} y={arenaTop} width={arenaDim} height={arenaDim} fill="url(#arenaFloorPattern)" />
 
-                  {/* Building Doorway Notch */}
-                  {doorSvg.isVisible && (
-                    <circle
-                      cx={doorSvg.x}
-                      cy={doorSvg.y}
-                      r={2.2}
-                      fill={b.isDoorOpen ? '#16a34a' : '#0284c7'}
-                      stroke="#ffffff"
-                      strokeWidth="0.8"
-                    />
-                  )}
-
-                  {/* Building Label (counter-rotated so text stays upright and readable) */}
-                  {centerSvg.isVisible && (
-                    <text
-                      x={centerSvg.x}
-                      y={centerSvg.y + 3}
-                      transform={`rotate(${-mapRotDeg} ${centerSvg.x} ${centerSvg.y + 3})`}
-                      fill="#334155"
-                      fontSize={isMobile ? '6.5' : '7.5'}
-                      fontWeight="900"
-                      textAnchor="middle"
-                      style={{ pointerEvents: 'none' }}
-                    >
-                      {b.name.replace(/Villa|Bungalow|Residence|Depot|Station/i, '').trim() || b.name}
-                    </text>
-                  )}
-                </g>
-              );
-            })}
-
-            {/* ENEMIES & COMBATANTS */}
-            {pings.map((ping) => {
-              const svg = worldToSvg(ping.x, ping.z);
-              if (!svg.isVisible) return null;
-
-              if (ping.type === 'teammate') {
-                return (
-                  <g key={ping.id}>
-                    <circle cx={svg.x} cy={svg.y} r={4.5} fill="rgba(2, 132, 199, 0.22)" />
-                    <circle cx={svg.x} cy={svg.y} r={2.5} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
+                  {/* Tactical Grid Background (Light green, strictly within walls) */}
+                  <g opacity="0.18">
+                    {[-120, -90, -60, -30, 0, 30, 60, 90, 120].map((coord) => {
+                      const s = worldToSvg(coord, coord);
+                      return (
+                        <React.Fragment key={coord}>
+                          <line x1={s.x} y1={arenaTop} x2={s.x} y2={arenaTop + arenaDim} stroke="#16a34a" strokeWidth="0.8" strokeDasharray="3,4" />
+                          <line x1={arenaLeft} y1={s.y} x2={arenaLeft + arenaDim} y2={s.y} stroke="#16a34a" strokeWidth="0.8" strokeDasharray="3,4" />
+                        </React.Fragment>
+                      );
+                    })}
                   </g>
-                );
-              } else if (ping.type === 'boss') {
-                return (
-                  <g key={ping.id}>
-                    <circle cx={svg.x} cy={svg.y} r={7} fill="rgba(217, 119, 6, 0.25)" />
-                    <polygon
-                      points={`${svg.x},${svg.y - 6} ${svg.x + 6},${svg.y} ${svg.x},${svg.y + 6} ${svg.x - 6},${svg.y}`}
-                      fill="#d97706"
-                      stroke="#ffffff"
-                      strokeWidth="1.2"
+
+                  {/* Roads & Avenues (Clean off-white with yellow dashed centerlines - stops at walls) */}
+                  {(() => {
+                    const roadW = 8;
+                    const rTop = worldToSvg(0, -half);
+                    const rBottom = worldToSvg(0, half);
+                    const rLeft = worldToSvg(-half, 0);
+                    const rRight = worldToSvg(half, 0);
+                    return (
+                      <g opacity="0.85">
+                        <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f1f5f9" strokeWidth={roadW * scale} />
+                        <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f1f5f9" strokeWidth={roadW * scale} />
+                        {/* Yellow centerlines */}
+                        <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.85" />
+                        <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.85" />
+                      </g>
+                    );
+                  })()}
+
+                  {/* Enterable Buildings (Clean light fill with crisp cyan outline) */}
+                  {buildings.map((b) => {
+                    const polyPts = getBuildingPolygon(b);
+                    const centerSvg = worldToSvg(b.x, b.z);
+                    const doorSvg = worldToSvg(b.doorX, b.doorZ);
+
+                    return (
+                      <g key={b.id}>
+                        {/* Building Footprint */}
+                        <polygon
+                          points={polyPts}
+                          fill="rgba(241, 245, 249, 0.95)"
+                          stroke="#0284c7"
+                          strokeWidth="1.4"
+                        />
+
+                        {/* Building Doorway Notch */}
+                        {doorSvg.isVisible && (
+                          <circle
+                            cx={doorSvg.x}
+                            cy={doorSvg.y}
+                            r={2.2}
+                            fill={b.isDoorOpen ? '#16a34a' : '#0284c7'}
+                            stroke="#ffffff"
+                            strokeWidth="0.8"
+                          />
+                        )}
+
+                        {/* Building Label (counter-rotated so text stays upright and readable) */}
+                        {centerSvg.isVisible && (
+                          <text
+                            x={centerSvg.x}
+                            y={centerSvg.y + 3}
+                            transform={`rotate(${-mapRotDeg} ${centerSvg.x} ${centerSvg.y + 3})`}
+                            fill="#334155"
+                            fontSize={isMobile ? '6.5' : '7.5'}
+                            fontWeight="900"
+                            textAnchor="middle"
+                            style={{ pointerEvents: 'none' }}
+                          >
+                            {b.name.replace(/Villa|Bungalow|Residence|Depot|Station/i, '').trim() || b.name}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  })}
+
+                  {/* ENEMIES & COMBATANTS */}
+                  {pings.map((ping) => {
+                    const svg = worldToSvg(ping.x, ping.z);
+                    if (!svg.isVisible) return null;
+
+                    if (ping.type === 'teammate') {
+                      return (
+                        <g key={ping.id}>
+                          <circle cx={svg.x} cy={svg.y} r={4.5} fill="rgba(2, 132, 199, 0.22)" />
+                          <circle cx={svg.x} cy={svg.y} r={2.5} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
+                        </g>
+                      );
+                    } else if (ping.type === 'boss') {
+                      return (
+                        <g key={ping.id}>
+                          <circle cx={svg.x} cy={svg.y} r={7} fill="rgba(217, 119, 6, 0.25)" />
+                          <polygon
+                            points={`${svg.x},${svg.y - 6} ${svg.x + 6},${svg.y} ${svg.x},${svg.y + 6} ${svg.x - 6},${svg.y}`}
+                            fill="#d97706"
+                            stroke="#ffffff"
+                            strokeWidth="1.2"
+                          />
+                          <text
+                            x={svg.x}
+                            y={svg.y - 8}
+                            transform={`rotate(${-mapRotDeg} ${svg.x} ${svg.y - 8})`}
+                            fill="#d97706"
+                            fontSize="7"
+                            fontWeight="900"
+                            textAnchor="middle"
+                          >
+                            BOSS
+                          </text>
+                        </g>
+                      );
+                    } else {
+                      // Hostile Enemy Combatant - PURE RED DOT
+                      return (
+                        <g key={ping.id}>
+                          {/* Glowing red threat aura */}
+                          <circle cx={svg.x} cy={svg.y} r={5.5} fill="rgba(225, 29, 72, 0.25)" />
+                          {/* Core red threat ping */}
+                          <circle
+                            cx={svg.x}
+                            cy={svg.y}
+                            r={3.2}
+                            fill="#e11d48"
+                            stroke="#ffffff"
+                            strokeWidth="1"
+                          />
+                        </g>
+                      );
+                    }
+                  })}
+
+                  {/* Radar Scanning Sweep Beam - Strictly clipped inside arena walls */}
+                  <g transform={`rotate(${sweepAngle - mapRotDeg} ${cx} ${cy})`}>
+                    <line
+                      x1={cx}
+                      y1={cy}
+                      x2={cx}
+                      y2={cy - maxBoxDiagonal}
+                      stroke="url(#arenaRadarSweepLight)"
+                      strokeWidth="2.5"
                     />
-                    <text
-                      x={svg.x}
-                      y={svg.y - 8}
-                      transform={`rotate(${-mapRotDeg} ${svg.x} ${svg.y - 8})`}
-                      fill="#d97706"
-                      fontSize="7"
-                      fontWeight="900"
-                      textAnchor="middle"
-                    >
-                      BOSS
-                    </text>
                   </g>
-                );
-              } else {
-                // Hostile Enemy Combatant - PURE RED DOT
-                return (
-                  <g key={ping.id}>
-                    {/* Glowing red threat aura */}
-                    <circle cx={svg.x} cy={svg.y} r={5.5} fill="rgba(225, 29, 72, 0.25)" />
-                    {/* Core red threat ping */}
-                    <circle
-                      cx={svg.x}
-                      cy={svg.y}
-                      r={3.2}
-                      fill="#e11d48"
-                      stroke="#ffffff"
-                      strokeWidth="1"
-                    />
-                  </g>
-                );
-              }
-            })}
-          </g>
+                </g>
 
-          {/* Radar Scanning Sweep Beam - Sweeps across full box area */}
-          <g transform={`rotate(${sweepAngle} ${cx} ${cy})`}>
-            <line
-              x1={cx}
-              y1={cy}
-              x2={cx}
-              y2={cy - maxBoxDiagonal}
-              stroke="url(#arenaRadarSweepLight)"
-              strokeWidth="2.5"
-            />
-          </g>
+                {/* SOLID PERIMETER BOUNDARY WALL (Solid stone/slate border enclosing map, no broken lines) */}
+                <rect
+                  x={arenaLeft}
+                  y={arenaTop}
+                  width={arenaDim}
+                  height={arenaDim}
+                  fill="none"
+                  stroke="#334155"
+                  strokeWidth="2.8"
+                />
+              </g>
 
-          {/* PLAYER MARKER (Accurate Directional Vision Cone & Pointer Arrow - No Radius Circle) */}
-          <g transform={`translate(${cx}, ${cy})`}>
-            {/* Forward Vision Flashlight Arc */}
-            <path
-              d="M 0 0 L -18 -38 A 42 42 0 0 1 18 -38 Z"
-              fill="url(#playerVisionConeLight)"
-              stroke="rgba(2, 132, 199, 0.25)"
-              strokeWidth="0.6"
-            />
+              {/* PLAYER MARKER (Accurate Directional Vision Cone & Pointer Arrow - No Radius Circle) */}
+              <g transform={`translate(${cx}, ${cy})`}>
+                {/* Forward Vision Flashlight Arc */}
+                <path
+                  d="M 0 0 L -18 -38 A 42 42 0 0 1 18 -38 Z"
+                  fill="url(#playerVisionConeLight)"
+                  stroke="rgba(2, 132, 199, 0.25)"
+                  strokeWidth="0.6"
+                />
 
-            {/* Player Directional Arrow */}
-            <polygon
-              points="0,-7 5,5 0,2 -5,5"
-              fill="#0284c7"
-              stroke="#ffffff"
-              strokeWidth="1"
-            />
-          </g>
-
-        </svg>
+                {/* Player Directional Arrow */}
+                <polygon
+                  points="0,-7 5,5 0,2 -5,5"
+                  fill="#0284c7"
+                  stroke="#ffffff"
+                  strokeWidth="1"
+                />
+              </g>
+            </svg>
+          );
+        })()}
       </div>
     </div>
   );
