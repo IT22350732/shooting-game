@@ -63,11 +63,11 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
   }, [pings]);
 
   // World to SVG Coordinate Conversion strictly inside the 4 arena walls:
-  // West (-X) -> Left, East (+X) -> Right
-  // Forward (+Z) -> Top, Backward (-Z) -> Bottom
+  // -X (West) -> Left, +X (East) -> Right
+  // -Z (North/Forward) -> Top, +Z (South/Backward) -> Bottom
   const worldToSvg = (wx: number, wz: number): { x: number; y: number; isVisible: boolean } => {
     const sx = pad + (wx + half) * scale;
-    const sy = pad + (half - wz) * scale;
+    const sy = pad + (wz + half) * scale;
     const isVisible = sx >= 0 && sx <= mapWidth && sy >= 0 && sy <= mapHeight;
     return { x: sx, y: sy, isVisible };
   };
@@ -235,8 +235,8 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
           {/* Roads & Avenues (strictly within the 4 walls) */}
           {(() => {
             const roadW = 8;
-            const rTop = worldToSvg(0, half);
-            const rBottom = worldToSvg(0, -half);
+            const rTop = worldToSvg(0, -half);
+            const rBottom = worldToSvg(0, half);
             const rLeft = worldToSvg(-half, 0);
             const rRight = worldToSvg(half, 0);
             return (
@@ -383,9 +383,9 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
           {(() => {
             const pSvg = worldToSvg(playerPos.x, playerPos.z);
             // Player directional angle in SVG coordinates:
-            // 0 deg = Facing Front/Top (+Z, Up in SVG towards Suburban Workshop)
+            // 0 deg = Facing Forward/North (-Z, Up in SVG)
             // Turning right decreases playerYaw -> rotates clockwise in SVG
-            const playerAngleDeg = 90 - (playerYaw * 180) / Math.PI;
+            const playerAngleDeg = (-playerYaw * 180) / Math.PI;
 
             return (
               <g transform={`translate(${pSvg.x}, ${pSvg.y}) rotate(${playerAngleDeg})`}>
