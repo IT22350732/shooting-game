@@ -44,18 +44,18 @@ interface HumanTheme {
 export const HUMAN_THEMES: Record<EnemyType, HumanTheme> = {
   basic: {
     name: 'Insurgent Rifleman',
-    highlightHex: 0x334155, // Tactical slate
-    emissiveHex: 0x000000,   // No sci-fi glow
-    uniformHex: 0x2d3748,    // Charcoal grey combat shirt
-    skinHex: 0xd4a373,       // Natural warm tan skin
-    hairHex: 0x1f1f1f,       // Dark hair/stubble
-    pantsHex: 0x1e293b,      // Dark cargo pants
-    vestHex: 0x18181b,       // Matte black plate carrier
-    gearAccentHex: 0x374151, // Tactical webbing
-    headwearType: 'cap',     // Tactical baseball cap
-    headwearHex: 0x1e293b,
-    eyewearType: 'eyes',     // Natural human eyes
-    bootHex: 0x0f172a,       // Black combat boots
+    highlightHex: 0xd97706, // Warm Amber
+    emissiveHex: 0x000000,
+    uniformHex: 0xc2410c,   // Desert Rust/Terracotta combat shirt
+    skinHex: 0xd4a373,      // Natural warm tan skin
+    hairHex: 0x5c3a21,      // Warm brown hair/stubble
+    pantsHex: 0xd5bdaf,     // Sandstone Khaki cargo trousers
+    vestHex: 0xa16207,      // Coyote Tan plate carrier
+    gearAccentHex: 0xb45309,// Tan webbing & pouches
+    headwearType: 'cap',    // Amber Tan contractor baseball cap
+    headwearHex: 0xb45309,
+    eyewearType: 'eyes',    // Natural human eyes
+    bootHex: 0x854d0e,      // Coyote brown leather boots
     scale: 1.0,
     hasWeapon: true,
     hasShield: false,
@@ -64,18 +64,18 @@ export const HUMAN_THEMES: Record<EnemyType, HumanTheme> = {
   },
   fast: {
     name: 'Scout Skirmisher',
-    highlightHex: 0x475569,
+    highlightHex: 0x22c55e, // Emerald Green
     emissiveHex: 0x000000,
-    uniformHex: 0x3f4e40,    // Olive drab tactical hoodie
-    skinHex: 0xdfb18e,       // Fair tan skin
-    hairHex: 0x2d1f14,       // Brown hair
-    pantsHex: 0x78716c,      // Coyote tan cargo trousers
-    vestHex: 0x292524,       // Lightweight chest rig
-    gearAccentHex: 0x44403c,
-    headwearType: 'beanie',  // Low-profile tactical watch cap
-    headwearHex: 0x1c1917,
-    eyewearType: 'shades',   // Tactical polarized shooting shades
-    bootHex: 0x57534e,       // Tan suede tactical boots
+    uniformHex: 0x16a34a,   // Ranger Green combat hoodie
+    skinHex: 0xdfb18e,      // Fair tan skin
+    hairHex: 0x78350f,      // Chestnut brown hair
+    pantsHex: 0xe2e8f0,     // Light sandstone athletic cargo trousers
+    vestHex: 0x65a30d,      // Olive Green tactical chest rig
+    gearAccentHex: 0x4d7c0f,// Olive webbing
+    headwearType: 'beanie', // Green watch cap beanie
+    headwearHex: 0x15803d,
+    eyewearType: 'shades',  // Polarized shooting shades
+    bootHex: 0x92400e,      // Tan suede tactical boots
     scale: 0.96,
     hasWeapon: true,
     hasShield: false,
@@ -84,18 +84,18 @@ export const HUMAN_THEMES: Record<EnemyType, HumanTheme> = {
   },
   ranged: {
     name: 'Sniper Marksman',
-    highlightHex: 0x334155,
+    highlightHex: 0x0284c7, // Sky Blue
     emissiveHex: 0x000000,
-    uniformHex: 0x283618,    // Woodland camouflage field jacket
-    skinHex: 0xc99a6b,       // Weathered olive tan skin
-    hairHex: 0x18181b,
-    pantsHex: 0x1e293b,      // Dark camo pants
-    vestHex: 0x242e1a,       // Sniper harness
-    gearAccentHex: 0x364128,
-    headwearType: 'boonie',  // Wide-brim tactical boonie hat
-    headwearHex: 0x283618,
-    eyewearType: 'goggles',  // Ballistic eyewear
-    bootHex: 0x18181b,
+    uniformHex: 0x4d7c0f,   // Woodland Camouflage field jacket
+    skinHex: 0xc99a6b,      // Weathered olive tan skin
+    hairHex: 0x451a03,      // Dark auburn hair
+    pantsHex: 0x65a30d,     // Forest field trousers
+    vestHex: 0xca8a04,      // Khaki sniper harness
+    gearAccentHex: 0xa16207,// Tan webbing
+    headwearType: 'boonie', // Woodland Green boonie hat
+    headwearHex: 0x3f6212,
+    eyewearType: 'goggles', // Ballistic combat goggles
+    bootHex: 0x713f12,      // Rich brown field boots
     scale: 1.02,
     hasWeapon: true,
     hasShield: false,
@@ -103,18 +103,18 @@ export const HUMAN_THEMES: Record<EnemyType, HumanTheme> = {
   },
   tank: {
     name: 'Heavy Juggernaut',
-    highlightHex: 0x1e293b,
+    highlightHex: 0x3b82f6, // Vibrant Cobalt Blue
     emissiveHex: 0x000000,
-    uniformHex: 0x18181b,    // Heavy black tactical assault suit
-    skinHex: 0xa8744f,       // Deep tan skin
-    hairHex: 0x111827,
-    pantsHex: 0x18181b,      // Reinforced blast pants
-    vestHex: 0x0f172a,       // Heavy ceramic armor plate carrier
-    gearAccentHex: 0x334155, // Heavy ballistic shoulder guards
-    headwearType: 'helmet',  // Full heavy ballistic assault helmet
-    headwearHex: 0x1e293b,
-    eyewearType: 'goggles',  // Heavy ballistic face visor
-    bootHex: 0x090d16,       // Steel-toe heavy assault boots
+    uniformHex: 0x2563eb,   // Heavy Cobalt Blue assault suit
+    skinHex: 0xa8744f,      // Deep tan skin
+    hairHex: 0x451a03,      // Brown hair
+    pantsHex: 0x3b82f6,     // Reinforced Cobalt blast cargo pants
+    vestHex: 0x1d4ed8,      // Heavy Blue Steel ceramic plate carrier
+    gearAccentHex: 0x60a5fa,// Titanium blue accents
+    headwearType: 'helmet', // Heavy Cobalt ballistic assault helmet
+    headwearHex: 0x1e40af,
+    eyewearType: 'goggles', // Ballistic face goggles
+    bootHex: 0x78350f,      // Heavy brown leather boots
     scale: 1.18,
     hasWeapon: true,
     hasShield: false,
@@ -122,18 +122,18 @@ export const HUMAN_THEMES: Record<EnemyType, HumanTheme> = {
   },
   shield: {
     name: 'SWAT Riot Breacher',
-    highlightHex: 0x1e3a8a,  // Deep navy
+    highlightHex: 0x2563eb, // Royal Blue
     emissiveHex: 0x000000,
-    uniformHex: 0x0f172a,    // Midnight navy SWAT assault uniform
-    skinHex: 0xcca078,       // Neutral tan skin
-    hairHex: 0x18181b,
-    pantsHex: 0x0f172a,      // SWAT cargo pants
-    vestHex: 0x1e293b,       // Heavy SWAT tactical assault vest
-    gearAccentHex: 0x334155,
-    headwearType: 'helmet',  // SWAT ballistic helmet with chinstrap
-    headwearHex: 0x0f172a,
-    eyewearType: 'goggles',  // Polycarbonate protective goggles
-    bootHex: 0x020617,       // Black tactical assault boots
+    uniformHex: 0x1d4ed8,   // Royal Blue SWAT tactical uniform
+    skinHex: 0xcca078,      // Neutral tan skin
+    hairHex: 0x3e2723,      // Dark brown hair
+    pantsHex: 0x2563eb,     // Royal Blue SWAT cargo pants
+    vestHex: 0x1e40af,      // Tactical Blue SWAT vest
+    gearAccentHex: 0x60a5fa,// Steel webbing
+    headwearType: 'helmet', // SWAT Royal Blue ballistic helmet
+    headwearHex: 0x1d4ed8,
+    eyewearType: 'goggles', // Protective goggles
+    bootHex: 0x854d0e,      // Tan assault boots
     scale: 1.04,
     hasWeapon: true,
     hasShield: true,
@@ -141,18 +141,18 @@ export const HUMAN_THEMES: Record<EnemyType, HumanTheme> = {
   },
   exploder: {
     name: 'Saboteur Demolitionist',
-    highlightHex: 0x7f1d1d,  // Muted hazard red
+    highlightHex: 0xf97316, // Bright Orange
     emissiveHex: 0x000000,
-    uniformHex: 0x374151,    // Weathered field jacket
-    skinHex: 0xc8956e,       // Pale weathered skin
-    hairHex: 0x18181b,
-    pantsHex: 0x1f2937,      // Worn dark cargo trousers
-    vestHex: 0x27272a,       // Demolition harness
-    gearAccentHex: 0x4b5563,
-    headwearType: 'balaclava', // Tactical ski mask with eye cutouts
-    headwearHex: 0x111827,
-    eyewearType: 'eyes',     // Piercing human eyes looking through mask
-    bootHex: 0x18181b,
+    uniformHex: 0xea580c,   // High-Visibility Hazard Orange jacket
+    skinHex: 0xe0b99c,      // Pale weathered skin
+    hairHex: 0x451a03,      // Brown hair
+    pantsHex: 0xd97706,     // Amber Hazard cargo trousers
+    vestHex: 0xb45309,      // Demolition harness
+    gearAccentHex: 0xd97706,// Demolition straps
+    headwearType: 'balaclava', // Hazard Rust ski mask
+    headwearHex: 0xc2410c,
+    eyewearType: 'eyes',    // Human eyes looking through mask
+    bootHex: 0x78350f,      // Brown demolition boots
     scale: 0.98,
     hasWeapon: false,
     hasShield: false,
@@ -160,18 +160,18 @@ export const HUMAN_THEMES: Record<EnemyType, HumanTheme> = {
   },
   elite: {
     name: 'Spec-Ops Commander',
-    highlightHex: 0x4b5320,  // Multicam olive
+    highlightHex: 0xeab308, // Desert Gold
     emissiveHex: 0x000000,
-    uniformHex: 0x374128,    // Crye Precision G3 Combat Shirt
-    skinHex: 0xb87a46,       // Bronzed skin
-    hairHex: 0x18181b,
-    pantsHex: 0x3f462c,      // Multicam cargo pants
-    vestHex: 0x4a4332,       // Coyote tan high-cut plate carrier
-    gearAccentHex: 0x5c533f,
-    headwearType: 'helmet',  // High-cut FAST Ballistic Helmet
-    headwearHex: 0x4a4332,
-    eyewearType: 'shades',   // Tactical ballistic polarized shades
-    bootHex: 0x383226,       // Coyote brown combat boots
+    uniformHex: 0xd97706,   // Desert Multicam combat shirt
+    skinHex: 0xb87a46,      // Bronzed skin
+    hairHex: 0x5c3a21,      // Brown hair
+    pantsHex: 0xca8a04,     // Khaki Desert cargo pants
+    vestHex: 0xb45309,      // Coyote Gold plate carrier
+    gearAccentHex: 0xd97706,// Coyote webbing
+    headwearType: 'helmet', // Coyote Tan FAST ballistic helmet
+    headwearHex: 0xca8a04,
+    eyewearType: 'shades',  // Polarized ballistic shades
+    bootHex: 0x854d0e,      // Coyote brown combat boots
     scale: 1.06,
     hasWeapon: true,
     hasShield: false,
@@ -447,27 +447,27 @@ export class Enemy {
     });
 
     const soleMat = new THREE.MeshStandardMaterial({
-      color: 0x090d16,
-      roughness: 0.92,
-      metalness: 0.02
+      color: 0x78716c, // Stone/tan rubber sole
+      roughness: 0.88,
+      metalness: 0.05
     });
 
     const gloveMat = new THREE.MeshStandardMaterial({
-      color: 0x181e26,
+      color: 0x9a3412, // Warm brown/tan leather shooting gloves
       roughness: 0.75,
       metalness: 0.08
     });
 
     const gunMat = new THREE.MeshStandardMaterial({
-      color: 0x1a2028,
+      color: 0x52525b, // Polished gunmetal steel (not black)
       roughness: 0.38,
       metalness: 0.78
     });
 
     const gunDetailMat = new THREE.MeshStandardMaterial({
-      color: 0x272e38,
+      color: 0x78716c, // Tactical polymer tan furniture
       roughness: 0.55,
-      metalness: 0.35
+      metalness: 0.25
     });
 
     const eyeWhiteMat = new THREE.MeshBasicMaterial({
@@ -475,23 +475,23 @@ export class Enemy {
     });
 
     const eyePupilMat = new THREE.MeshBasicMaterial({
-      color: 0x111827
+      color: 0x3f3f46
     });
 
     const shadesMat = new THREE.MeshStandardMaterial({
-      color: 0x090d16,
-      roughness: 0.12,
-      metalness: 0.88
+      color: 0x1e3a8a, // Polarized cobalt blue lenses
+      roughness: 0.15,
+      metalness: 0.85
     });
 
     const gogglesFrameMat = new THREE.MeshStandardMaterial({
-      color: 0x18202b,
+      color: 0x78716c, // Tan tactical goggles frame
       roughness: 0.65,
       metalness: 0.15
     });
 
     const gogglesLensMat = new THREE.MeshStandardMaterial({
-      color: 0x0f172a,
+      color: 0x60a5fa, // Tinted anti-fragmentation blue lens
       roughness: 0.18,
       metalness: 0.8
     });
@@ -502,9 +502,9 @@ export class Enemy {
     // 0. Soft Ground Contact Shadow (Natural human ground contact - replaces neon sci-fi circle)
     const shadowGeo = new THREE.CircleGeometry(0.42 * s, 24);
     const shadowMat = new THREE.MeshBasicMaterial({
-      color: 0x030712,
+      color: 0x334155,
       transparent: true,
-      opacity: 0.36,
+      opacity: 0.22,
       side: THREE.DoubleSide,
       depthWrite: false
     });
@@ -636,7 +636,7 @@ export class Enemy {
     if (theme.hasExplosiveVest) {
       // 2x Strapped C4 demolition blocks wrapped in olive military tape
       const c4Geo = new THREE.BoxGeometry(0.13 * s, 0.08 * s, 0.06 * s);
-      const c4Mat = new THREE.MeshStandardMaterial({ color: 0x52525b, roughness: 0.85 });
+      const c4Mat = new THREE.MeshStandardMaterial({ color: 0x65a30d, roughness: 0.85 });
 
       const c4Top = new THREE.Mesh(c4Geo, c4Mat);
       c4Top.position.set(0, 0.44 * s, 0.18 * s);
@@ -651,9 +651,9 @@ export class Enemy {
       // Digital detonator timer box with LED indicator (serves as this.coreMesh for fuse countdown pulse)
       const detonatorGeo = new THREE.BoxGeometry(0.09 * s, 0.07 * s, 0.05 * s);
       const detonatorMat = new THREE.MeshStandardMaterial({
-        color: 0x1c1917,
+        color: 0x78716c,
         roughness: 0.5,
-        metalness: 0.4
+        metalness: 0.25
       });
       this.coreMesh = new THREE.Mesh(detonatorGeo, detonatorMat);
       this.coreMesh.position.set(0, 0.24 * s, 0.18 * s);
@@ -933,23 +933,23 @@ export class Enemy {
       // Main heavy-duty ballistic alloy shield body
       const shieldGeo = new THREE.BoxGeometry(0.76 * s, 1.38 * s, 0.04 * s);
       const shieldMat = new THREE.MeshStandardMaterial({
-        color: 0x0f172a, // SWAT matte midnight navy
-        roughness: 0.65,
-        metalness: 0.35
+        color: 0x1d4ed8, // SWAT vibrant royal blue ballistic shield
+        roughness: 0.5,
+        metalness: 0.4
       });
       this.shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
       this.shieldMesh.position.set(0, -0.15 * s, 0.35 * s);
       this.leftForearmGroup.add(this.shieldMesh);
       this.registerMesh(this.shieldMesh, shieldMat);
 
-      // Outer heavy rubber protective rim
+      // Outer heavy protective rim
       const rimTopGeo = new THREE.BoxGeometry(0.80 * s, 0.04 * s, 0.05 * s);
-      const rimTop = new THREE.Mesh(rimTopGeo, soleMat);
+      const rimTop = new THREE.Mesh(rimTopGeo, gunDetailMat);
       rimTop.position.set(0, 0.69 * s, 0);
       this.shieldMesh.add(rimTop);
 
       const rimBottomGeo = new THREE.BoxGeometry(0.80 * s, 0.04 * s, 0.05 * s);
-      const rimBottom = new THREE.Mesh(rimBottomGeo, soleMat);
+      const rimBottom = new THREE.Mesh(rimBottomGeo, gunDetailMat);
       rimBottom.position.set(0, -0.69 * s, 0);
       this.shieldMesh.add(rimBottom);
 
