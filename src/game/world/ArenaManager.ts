@@ -3090,20 +3090,34 @@ export class ArenaManager {
       addRailing(frontRailSpan, deckW / 2 - frontRailSpan / 2, deckD / 2, 0);
     }
 
-    // 6. ENTERABLE HOLLOW TREEHOUSE CABIN ROOM
+    // 6. ENTERABLE PANORAMIC GLASS TREEHOUSE CABIN ROOM
     const roomW = 5.2;
     const roomD = 4.2;
     const roomH = 3.0;
-    const roomWallThick = 0.35;
+    const roomWallThick = 0.16;
     const roomCenterX = 0.4;
     const roomCenterZ = -deckD / 2 + roomD / 2 + 0.4;
     const doorW = 1.6;
     const doorH = 2.4;
+    const baseSillH = 0.35; // Timber kickplate sill along floor
+    const headerH = 0.22; // Top timber roofline header
+    const glassPaneH = roomH - baseSillH - headerH;
 
-    const cabinMat = new THREE.MeshStandardMaterial({
-      map: TextureGenerator.createWoodSidingTexture('#92400e'),
-      roughness: 0.8,
-      metalness: 0.05
+    const timberFrameMat = new THREE.MeshStandardMaterial({
+      map: TextureGenerator.createWoodSidingTexture('#78350f'),
+      roughness: 0.75,
+      metalness: 0.1
+    });
+
+    // High-clarity architectural crystal glass: user inside sees the arena outside with 100% clarity
+    const treehouseGlassMat = new THREE.MeshStandardMaterial({
+      color: 0xc7e8ff,
+      transparent: true,
+      opacity: 0.18,
+      roughness: 0.04,
+      metalness: 0.15,
+      side: THREE.DoubleSide,
+      depthWrite: false
     });
 
     const cabinGroup = new THREE.Group();
@@ -3112,99 +3126,147 @@ export class ArenaManager {
 
     const cabinWallMeshes: THREE.Mesh[] = [];
 
-    // Back Wall (-Z)
-    const backWallGeo = new THREE.BoxGeometry(roomW, roomH, roomWallThick);
-    const backWall = new THREE.Mesh(backWallGeo, cabinMat);
-    backWall.position.set(0, roomH / 2, -roomD / 2 + roomWallThick / 2);
-    backWall.castShadow = true;
-    backWall.receiveShadow = true;
-    cabinGroup.add(backWall);
-    cabinWallMeshes.push(backWall);
+    // Helper to construct architectural glass wall with timber sill, header, and vertical mullions
+    const createGlassWallSection = (
+      width: number,
+      px: number,
+      pz: number,
+      rotY: number
+    ) => {
+      const wallSection = new THREE.Group();
+      wallSection.position.set(px, 0, pz);
+      wallSection.rotation.y = rotY;
+      cabinGroup.add(wallSection);
 
-    // Left Wall (-X)
-    const sideWallGeo = new THREE.BoxGeometry(roomWallThick, roomH, roomD - roomWallThick * 2);
-    const leftWall = new THREE.Mesh(sideWallGeo, cabinMat);
-    leftWall.position.set(-roomW / 2 + roomWallThick / 2, roomH / 2, 0);
-    leftWall.castShadow = true;
-    leftWall.receiveShadow = true;
-    cabinGroup.add(leftWall);
-    cabinWallMeshes.push(leftWall);
+      // Bottom timber sill
+      const sillGeo = new THREE.BoxGeometry(width, baseSillH, roomWallThick);
+      const sill = new THREE.Mesh(sillGeo, timberFrameMat);
+      sill.position.set(0, baseSillH / 2, 0);
+      sill.castShadow = true;
+      sill.receiveShadow = true;
+      wallSection.add(sill);
 
-    // Right Wall (+X)
-    const rightWall = new THREE.Mesh(sideWallGeo, cabinMat);
-    rightWall.position.set(roomW / 2 - roomWallThick / 2, roomH / 2, 0);
-    rightWall.castShadow = true;
-    rightWall.receiveShadow = true;
-    cabinGroup.add(rightWall);
-    cabinWallMeshes.push(rightWall);
+      // Top timber header
+      const headerGeo = new THREE.BoxGeometry(width, headerH, roomWallThick);
+      const header = new THREE.Mesh(headerGeo, timberFrameMat);
+      header.position.set(0, roomH - headerH / 2, 0);
+      header.castShadow = true;
+      wallSection.add(header);
 
-    // Front Wall with Doorway Opening (+Z)
-    const frontPanelW = (roomW - doorW) / 2;
-    const frontPanelGeo = new THREE.BoxGeometry(frontPanelW, roomH, roomWallThick);
+      // Crystal transparent glass pane
+      const glassGeo = new THREE.BoxGeometry(width - 0.06, glassPaneH, 0.05);
+      const glass = new THREE.Mesh(glassGeo, treehouseGlassMat);
+      glass.position.set(0, baseSillH + glassPaneH / 2, 0);
+      glass.renderOrder = 10;
+      wallSection.add(glass);
 
-    const frontLeft = new THREE.Mesh(frontPanelGeo, cabinMat);
-    frontLeft.position.set(-roomW / 2 + frontPanelW / 2, roomH / 2, roomD / 2 - roomWallThick / 2);
-    frontLeft.castShadow = true;
-    cabinGroup.add(frontLeft);
-    cabinWallMeshes.push(frontLeft);
+      // Vertical architectural timber mullions (support ribs)
+      const mulGeo = new THREE.BoxGeometry(0.08, glassPaneH, roomWallThick + 0.02);
+      const mul1 = new THREE.Mesh(mulGeo, timberFrameMat);
+      mul1.position.set(-width / 4, baseSillH + glassPaneH / 2, 0);
+      wallSection.add(mul1);
 
-    const frontRight = new THREE.Mesh(frontPanelGeo, cabinMat);
-    frontRight.position.set(roomW / 2 - frontPanelW / 2, roomH / 2, roomD / 2 - roomWallThick / 2);
-    frontRight.castShadow = true;
-    cabinGroup.add(frontRight);
-    cabinWallMeshes.push(frontRight);
+      const mul2 = new THREE.Mesh(mulGeo, timberFrameMat);
+      mul2.position.set(width / 4, baseSillH + glassPaneH / 2, 0);
+      wallSection.add(mul2);
 
-    // Lintel above doorway
+      cabinWallMeshes.push(glass);
+    };
+
+    // Back Glass Wall (-Z)
+    createGlassWallSection(roomW, 0, -roomD / 2 + roomWallThick / 2, 0);
+
+    // Left Glass Wall (-X)
+    createGlassWallSection(roomD, -roomW / 2 + roomWallThick / 2, 0, Math.PI / 2);
+
+    // Right Glass Wall (+X)
+    createGlassWallSection(roomD, roomW / 2 - roomWallThick / 2, 0, Math.PI / 2);
+
+    // Front Wall with Doorway (+Z): Glass panels flanking entrance
+    const frontSideW = (roomW - doorW) / 2;
+
+    // Front Left Glass Panel
+    const flSection = new THREE.Group();
+    flSection.position.set(-roomW / 2 + frontSideW / 2, 0, roomD / 2 - roomWallThick / 2);
+    cabinGroup.add(flSection);
+
+    const flSill = new THREE.Mesh(new THREE.BoxGeometry(frontSideW, baseSillH, roomWallThick), timberFrameMat);
+    flSill.position.set(0, baseSillH / 2, 0);
+    flSection.add(flSill);
+
+    const flHeader = new THREE.Mesh(new THREE.BoxGeometry(frontSideW, headerH, roomWallThick), timberFrameMat);
+    flHeader.position.set(0, roomH - headerH / 2, 0);
+    flSection.add(flHeader);
+
+    const flGlass = new THREE.Mesh(new THREE.BoxGeometry(frontSideW - 0.06, glassPaneH, 0.05), treehouseGlassMat);
+    flGlass.position.set(0, baseSillH + glassPaneH / 2, 0);
+    flGlass.renderOrder = 10;
+    flSection.add(flGlass);
+    cabinWallMeshes.push(flGlass);
+
+    // Front Right Glass Panel
+    const frSection = new THREE.Group();
+    frSection.position.set(roomW / 2 - frontSideW / 2, 0, roomD / 2 - roomWallThick / 2);
+    cabinGroup.add(frSection);
+
+    const frSill = new THREE.Mesh(new THREE.BoxGeometry(frontSideW, baseSillH, roomWallThick), timberFrameMat);
+    frSill.position.set(0, baseSillH / 2, 0);
+    frSection.add(frSill);
+
+    const frHeader = new THREE.Mesh(new THREE.BoxGeometry(frontSideW, headerH, roomWallThick), timberFrameMat);
+    frHeader.position.set(0, roomH - headerH / 2, 0);
+    frSection.add(frHeader);
+
+    const frGlass = new THREE.Mesh(new THREE.BoxGeometry(frontSideW - 0.06, glassPaneH, 0.05), treehouseGlassMat);
+    frGlass.position.set(0, baseSillH + glassPaneH / 2, 0);
+    frGlass.renderOrder = 10;
+    frSection.add(frGlass);
+    cabinWallMeshes.push(frGlass);
+
+    // Doorway Lintel Header
     const lintelH = roomH - doorH;
     if (lintelH > 0.05) {
       const lintelGeo = new THREE.BoxGeometry(doorW, lintelH, roomWallThick);
-      const lintel = new THREE.Mesh(lintelGeo, cabinMat);
+      const lintel = new THREE.Mesh(lintelGeo, timberFrameMat);
       lintel.position.set(0, doorH + lintelH / 2, roomD / 2 - roomWallThick / 2);
-      lintel.castShadow = true;
       cabinGroup.add(lintel);
-      cabinWallMeshes.push(lintel);
     }
 
-    // Register individual perimeter wall Box3 obstacles
+    // 4 Corner Timber Posts
+    const colGeo = new THREE.BoxGeometry(0.18, roomH, 0.18);
+    const colCoords: [number, number][] = [
+      [-roomW / 2 + 0.09, -roomD / 2 + 0.09],
+      [roomW / 2 - 0.09, -roomD / 2 + 0.09],
+      [-roomW / 2 + 0.09, roomD / 2 - 0.09],
+      [roomW / 2 - 0.09, roomD / 2 - 0.09]
+    ];
+    colCoords.forEach(([cx, cz]) => {
+      const col = new THREE.Mesh(colGeo, timberFrameMat);
+      col.position.set(cx, roomH / 2, cz);
+      col.castShadow = true;
+      cabinGroup.add(col);
+    });
+
+    // Register individual perimeter glass wall Box3 obstacles (with isGlass: true)
     group.updateMatrixWorld(true);
     cabinWallMeshes.forEach(mesh => {
       const box = new THREE.Box3().setFromObject(mesh);
-      this.obstacles.push({ mesh, box, isCover: false });
+      this.obstacles.push({ mesh, box, isCover: false, isGlass: true });
     });
 
-    // 7. LOOKOUT SNIPER WINDOWS
-    const winGeo = new THREE.PlaneGeometry(1.6, 1.1);
-    const winGlassMat = new THREE.MeshStandardMaterial({
-      color: 0x93c5fd,
-      transparent: true,
-      opacity: 0.35,
-      roughness: 0.1,
-      metalness: 0.8,
-      side: THREE.DoubleSide
-    });
-    const winL = new THREE.Mesh(winGeo, winGlassMat);
-    winL.rotation.y = Math.PI / 2;
-    winL.position.set(-roomW / 2, 1.6, 0);
-    cabinGroup.add(winL);
-
-    const winR = new THREE.Mesh(winGeo, winGlassMat);
-    winR.rotation.y = Math.PI / 2;
-    winR.position.set(roomW / 2, 1.6, 0);
-    cabinGroup.add(winR);
-
-    const winB = new THREE.Mesh(winGeo, winGlassMat);
-    winB.position.set(0, 1.6, -roomD / 2);
-    cabinGroup.add(winB);
-
-    // 8. INTERACTIVE TREEHOUSE DOOR
+    // 7. INTERACTIVE TREEHOUSE BALCONY GLASS DOOR
     const worldDoorPos = new THREE.Vector3(roomCenterX, deckH, roomCenterZ + roomD / 2)
       .applyAxisAngle(yAxis, bRot)
       .add(group.position);
 
+    // French balcony glass door with timber frame
     const doorMat = new THREE.MeshStandardMaterial({
-      map: TextureGenerator.createWoodSidingTexture('#78350f'),
-      roughness: 0.75,
-      metalness: 0.1
+      color: 0x93c5fd,
+      transparent: true,
+      opacity: 0.35,
+      roughness: 0.08,
+      metalness: 0.2,
+      depthWrite: false
     });
 
     const door = new InteractiveDoor(
