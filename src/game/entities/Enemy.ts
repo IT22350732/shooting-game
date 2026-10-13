@@ -26,49 +26,76 @@ interface HumanTheme {
   emissiveHex: number;
   uniformHex: number;
   skinHex: number;
-  armorHex: number;
-  visorHex: number;
+  hairHex: number;
+  pantsHex: number;
+  vestHex: number;
+  gearAccentHex: number;
+  headwearType: 'helmet' | 'cap' | 'beanie' | 'boonie' | 'balaclava';
+  headwearHex: number;
+  eyewearType: 'eyes' | 'shades' | 'goggles';
+  bootHex: number;
   scale: number;
   hasWeapon: boolean;
   hasShield: boolean;
   hasExplosiveVest: boolean;
+  rolledSleeves?: boolean;
 }
 
 export const HUMAN_THEMES: Record<EnemyType, HumanTheme> = {
   basic: {
-    name: 'Hostile Insurgent',
-    highlightHex: 0xef4444, // Vibrant Crimson Red
-    emissiveHex: 0xdc2626,
-    uniformHex: 0x1e293b,   // Slate charcoal uniform
-    skinHex: 0xd4a373,      // Warm Tan
-    armorHex: 0xef4444,     // Crimson Tactical Armor Plate
-    visorHex: 0xff0033,     // Glowing Crimson Optic
+    name: 'Insurgent Rifleman',
+    highlightHex: 0x334155, // Tactical slate
+    emissiveHex: 0x000000,   // No sci-fi glow
+    uniformHex: 0x2d3748,    // Charcoal grey combat shirt
+    skinHex: 0xd4a373,       // Natural warm tan skin
+    hairHex: 0x1f1f1f,       // Dark hair/stubble
+    pantsHex: 0x1e293b,      // Dark cargo pants
+    vestHex: 0x18181b,       // Matte black plate carrier
+    gearAccentHex: 0x374151, // Tactical webbing
+    headwearType: 'cap',     // Tactical baseball cap
+    headwearHex: 0x1e293b,
+    eyewearType: 'eyes',     // Natural human eyes
+    bootHex: 0x0f172a,       // Black combat boots
     scale: 1.0,
     hasWeapon: true,
     hasShield: false,
-    hasExplosiveVest: false
+    hasExplosiveVest: false,
+    rolledSleeves: true
   },
   fast: {
-    name: 'Cyber Sprinter',
-    highlightHex: 0x22c55e, // Electric Lime Green
-    emissiveHex: 0x4ade80,
-    uniformHex: 0x0f172a,   // Midnight stealth suit
-    skinHex: 0xdfb18e,      // Fair Tan
-    armorHex: 0x22c55e,     // Neon Green Harness
-    visorHex: 0x22c55e,     // Glowing Neon Green Scout Visor
-    scale: 0.9,
+    name: 'Scout Skirmisher',
+    highlightHex: 0x475569,
+    emissiveHex: 0x000000,
+    uniformHex: 0x3f4e40,    // Olive drab tactical hoodie
+    skinHex: 0xdfb18e,       // Fair tan skin
+    hairHex: 0x2d1f14,       // Brown hair
+    pantsHex: 0x78716c,      // Coyote tan cargo trousers
+    vestHex: 0x292524,       // Lightweight chest rig
+    gearAccentHex: 0x44403c,
+    headwearType: 'beanie',  // Low-profile tactical watch cap
+    headwearHex: 0x1c1917,
+    eyewearType: 'shades',   // Tactical polarized shooting shades
+    bootHex: 0x57534e,       // Tan suede tactical boots
+    scale: 0.96,
     hasWeapon: true,
     hasShield: false,
-    hasExplosiveVest: false
+    hasExplosiveVest: false,
+    rolledSleeves: true
   },
   ranged: {
     name: 'Sniper Marksman',
-    highlightHex: 0x06b6d4, // High-Voltage Cyan
-    emissiveHex: 0x22d3ee,
-    uniformHex: 0x0f2744,   // Deep Navy Camo
-    skinHex: 0xc99a6b,      // Olive Tan
-    armorHex: 0x0891b2,     // Cyan ballistic plate
-    visorHex: 0x00f0ff,     // Glowing Cyan Sniper HUD Visor
+    highlightHex: 0x334155,
+    emissiveHex: 0x000000,
+    uniformHex: 0x283618,    // Woodland camouflage field jacket
+    skinHex: 0xc99a6b,       // Weathered olive tan skin
+    hairHex: 0x18181b,
+    pantsHex: 0x1e293b,      // Dark camo pants
+    vestHex: 0x242e1a,       // Sniper harness
+    gearAccentHex: 0x364128,
+    headwearType: 'boonie',  // Wide-brim tactical boonie hat
+    headwearHex: 0x283618,
+    eyewearType: 'goggles',  // Ballistic eyewear
+    bootHex: 0x18181b,
     scale: 1.02,
     hasWeapon: true,
     hasShield: false,
@@ -76,55 +103,80 @@ export const HUMAN_THEMES: Record<EnemyType, HumanTheme> = {
   },
   tank: {
     name: 'Heavy Juggernaut',
-    highlightHex: 0xa855f7, // Deep Heavy Purple
-    emissiveHex: 0xc084fc,
-    uniformHex: 0x18181b,   // Heavy Blast Undersuit
-    skinHex: 0xb27c52,      // Deep Tan
-    armorHex: 0x9333ea,     // Reinforced Purple Titan Plating
-    visorHex: 0xa855f7,     // Glowing Purple Slit Visor
-    scale: 1.25,
+    highlightHex: 0x1e293b,
+    emissiveHex: 0x000000,
+    uniformHex: 0x18181b,    // Heavy black tactical assault suit
+    skinHex: 0xa8744f,       // Deep tan skin
+    hairHex: 0x111827,
+    pantsHex: 0x18181b,      // Reinforced blast pants
+    vestHex: 0x0f172a,       // Heavy ceramic armor plate carrier
+    gearAccentHex: 0x334155, // Heavy ballistic shoulder guards
+    headwearType: 'helmet',  // Full heavy ballistic assault helmet
+    headwearHex: 0x1e293b,
+    eyewearType: 'goggles',  // Heavy ballistic face visor
+    bootHex: 0x090d16,       // Steel-toe heavy assault boots
+    scale: 1.18,
     hasWeapon: true,
     hasShield: false,
     hasExplosiveVest: false
   },
   shield: {
-    name: 'Riot Vanguard',
-    highlightHex: 0xf97316, // Radiant Solar Amber / Orange
-    emissiveHex: 0xfb923c,
-    uniformHex: 0x334155,   // Heavy Riot Uniform
-    skinHex: 0xcca078,      // Neutral Tan
-    armorHex: 0xea580c,     // Orange Riot Armor
-    visorHex: 0xff7700,     // Glowing Orange Blast Visor
-    scale: 1.05,
+    name: 'SWAT Riot Breacher',
+    highlightHex: 0x1e3a8a,  // Deep navy
+    emissiveHex: 0x000000,
+    uniformHex: 0x0f172a,    // Midnight navy SWAT assault uniform
+    skinHex: 0xcca078,       // Neutral tan skin
+    hairHex: 0x18181b,
+    pantsHex: 0x0f172a,      // SWAT cargo pants
+    vestHex: 0x1e293b,       // Heavy SWAT tactical assault vest
+    gearAccentHex: 0x334155,
+    headwearType: 'helmet',  // SWAT ballistic helmet with chinstrap
+    headwearHex: 0x0f172a,
+    eyewearType: 'goggles',  // Polycarbonate protective goggles
+    bootHex: 0x020617,       // Black tactical assault boots
+    scale: 1.04,
     hasWeapon: true,
     hasShield: true,
     hasExplosiveVest: false
   },
   exploder: {
-    name: 'Demolition Infiltrator',
-    highlightHex: 0xec4899, // Blazing Hot Pink / Magenta
-    emissiveHex: 0xf43f5e,
-    uniformHex: 0x27272a,   // Dark Hazmat Uniform
-    skinHex: 0xe0b99c,      // Pale Skin
-    armorHex: 0xdb2777,     // Magenta Bomb Harness
-    visorHex: 0xff007f,     // Pulsing Pink Hazard Visor
-    scale: 0.95,
+    name: 'Saboteur Demolitionist',
+    highlightHex: 0x7f1d1d,  // Muted hazard red
+    emissiveHex: 0x000000,
+    uniformHex: 0x374151,    // Weathered field jacket
+    skinHex: 0xc8956e,       // Pale weathered skin
+    hairHex: 0x18181b,
+    pantsHex: 0x1f2937,      // Worn dark cargo trousers
+    vestHex: 0x27272a,       // Demolition harness
+    gearAccentHex: 0x4b5563,
+    headwearType: 'balaclava', // Tactical ski mask with eye cutouts
+    headwearHex: 0x111827,
+    eyewearType: 'eyes',     // Piercing human eyes looking through mask
+    bootHex: 0x18181b,
+    scale: 0.98,
     hasWeapon: false,
     hasShield: false,
     hasExplosiveVest: true
   },
   elite: {
-    name: 'Commando Officer',
-    highlightHex: 0xeab308, // Radiant Cyber Gold / Yellow
-    emissiveHex: 0xfacc15,
-    uniformHex: 0x111827,   // Obsidian & Carbon Uniform
-    skinHex: 0xc68642,      // Bronzed Skin
-    armorHex: 0xca8a04,     // Gilded Composite Armor
-    visorHex: 0xffea00,     // Dual Golden HUD Glasses
-    scale: 1.12,
+    name: 'Spec-Ops Commander',
+    highlightHex: 0x4b5320,  // Multicam olive
+    emissiveHex: 0x000000,
+    uniformHex: 0x374128,    // Crye Precision G3 Combat Shirt
+    skinHex: 0xb87a46,       // Bronzed skin
+    hairHex: 0x18181b,
+    pantsHex: 0x3f462c,      // Multicam cargo pants
+    vestHex: 0x4a4332,       // Coyote tan high-cut plate carrier
+    gearAccentHex: 0x5c533f,
+    headwearType: 'helmet',  // High-cut FAST Ballistic Helmet
+    headwearHex: 0x4a4332,
+    eyewearType: 'shades',   // Tactical ballistic polarized shades
+    bootHex: 0x383226,       // Coyote brown combat boots
+    scale: 1.06,
     hasWeapon: true,
     hasShield: false,
-    hasExplosiveVest: false
+    hasExplosiveVest: false,
+    rolledSleeves: true
   }
 };
 
@@ -313,7 +365,7 @@ export class Enemy {
 
     const barGeo = new THREE.PlaneGeometry(0.96, 0.08);
     const barMat = new THREE.MeshBasicMaterial({
-      color: this.theme.highlightHex,
+      color: 0xef4444,
       side: THREE.DoubleSide
     });
     this.healthBarMesh = new THREE.Mesh(barGeo, barMat);
@@ -345,51 +397,120 @@ export class Enemy {
     const s = this.scaleFactor;
     const theme = this.theme;
 
-    // Tactical Materials
+    // 1. Realistic Human & Tactical Materials
     const skinMat = new THREE.MeshStandardMaterial({
       color: theme.skinHex,
-      roughness: 0.7,
-      metalness: 0.05
+      roughness: 0.78,
+      metalness: 0.04
     });
 
     const uniformMat = new THREE.MeshStandardMaterial({
       color: theme.uniformHex,
-      roughness: 0.8,
+      roughness: 0.85,
+      metalness: 0.06
+    });
+
+    const pantsMat = new THREE.MeshStandardMaterial({
+      color: theme.pantsHex,
+      roughness: 0.88,
+      metalness: 0.05
+    });
+
+    const vestMat = new THREE.MeshStandardMaterial({
+      color: theme.vestHex,
+      roughness: 0.72,
+      metalness: 0.1
+    });
+
+    const gearMat = new THREE.MeshStandardMaterial({
+      color: theme.gearAccentHex,
+      roughness: 0.7,
+      metalness: 0.12
+    });
+
+    const headwearMat = new THREE.MeshStandardMaterial({
+      color: theme.headwearHex,
+      roughness: 0.76,
+      metalness: 0.1
+    });
+
+    const hairMat = new THREE.MeshStandardMaterial({
+      color: theme.hairHex,
+      roughness: 0.95,
+      metalness: 0.0
+    });
+
+    const bootMat = new THREE.MeshStandardMaterial({
+      color: theme.bootHex,
+      roughness: 0.82,
+      metalness: 0.1
+    });
+
+    const soleMat = new THREE.MeshStandardMaterial({
+      color: 0x090d16,
+      roughness: 0.92,
+      metalness: 0.02
+    });
+
+    const gloveMat = new THREE.MeshStandardMaterial({
+      color: 0x181e26,
+      roughness: 0.75,
+      metalness: 0.08
+    });
+
+    const gunMat = new THREE.MeshStandardMaterial({
+      color: 0x1a2028,
+      roughness: 0.38,
+      metalness: 0.78
+    });
+
+    const gunDetailMat = new THREE.MeshStandardMaterial({
+      color: 0x272e38,
+      roughness: 0.55,
+      metalness: 0.35
+    });
+
+    const eyeWhiteMat = new THREE.MeshBasicMaterial({
+      color: 0xf1f5f9
+    });
+
+    const eyePupilMat = new THREE.MeshBasicMaterial({
+      color: 0x111827
+    });
+
+    const shadesMat = new THREE.MeshStandardMaterial({
+      color: 0x090d16,
+      roughness: 0.12,
+      metalness: 0.88
+    });
+
+    const gogglesFrameMat = new THREE.MeshStandardMaterial({
+      color: 0x18202b,
+      roughness: 0.65,
       metalness: 0.15
     });
 
-    const highlightMat = new THREE.MeshStandardMaterial({
-      color: theme.highlightHex,
-      roughness: 0.25,
-      metalness: 0.6,
-      emissive: theme.emissiveHex,
-      emissiveIntensity: 0.65
-    });
-
-    const visorMat = new THREE.MeshBasicMaterial({
-      color: theme.visorHex
-    });
-
-    const jointMat = new THREE.MeshStandardMaterial({
+    const gogglesLensMat = new THREE.MeshStandardMaterial({
       color: 0x0f172a,
-      roughness: 0.4,
+      roughness: 0.18,
       metalness: 0.8
     });
 
     // Root of Human Body
     this.mesh.add(this.humanGroup);
 
-    // 0. Ground Tactical Aura Ring (Distinct high-visibility glow under human enemy feet, safely within collision cylinder)
-    const ringGeo = new THREE.RingGeometry(0.36 * s, 0.46 * s, 32);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: theme.highlightHex,
-      side: THREE.DoubleSide,
+    // 0. Soft Ground Contact Shadow (Natural human ground contact - replaces neon sci-fi circle)
+    const shadowGeo = new THREE.CircleGeometry(0.42 * s, 24);
+    const shadowMat = new THREE.MeshBasicMaterial({
+      color: 0x030712,
       transparent: true,
-      opacity: 0.55
+      opacity: 0.36,
+      side: THREE.DoubleSide,
+      depthWrite: false
     });
-    this.groundHighlightRing = new THREE.Mesh(ringGeo, ringMat);
+    this.groundHighlightRing = new THREE.Mesh(shadowGeo, shadowMat);
     this.groundHighlightRing.rotation.x = -Math.PI / 2;
-    this.groundHighlightRing.position.y = 0.02;
+    this.groundHighlightRing.position.y = 0.015;
     this.groundHighlightRing.raycast = () => {};
     this.mesh.add(this.groundHighlightRing);
 
@@ -398,255 +519,631 @@ export class Enemy {
     this.pelvis.position.set(0, this.basePelvisY, 0);
     this.humanGroup.add(this.pelvis);
 
-    const hipGeo = new THREE.BoxGeometry(0.42 * s, 0.22 * s, 0.26 * s);
-    const hipMesh = new THREE.Mesh(hipGeo, uniformMat);
+    // Tactical cargo pants waistband and hips
+    const hipGeo = new THREE.BoxGeometry(0.40 * s, 0.22 * s, 0.26 * s);
+    const hipMesh = new THREE.Mesh(hipGeo, pantsMat);
     this.pelvis.add(hipMesh);
-    this.registerMesh(hipMesh, uniformMat);
+    this.registerMesh(hipMesh, pantsMat);
 
-    // Tactical Belt with Highlighted Buckle & Holsters
-    const beltGeo = new THREE.BoxGeometry(0.44 * s, 0.08 * s, 0.28 * s);
-    const beltMesh = new THREE.Mesh(beltGeo, highlightMat);
+    // Tactical Duty Belt with metal buckle
+    const beltGeo = new THREE.BoxGeometry(0.42 * s, 0.07 * s, 0.28 * s);
+    const beltMesh = new THREE.Mesh(beltGeo, gearMat);
     beltMesh.position.y = 0.08 * s;
     this.pelvis.add(beltMesh);
-    this.registerMesh(beltMesh, highlightMat);
+    this.registerMesh(beltMesh, gearMat);
+
+    const buckleGeo = new THREE.BoxGeometry(0.08 * s, 0.06 * s, 0.02 * s);
+    const buckleMesh = new THREE.Mesh(buckleGeo, gunDetailMat);
+    buckleMesh.position.set(0, 0.08 * s, 0.145 * s);
+    this.pelvis.add(buckleMesh);
+    this.registerMesh(buckleMesh, gunDetailMat);
+
+    // Tactical sidearm holster on right hip
+    const holsterGeo = new THREE.BoxGeometry(0.08 * s, 0.16 * s, 0.10 * s);
+    const holsterMesh = new THREE.Mesh(holsterGeo, gearMat);
+    holsterMesh.position.set(0.22 * s, -0.04 * s, 0);
+    this.pelvis.add(holsterMesh);
+    this.registerMesh(holsterMesh, gearMat);
 
     // 2. Spine & Torso Group (Pivots at waist above pelvis)
     this.baseTorsoY = 0.12 * s;
     this.torsoGroup.position.set(0, this.baseTorsoY, 0);
     this.pelvis.add(this.torsoGroup);
 
-    // Waist / Abdomen
+    // Waist / Abdomen (Combat shirt tuck)
     const abdomenGeo = new THREE.BoxGeometry(0.38 * s, 0.24 * s, 0.24 * s);
     const abdomenMesh = new THREE.Mesh(abdomenGeo, uniformMat);
     abdomenMesh.position.y = 0.12 * s;
     this.torsoGroup.add(abdomenMesh);
     this.registerMesh(abdomenMesh, uniformMat);
 
-    // Upper Chest
-    const chestGeo = new THREE.BoxGeometry(0.46 * s, 0.36 * s, 0.28 * s);
+    // Upper Torso / Chest (Combat shirt base)
+    const chestGeo = new THREE.BoxGeometry(0.44 * s, 0.36 * s, 0.26 * s);
     const chestMesh = new THREE.Mesh(chestGeo, uniformMat);
     chestMesh.position.y = 0.38 * s;
     this.torsoGroup.add(chestMesh);
     this.registerMesh(chestMesh, uniformMat);
 
-    // Tactical Armored Vest (Highlighted Enemy Armor Plating)
-    const vestGeo = new THREE.BoxGeometry(0.48 * s, 0.38 * s, 0.32 * s);
-    const vestMesh = new THREE.Mesh(vestGeo, highlightMat);
-    vestMesh.position.y = 0.38 * s;
-    this.torsoGroup.add(vestMesh);
-    this.registerMesh(vestMesh, highlightMat);
+    // Tactical Plate Carrier Vest (Front & Back Ballistic Armor)
+    const vestFrontGeo = new THREE.BoxGeometry(0.42 * s, 0.34 * s, 0.10 * s);
+    const vestFrontMesh = new THREE.Mesh(vestFrontGeo, vestMat);
+    vestFrontMesh.position.set(0, 0.38 * s, 0.10 * s);
+    this.torsoGroup.add(vestFrontMesh);
+    this.registerMesh(vestFrontMesh, vestMat);
 
-    // Shoulder Pauldrons (Left & Right Armor Pads)
-    const pauldronGeo = new THREE.BoxGeometry(0.18 * s, 0.14 * s, 0.22 * s);
-    const leftPad = new THREE.Mesh(pauldronGeo, highlightMat);
-    leftPad.position.set(-0.31 * s, 0.54 * s, 0);
-    this.torsoGroup.add(leftPad);
-    this.registerMesh(leftPad, highlightMat);
+    const vestBackGeo = new THREE.BoxGeometry(0.42 * s, 0.34 * s, 0.08 * s);
+    const vestBackMesh = new THREE.Mesh(vestBackGeo, vestMat);
+    vestBackMesh.position.set(0, 0.38 * s, -0.10 * s);
+    this.torsoGroup.add(vestBackMesh);
+    this.registerMesh(vestBackMesh, vestMat);
 
-    const rightPad = new THREE.Mesh(pauldronGeo, highlightMat);
-    rightPad.position.set(0.31 * s, 0.54 * s, 0);
-    this.torsoGroup.add(rightPad);
-    this.registerMesh(rightPad, highlightMat);
+    // Plate carrier shoulder straps
+    const strapGeo = new THREE.BoxGeometry(0.09 * s, 0.06 * s, 0.28 * s);
+    const leftStrap = new THREE.Mesh(strapGeo, vestMat);
+    leftStrap.position.set(-0.14 * s, 0.54 * s, 0);
+    this.torsoGroup.add(leftStrap);
+    this.registerMesh(leftStrap, vestMat);
 
-    // Exploder Demolition Core in Chest
-    if (theme.hasExplosiveVest) {
-      const coreGeo = new THREE.SphereGeometry(0.14 * s, 16, 16);
-      const coreMat = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        emissive: theme.highlightHex,
-        emissiveIntensity: 1.5,
-        roughness: 0.1
-      });
-      this.coreMesh = new THREE.Mesh(coreGeo, coreMat);
-      this.coreMesh.position.set(0, 0.38 * s, 0.18 * s);
-      this.torsoGroup.add(this.coreMesh);
-      this.registerMesh(this.coreMesh, coreMat);
+    const rightStrap = new THREE.Mesh(strapGeo, vestMat);
+    rightStrap.position.set(0.14 * s, 0.54 * s, 0);
+    this.torsoGroup.add(rightStrap);
+    this.registerMesh(rightStrap, vestMat);
+
+    // MOLLE Magazine Pouches across chest/stomach
+    for (let i = -1; i <= 1; i++) {
+      const magPouchGeo = new THREE.BoxGeometry(0.08 * s, 0.13 * s, 0.05 * s);
+      const magPouch = new THREE.Mesh(magPouchGeo, gearMat);
+      magPouch.position.set(i * 0.11 * s, 0.32 * s, 0.17 * s);
+      this.torsoGroup.add(magPouch);
+      this.registerMesh(magPouch, gearMat);
     }
 
-    // 3. Head & Neck (Weakpoint Headshot Mesh)
+    // Tactical Shoulder Radio with Antenna
+    const radioGeo = new THREE.BoxGeometry(0.06 * s, 0.10 * s, 0.06 * s);
+    const radioMesh = new THREE.Mesh(radioGeo, gunDetailMat);
+    radioMesh.position.set(-0.16 * s, 0.53 * s, 0.10 * s);
+    this.torsoGroup.add(radioMesh);
+    this.registerMesh(radioMesh, gunDetailMat);
+
+    const antennaGeo = new THREE.CylinderGeometry(0.008 * s, 0.008 * s, 0.16 * s, 6);
+    const antennaMesh = new THREE.Mesh(antennaGeo, gunMat);
+    antennaMesh.position.set(-0.16 * s, 0.63 * s, 0.10 * s);
+    this.torsoGroup.add(antennaMesh);
+    this.registerMesh(antennaMesh, gunMat);
+
+    // Heavy Pauldrons only for Heavy Juggernaut
+    if (this.type === 'tank') {
+      const pauldronGeo = new THREE.BoxGeometry(0.18 * s, 0.16 * s, 0.24 * s);
+      const leftPad = new THREE.Mesh(pauldronGeo, vestMat);
+      leftPad.position.set(-0.31 * s, 0.54 * s, 0);
+      this.torsoGroup.add(leftPad);
+      this.registerMesh(leftPad, vestMat);
+
+      const rightPad = new THREE.Mesh(pauldronGeo, vestMat);
+      rightPad.position.set(0.31 * s, 0.54 * s, 0);
+      this.torsoGroup.add(rightPad);
+      this.registerMesh(rightPad, vestMat);
+
+      // Heavy throat / collar protection
+      const collarGeo = new THREE.BoxGeometry(0.32 * s, 0.10 * s, 0.24 * s);
+      const collarMesh = new THREE.Mesh(collarGeo, vestMat);
+      collarMesh.position.set(0, 0.57 * s, 0.03 * s);
+      this.torsoGroup.add(collarMesh);
+      this.registerMesh(collarMesh, vestMat);
+    }
+
+    // Saboteur Demolitionist C4 Demolition Rig
+    if (theme.hasExplosiveVest) {
+      // 2x Strapped C4 demolition blocks wrapped in olive military tape
+      const c4Geo = new THREE.BoxGeometry(0.13 * s, 0.08 * s, 0.06 * s);
+      const c4Mat = new THREE.MeshStandardMaterial({ color: 0x52525b, roughness: 0.85 });
+
+      const c4Top = new THREE.Mesh(c4Geo, c4Mat);
+      c4Top.position.set(0, 0.44 * s, 0.18 * s);
+      this.torsoGroup.add(c4Top);
+      this.registerMesh(c4Top, c4Mat);
+
+      const c4Bottom = new THREE.Mesh(c4Geo, c4Mat);
+      c4Bottom.position.set(0, 0.34 * s, 0.18 * s);
+      this.torsoGroup.add(c4Bottom);
+      this.registerMesh(c4Bottom, c4Mat);
+
+      // Digital detonator timer box with LED indicator (serves as this.coreMesh for fuse countdown pulse)
+      const detonatorGeo = new THREE.BoxGeometry(0.09 * s, 0.07 * s, 0.05 * s);
+      const detonatorMat = new THREE.MeshStandardMaterial({
+        color: 0x1c1917,
+        roughness: 0.5,
+        metalness: 0.4
+      });
+      this.coreMesh = new THREE.Mesh(detonatorGeo, detonatorMat);
+      this.coreMesh.position.set(0, 0.24 * s, 0.18 * s);
+      this.torsoGroup.add(this.coreMesh);
+      this.registerMesh(this.coreMesh, detonatorMat);
+
+      const timerLedGeo = new THREE.BoxGeometry(0.05 * s, 0.02 * s, 0.01 * s);
+      const timerLedMat = new THREE.MeshBasicMaterial({ color: 0xdc2626 });
+      const timerLed = new THREE.Mesh(timerLedGeo, timerLedMat);
+      timerLed.position.set(0, 0.01 * s, 0.026 * s);
+      this.coreMesh.add(timerLed);
+    }
+
+    // 3. Head & Neck (Weakpoint Headshot Detection Mesh)
     this.headGroup.position.set(0, 0.60 * s, 0);
     this.torsoGroup.add(this.headGroup);
 
-    // Neck
-    const neckGeo = new THREE.CylinderGeometry(0.08 * s, 0.09 * s, 0.12 * s, 12);
+    // Natural Neck
+    const neckGeo = new THREE.CylinderGeometry(0.075 * s, 0.085 * s, 0.12 * s, 10);
     const neckMesh = new THREE.Mesh(neckGeo, skinMat);
     neckMesh.position.y = 0.06 * s;
     this.headGroup.add(neckMesh);
     this.registerMesh(neckMesh, skinMat);
 
-    // Human Head (Face / Cranium)
-    const headGeo = new THREE.BoxGeometry(0.28 * s, 0.30 * s, 0.28 * s);
-    this.headMesh = new THREE.Mesh(headGeo, skinMat);
+    // Human Head (Cranium weakpoint mesh)
+    const isBalaclava = theme.headwearType === 'balaclava';
+    const headBaseMat = isBalaclava ? headwearMat : skinMat;
+    const headGeo = new THREE.BoxGeometry(0.26 * s, 0.28 * s, 0.26 * s);
+    this.headMesh = new THREE.Mesh(headGeo, headBaseMat);
     this.headMesh.position.set(0, 0.24 * s, 0);
     this.headGroup.add(this.headMesh);
-    this.registerMesh(this.headMesh, skinMat);
+    this.registerMesh(this.headMesh, headBaseMat);
 
-    // Tactical Combat Helmet
-    const helmetGeo = new THREE.BoxGeometry(0.32 * s, 0.16 * s, 0.32 * s);
-    const helmetMesh = new THREE.Mesh(helmetGeo, uniformMat);
-    helmetMesh.position.set(0, 0.32 * s, 0.01 * s);
-    this.headGroup.add(helmetMesh);
-    this.registerMesh(helmetMesh, uniformMat);
+    // 3D Human Nose
+    const noseGeo = new THREE.BoxGeometry(0.046 * s, 0.08 * s, 0.055 * s);
+    const noseMesh = new THREE.Mesh(noseGeo, skinMat);
+    noseMesh.position.set(0, -0.01 * s, 0.155 * s);
+    this.headMesh.add(noseMesh);
+    this.registerMesh(noseMesh, skinMat);
 
-    // Helmet Highlight Stripe
-    const helmetStripeGeo = new THREE.BoxGeometry(0.12 * s, 0.18 * s, 0.33 * s);
-    const helmetStripe = new THREE.Mesh(helmetStripeGeo, highlightMat);
-    helmetStripe.position.set(0, 0.32 * s, 0.01 * s);
-    this.headGroup.add(helmetStripe);
-    this.registerMesh(helmetStripe, highlightMat);
+    // Left and Right Human Ears
+    if (!isBalaclava) {
+      const earGeo = new THREE.BoxGeometry(0.035 * s, 0.075 * s, 0.045 * s);
+      const leftEar = new THREE.Mesh(earGeo, skinMat);
+      leftEar.position.set(-0.145 * s, 0.01 * s, 0);
+      this.headMesh.add(leftEar);
+      this.registerMesh(leftEar, skinMat);
 
-    // Glowing Optical Tactical Visor / Eyes
-    const visorGeo = new THREE.BoxGeometry(0.26 * s, 0.09 * s, 0.08 * s);
-    const visorMesh = new THREE.Mesh(visorGeo, visorMat);
-    visorMesh.position.set(0, 0.23 * s, 0.15 * s);
-    this.headGroup.add(visorMesh);
+      const rightEar = new THREE.Mesh(earGeo, skinMat);
+      rightEar.position.set(0.145 * s, 0.01 * s, 0);
+      this.headMesh.add(rightEar);
+      this.registerMesh(rightEar, skinMat);
+
+      // Facial Stubble / Jawline contour
+      const jawGeo = new THREE.BoxGeometry(0.25 * s, 0.09 * s, 0.25 * s);
+      const jawMesh = new THREE.Mesh(jawGeo, hairMat);
+      jawMesh.position.set(0, -0.10 * s, 0.01 * s);
+      this.headMesh.add(jawMesh);
+      this.registerMesh(jawMesh, hairMat);
+    }
+
+    // Human Eyes / Eyewear Configuration (No glowing robot visors)
+    if (theme.eyewearType === 'eyes') {
+      // Natural human eye sockets with white sclera and dark pupils
+      const eyeGeo = new THREE.BoxGeometry(0.045 * s, 0.03 * s, 0.015 * s);
+      const pupilGeo = new THREE.BoxGeometry(0.022 * s, 0.022 * s, 0.018 * s);
+
+      // Left Eye
+      const leftEyeWhite = new THREE.Mesh(eyeGeo, eyeWhiteMat);
+      leftEyeWhite.position.set(-0.065 * s, 0.045 * s, 0.133 * s);
+      this.headMesh.add(leftEyeWhite);
+
+      const leftPupil = new THREE.Mesh(pupilGeo, eyePupilMat);
+      leftPupil.position.set(-0.065 * s, 0.045 * s, 0.135 * s);
+      this.headMesh.add(leftPupil);
+
+      // Right Eye
+      const rightEyeWhite = new THREE.Mesh(eyeGeo, eyeWhiteMat);
+      rightEyeWhite.position.set(0.065 * s, 0.045 * s, 0.133 * s);
+      this.headMesh.add(rightEyeWhite);
+
+      const rightPupil = new THREE.Mesh(pupilGeo, eyePupilMat);
+      rightPupil.position.set(0.065 * s, 0.045 * s, 0.135 * s);
+      this.headMesh.add(rightPupil);
+
+      // Brow Ridge
+      const browGeo = new THREE.BoxGeometry(0.24 * s, 0.035 * s, 0.04 * s);
+      const browMesh = new THREE.Mesh(browGeo, hairMat);
+      browMesh.position.set(0, 0.075 * s, 0.14 * s);
+      this.headMesh.add(browMesh);
+      this.registerMesh(browMesh, hairMat);
+    } else if (theme.eyewearType === 'shades') {
+      // Sleek tactical polarized shooting sunglasses
+      const frameGeo = new THREE.BoxGeometry(0.26 * s, 0.04 * s, 0.03 * s);
+      const frameMesh = new THREE.Mesh(frameGeo, gunDetailMat);
+      frameMesh.position.set(0, 0.055 * s, 0.145 * s);
+      this.headMesh.add(frameMesh);
+      this.registerMesh(frameMesh, gunDetailMat);
+
+      const lensGeo = new THREE.BoxGeometry(0.10 * s, 0.045 * s, 0.025 * s);
+      const leftLens = new THREE.Mesh(lensGeo, shadesMat);
+      leftLens.position.set(-0.065 * s, 0.045 * s, 0.145 * s);
+      this.headMesh.add(leftLens);
+      this.registerMesh(leftLens, shadesMat);
+
+      const rightLens = new THREE.Mesh(lensGeo, shadesMat);
+      rightLens.position.set(0.065 * s, 0.045 * s, 0.145 * s);
+      this.headMesh.add(rightLens);
+      this.registerMesh(rightLens, shadesMat);
+    } else if (theme.eyewearType === 'goggles') {
+      // Ballistic combat goggles with rubber frame and dark anti-fragmentation lens
+      const goggleFrameGeo = new THREE.BoxGeometry(0.25 * s, 0.065 * s, 0.05 * s);
+      const goggleFrame = new THREE.Mesh(goggleFrameGeo, gogglesFrameMat);
+      goggleFrame.position.set(0, 0.045 * s, 0.14 * s);
+      this.headMesh.add(goggleFrame);
+      this.registerMesh(goggleFrame, gogglesFrameMat);
+
+      const goggleLensGeo = new THREE.BoxGeometry(0.22 * s, 0.048 * s, 0.02 * s);
+      const goggleLens = new THREE.Mesh(goggleLensGeo, gogglesLensMat);
+      goggleLens.position.set(0, 0.045 * s, 0.16 * s);
+      this.headMesh.add(goggleLens);
+      this.registerMesh(goggleLens, gogglesLensMat);
+
+      // Goggle elastic strap around head
+      const strapGeo = new THREE.BoxGeometry(0.28 * s, 0.035 * s, 0.28 * s);
+      const goggleStrap = new THREE.Mesh(strapGeo, gogglesFrameMat);
+      goggleStrap.position.set(0, 0.045 * s, 0);
+      this.headMesh.add(goggleStrap);
+      this.registerMesh(goggleStrap, gogglesFrameMat);
+    }
+
+    // Authentic Tactical Headwear
+    if (theme.headwearType === 'helmet') {
+      // FAST High-cut tactical ballistic helmet shell
+      const helmetDomeGeo = new THREE.BoxGeometry(0.31 * s, 0.18 * s, 0.31 * s);
+      const helmetDome = new THREE.Mesh(helmetDomeGeo, headwearMat);
+      helmetDome.position.set(0, 0.12 * s, 0);
+      this.headMesh.add(helmetDome);
+      this.registerMesh(helmetDome, headwearMat);
+
+      // NVG Night-Vision Mounting Bracket on forehead
+      const nvgGeo = new THREE.BoxGeometry(0.08 * s, 0.08 * s, 0.03 * s);
+      const nvgMount = new THREE.Mesh(nvgGeo, gunDetailMat);
+      nvgMount.position.set(0, 0.14 * s, 0.165 * s);
+      this.headMesh.add(nvgMount);
+      this.registerMesh(nvgMount, gunDetailMat);
+
+      // Left & Right ARC Accessory Rails
+      const railGeo = new THREE.BoxGeometry(0.02 * s, 0.04 * s, 0.16 * s);
+      const leftRail = new THREE.Mesh(railGeo, gunDetailMat);
+      leftRail.position.set(-0.165 * s, 0.12 * s, 0);
+      this.headMesh.add(leftRail);
+      this.registerMesh(leftRail, gunDetailMat);
+
+      const rightRail = new THREE.Mesh(railGeo, gunDetailMat);
+      rightRail.position.set(0.165 * s, 0.12 * s, 0);
+      this.headMesh.add(rightRail);
+      this.registerMesh(rightRail, gunDetailMat);
+
+      // Tactical Comms Headset ear cups
+      const earCupGeo = new THREE.BoxGeometry(0.04 * s, 0.08 * s, 0.06 * s);
+      const leftCup = new THREE.Mesh(earCupGeo, gunDetailMat);
+      leftCup.position.set(-0.155 * s, 0.01 * s, 0);
+      this.headMesh.add(leftCup);
+      this.registerMesh(leftCup, gunDetailMat);
+
+      const rightCup = new THREE.Mesh(earCupGeo, gunDetailMat);
+      rightCup.position.set(0.155 * s, 0.01 * s, 0);
+      this.headMesh.add(rightCup);
+      this.registerMesh(rightCup, gunDetailMat);
+    } else if (theme.headwearType === 'cap') {
+      // Contractor Baseball Cap Crown
+      const capCrownGeo = new THREE.BoxGeometry(0.29 * s, 0.12 * s, 0.29 * s);
+      const capCrown = new THREE.Mesh(capCrownGeo, headwearMat);
+      capCrown.position.set(0, 0.12 * s, -0.01 * s);
+      this.headMesh.add(capCrown);
+      this.registerMesh(capCrown, headwearMat);
+
+      // Forward curved cap visor / bill
+      const capVisorGeo = new THREE.BoxGeometry(0.26 * s, 0.025 * s, 0.14 * s);
+      const capVisor = new THREE.Mesh(capVisorGeo, headwearMat);
+      capVisor.position.set(0, 0.09 * s, 0.18 * s);
+      capVisor.rotation.x = 0.12;
+      this.headMesh.add(capVisor);
+      this.registerMesh(capVisor, headwearMat);
+
+      // Velcro morale patch on front
+      const patchGeo = new THREE.BoxGeometry(0.09 * s, 0.05 * s, 0.01 * s);
+      const patchMesh = new THREE.Mesh(patchGeo, gearMat);
+      patchMesh.position.set(0, 0.13 * s, 0.145 * s);
+      this.headMesh.add(patchMesh);
+      this.registerMesh(patchMesh, gearMat);
+    } else if (theme.headwearType === 'beanie') {
+      // Knitted Watch Cap / Tactical Beanie
+      const beanieGeo = new THREE.BoxGeometry(0.30 * s, 0.18 * s, 0.30 * s);
+      const beanieMesh = new THREE.Mesh(beanieGeo, headwearMat);
+      beanieMesh.position.set(0, 0.12 * s, 0);
+      this.headMesh.add(beanieMesh);
+      this.registerMesh(beanieMesh, headwearMat);
+
+      // Folded beanie brim cuff
+      const cuffGeo = new THREE.BoxGeometry(0.31 * s, 0.06 * s, 0.31 * s);
+      const cuffMesh = new THREE.Mesh(cuffGeo, headwearMat);
+      cuffMesh.position.set(0, 0.06 * s, 0);
+      this.headMesh.add(cuffMesh);
+      this.registerMesh(cuffMesh, headwearMat);
+    } else if (theme.headwearType === 'boonie') {
+      // Tactical Boonie Hat Crown
+      const boonieCrownGeo = new THREE.BoxGeometry(0.28 * s, 0.12 * s, 0.28 * s);
+      const boonieCrown = new THREE.Mesh(boonieCrownGeo, headwearMat);
+      boonieCrown.position.set(0, 0.12 * s, 0);
+      this.headMesh.add(boonieCrown);
+      this.registerMesh(boonieCrown, headwearMat);
+
+      // Wide 360-degree fabric brim sloping downwards
+      const brimGeo = new THREE.CylinderGeometry(0.26 * s, 0.28 * s, 0.02 * s, 16);
+      const brimMesh = new THREE.Mesh(brimGeo, headwearMat);
+      brimMesh.position.set(0, 0.07 * s, 0);
+      this.headMesh.add(brimMesh);
+      this.registerMesh(brimMesh, headwearMat);
+    }
 
     // 4. Left Arm Group (Shoulder pivot at left side of chest)
-    this.leftArmGroup.position.set(-0.31 * s, 0.48 * s, 0);
+    this.leftArmGroup.position.set(-0.29 * s, 0.48 * s, 0);
     this.torsoGroup.add(this.leftArmGroup);
 
-    // Upper Arm (Bicep)
-    const upperArmGeo = new THREE.BoxGeometry(0.13 * s, 0.32 * s, 0.13 * s);
+    // Left Upper Arm (Bicep - Combat shirt sleeve)
+    const upperArmGeo = new THREE.BoxGeometry(0.13 * s, 0.30 * s, 0.13 * s);
     const leftUpperArm = new THREE.Mesh(upperArmGeo, uniformMat);
-    leftUpperArm.position.y = -0.16 * s;
+    leftUpperArm.position.y = -0.15 * s;
     this.leftArmGroup.add(leftUpperArm);
     this.registerMesh(leftUpperArm, uniformMat);
 
+    // Rolled sleeve cuff if rolled sleeves enabled
+    if (theme.rolledSleeves) {
+      const cuffGeo = new THREE.BoxGeometry(0.145 * s, 0.05 * s, 0.145 * s);
+      const leftCuff = new THREE.Mesh(cuffGeo, uniformMat);
+      leftCuff.position.y = -0.28 * s;
+      this.leftArmGroup.add(leftCuff);
+      this.registerMesh(leftCuff, uniformMat);
+    }
+
     // Left Forearm Group (Elbow pivot)
-    this.leftForearmGroup.position.set(0, -0.32 * s, 0);
+    this.leftForearmGroup.position.set(0, -0.30 * s, 0);
     this.leftArmGroup.add(this.leftForearmGroup);
 
-    const forearmGeo = new THREE.BoxGeometry(0.12 * s, 0.28 * s, 0.12 * s);
-    const leftForearm = new THREE.Mesh(forearmGeo, uniformMat);
-    leftForearm.position.y = -0.14 * s;
+    // Forearm material: exposed skin for rolled sleeves, or uniform fabric
+    const forearmMat = theme.rolledSleeves ? skinMat : uniformMat;
+    const forearmGeo = new THREE.BoxGeometry(0.115 * s, 0.26 * s, 0.115 * s);
+    const leftForearm = new THREE.Mesh(forearmGeo, forearmMat);
+    leftForearm.position.y = -0.13 * s;
     this.leftForearmGroup.add(leftForearm);
-    this.registerMesh(leftForearm, uniformMat);
+    this.registerMesh(leftForearm, forearmMat);
 
-    // Tactical Glove
-    const gloveGeo = new THREE.BoxGeometry(0.13 * s, 0.11 * s, 0.13 * s);
-    const leftGlove = new THREE.Mesh(gloveGeo, jointMat);
+    // Tactical Watch on left wrist
+    const watchBandGeo = new THREE.BoxGeometry(0.125 * s, 0.04 * s, 0.125 * s);
+    const watchBand = new THREE.Mesh(watchBandGeo, gearMat);
+    watchBand.position.y = -0.21 * s;
+    this.leftForearmGroup.add(watchBand);
+    this.registerMesh(watchBand, gearMat);
+
+    const watchFaceGeo = new THREE.BoxGeometry(0.05 * s, 0.02 * s, 0.03 * s);
+    const watchFace = new THREE.Mesh(watchFaceGeo, gunDetailMat);
+    watchFace.position.set(0, -0.21 * s, 0.065 * s);
+    this.leftForearmGroup.add(watchFace);
+    this.registerMesh(watchFace, gunDetailMat);
+
+    // Tactical Combat Glove
+    const gloveGeo = new THREE.BoxGeometry(0.12 * s, 0.11 * s, 0.12 * s);
+    const leftGlove = new THREE.Mesh(gloveGeo, gloveMat);
     leftGlove.position.y = -0.27 * s;
     this.leftForearmGroup.add(leftGlove);
-    this.registerMesh(leftGlove, jointMat);
+    this.registerMesh(leftGlove, gloveMat);
 
-    // Riot Shield for Shield Vanguard (Mounted on Left Forearm)
+    // Police SWAT Tactical Ballistic Riot Shield
     if (theme.hasShield) {
-      const shieldGeo = new THREE.BoxGeometry(0.85 * s, 1.45 * s, 0.05 * s);
+      // Main heavy-duty ballistic alloy shield body
+      const shieldGeo = new THREE.BoxGeometry(0.76 * s, 1.38 * s, 0.04 * s);
       const shieldMat = new THREE.MeshStandardMaterial({
-        color: theme.highlightHex,
-        transparent: true,
-        opacity: 0.85,
-        roughness: 0.1,
-        metalness: 0.9,
-        side: THREE.DoubleSide,
-        emissive: theme.emissiveHex,
-        emissiveIntensity: 0.8
+        color: 0x0f172a, // SWAT matte midnight navy
+        roughness: 0.65,
+        metalness: 0.35
       });
       this.shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
       this.shieldMesh.position.set(0, -0.15 * s, 0.35 * s);
       this.leftForearmGroup.add(this.shieldMesh);
       this.registerMesh(this.shieldMesh, shieldMat);
+
+      // Outer heavy rubber protective rim
+      const rimTopGeo = new THREE.BoxGeometry(0.80 * s, 0.04 * s, 0.05 * s);
+      const rimTop = new THREE.Mesh(rimTopGeo, soleMat);
+      rimTop.position.set(0, 0.69 * s, 0);
+      this.shieldMesh.add(rimTop);
+
+      const rimBottomGeo = new THREE.BoxGeometry(0.80 * s, 0.04 * s, 0.05 * s);
+      const rimBottom = new THREE.Mesh(rimBottomGeo, soleMat);
+      rimBottom.position.set(0, -0.69 * s, 0);
+      this.shieldMesh.add(rimBottom);
+
+      // Laminated ballistic polycarbonate observation window
+      const windowCutoutGeo = new THREE.BoxGeometry(0.36 * s, 0.18 * s, 0.05 * s);
+      const windowGlassMat = new THREE.MeshStandardMaterial({
+        color: 0x64748b,
+        transparent: true,
+        opacity: 0.55,
+        roughness: 0.1,
+        metalness: 0.7
+      });
+      const shieldWindow = new THREE.Mesh(windowCutoutGeo, windowGlassMat);
+      shieldWindow.position.set(0, 0.32 * s, 0.005 * s);
+      this.shieldMesh.add(shieldWindow);
+
+      // Tactical POLICE / SWAT Identification Bar
+      const idBarGeo = new THREE.BoxGeometry(0.48 * s, 0.09 * s, 0.02 * s);
+      const idBarMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const idBar = new THREE.Mesh(idBarGeo, idBarMat);
+      idBar.position.set(0, 0.05 * s, 0.025 * s);
+      this.shieldMesh.add(idBar);
+
+      // Heavy rear carry handle attached to forearm
+      const handleGeo = new THREE.BoxGeometry(0.12 * s, 0.28 * s, 0.08 * s);
+      const shieldHandle = new THREE.Mesh(handleGeo, gunDetailMat);
+      shieldHandle.position.set(0, 0, -0.06 * s);
+      this.shieldMesh.add(shieldHandle);
     }
 
     // 5. Right Arm Group (Shoulder pivot at right side of chest)
-    this.rightArmGroup.position.set(0.31 * s, 0.48 * s, 0);
+    this.rightArmGroup.position.set(0.29 * s, 0.48 * s, 0);
     this.torsoGroup.add(this.rightArmGroup);
 
-    // Upper Arm (Bicep)
+    // Right Upper Arm (Bicep - Combat shirt sleeve)
     const rightUpperArm = new THREE.Mesh(upperArmGeo, uniformMat);
-    rightUpperArm.position.y = -0.16 * s;
+    rightUpperArm.position.y = -0.15 * s;
     this.rightArmGroup.add(rightUpperArm);
     this.registerMesh(rightUpperArm, uniformMat);
 
+    if (theme.rolledSleeves) {
+      const cuffGeo = new THREE.BoxGeometry(0.145 * s, 0.05 * s, 0.145 * s);
+      const rightCuff = new THREE.Mesh(cuffGeo, uniformMat);
+      rightCuff.position.y = -0.28 * s;
+      this.rightArmGroup.add(rightCuff);
+      this.registerMesh(rightCuff, uniformMat);
+    }
+
     // Right Forearm Group (Elbow pivot)
-    this.rightForearmGroup.position.set(0, -0.32 * s, 0);
+    this.rightForearmGroup.position.set(0, -0.30 * s, 0);
     this.rightArmGroup.add(this.rightForearmGroup);
 
-    const rightForearm = new THREE.Mesh(forearmGeo, uniformMat);
-    rightForearm.position.y = -0.14 * s;
+    const rightForearm = new THREE.Mesh(forearmGeo, forearmMat);
+    rightForearm.position.y = -0.13 * s;
     this.rightForearmGroup.add(rightForearm);
-    this.registerMesh(rightForearm, uniformMat);
+    this.registerMesh(rightForearm, forearmMat);
 
-    // Tactical Glove
-    const rightGlove = new THREE.Mesh(gloveGeo, jointMat);
+    // Tactical Combat Glove
+    const rightGlove = new THREE.Mesh(gloveGeo, gloveMat);
     rightGlove.position.y = -0.27 * s;
     this.rightForearmGroup.add(rightGlove);
-    this.registerMesh(rightGlove, jointMat);
+    this.registerMesh(rightGlove, gloveMat);
 
-    // Firearm attached to Right Hand
+    // Military Firearms attached to Right Hand
     if (theme.hasWeapon) {
       this.weaponMesh = new THREE.Group();
       this.rightForearmGroup.add(this.weaponMesh);
       this.weaponMesh.position.set(0, -0.28 * s, 0.22 * s);
 
       if (this.type === 'shield') {
-        // Compact Sidearm Pistol (used alongside riot shield)
-        const pistolGeo = new THREE.BoxGeometry(0.09 * s, 0.13 * s, 0.34 * s);
-        const pistol = new THREE.Mesh(pistolGeo, jointMat);
-        this.weaponMesh.add(pistol);
-        this.registerMesh(pistol, jointMat);
+        // Tactical 9mm Duty Pistol with under-barrel light
+        const frameGeo = new THREE.BoxGeometry(0.08 * s, 0.14 * s, 0.26 * s);
+        const pistolFrame = new THREE.Mesh(frameGeo, gunDetailMat);
+        this.weaponMesh.add(pistolFrame);
+        this.registerMesh(pistolFrame, gunDetailMat);
 
-        const slideGeo = new THREE.BoxGeometry(0.10 * s, 0.04 * s, 0.32 * s);
-        const slide = new THREE.Mesh(slideGeo, highlightMat);
-        slide.position.y = 0.07 * s;
-        this.weaponMesh.add(slide);
-        this.registerMesh(slide, highlightMat);
+        const slideGeo = new THREE.BoxGeometry(0.075 * s, 0.06 * s, 0.28 * s);
+        const pistolSlide = new THREE.Mesh(slideGeo, gunMat);
+        pistolSlide.position.y = 0.06 * s;
+        this.weaponMesh.add(pistolSlide);
+        this.registerMesh(pistolSlide, gunMat);
+
+        const lightGeo = new THREE.BoxGeometry(0.06 * s, 0.04 * s, 0.10 * s);
+        const tacLight = new THREE.Mesh(lightGeo, gunMat);
+        tacLight.position.set(0, -0.01 * s, 0.10 * s);
+        this.weaponMesh.add(tacLight);
+        this.registerMesh(tacLight, gunMat);
       } else if (this.type === 'fast') {
-        // Compact Machine Pistol / SMG
-        const smgGeo = new THREE.BoxGeometry(0.10 * s, 0.15 * s, 0.44 * s);
-        const smg = new THREE.Mesh(smgGeo, jointMat);
-        this.weaponMesh.add(smg);
-        this.registerMesh(smg, jointMat);
+        // Tactical Submachine Gun (SMG)
+        const receiverGeo = new THREE.BoxGeometry(0.10 * s, 0.14 * s, 0.44 * s);
+        const smgReceiver = new THREE.Mesh(receiverGeo, gunMat);
+        this.weaponMesh.add(smgReceiver);
+        this.registerMesh(smgReceiver, gunMat);
 
-        const trimGeo = new THREE.BoxGeometry(0.11 * s, 0.04 * s, 0.36 * s);
-        const trim = new THREE.Mesh(trimGeo, highlightMat);
-        trim.position.y = 0.07 * s;
-        this.weaponMesh.add(trim);
-        this.registerMesh(trim, highlightMat);
+        // Stick magazine
+        const magGeo = new THREE.BoxGeometry(0.06 * s, 0.18 * s, 0.08 * s);
+        const smgMag = new THREE.Mesh(magGeo, gunDetailMat);
+        smgMag.position.set(0, -0.12 * s, 0.04 * s);
+        this.weaponMesh.add(smgMag);
+        this.registerMesh(smgMag, gunDetailMat);
+
+        // Top optic red dot sight
+        const opticGeo = new THREE.BoxGeometry(0.06 * s, 0.05 * s, 0.12 * s);
+        const opticMesh = new THREE.Mesh(opticGeo, gunDetailMat);
+        opticMesh.position.set(0, 0.09 * s, -0.02 * s);
+        this.weaponMesh.add(opticMesh);
+        this.registerMesh(opticMesh, gunDetailMat);
       } else if (this.type === 'tank') {
-        // Heavy Minigun / Cannon
-        const cannonGeo = new THREE.BoxGeometry(0.18 * s, 0.22 * s, 0.82 * s);
-        const cannon = new THREE.Mesh(cannonGeo, jointMat);
-        this.weaponMesh.add(cannon);
-        this.registerMesh(cannon, jointMat);
+        // Heavy Squad Automatic Weapon / LMG
+        const receiverGeo = new THREE.BoxGeometry(0.16 * s, 0.20 * s, 0.78 * s);
+        const lmgReceiver = new THREE.Mesh(receiverGeo, gunMat);
+        this.weaponMesh.add(lmgReceiver);
+        this.registerMesh(lmgReceiver, gunMat);
 
-        const muzzleGeo = new THREE.CylinderGeometry(0.08 * s, 0.08 * s, 0.22 * s, 8);
-        muzzleGeo.rotateX(Math.PI / 2);
-        const muzzle = new THREE.Mesh(muzzleGeo, highlightMat);
-        muzzle.position.z = 0.45 * s;
-        this.weaponMesh.add(muzzle);
-        this.registerMesh(muzzle, highlightMat);
+        // Heavy fluted barrel with heat shroud
+        const barrelGeo = new THREE.CylinderGeometry(0.05 * s, 0.05 * s, 0.35 * s, 8);
+        barrelGeo.rotateX(Math.PI / 2);
+        const lmgBarrel = new THREE.Mesh(barrelGeo, gunMat);
+        lmgBarrel.position.z = 0.52 * s;
+        this.weaponMesh.add(lmgBarrel);
+        this.registerMesh(lmgBarrel, gunMat);
+
+        // High-capacity drum magazine
+        const drumGeo = new THREE.CylinderGeometry(0.12 * s, 0.12 * s, 0.14 * s, 12);
+        drumGeo.rotateZ(Math.PI / 2);
+        const lmgDrum = new THREE.Mesh(drumGeo, gunDetailMat);
+        lmgDrum.position.set(0, -0.16 * s, 0.05 * s);
+        this.weaponMesh.add(lmgDrum);
+        this.registerMesh(lmgDrum, gunDetailMat);
       } else if (this.type === 'ranged') {
-        // Long Marksman Sniper Rifle with Scope
-        const rifleGeo = new THREE.BoxGeometry(0.10 * s, 0.14 * s, 0.92 * s);
-        const rifle = new THREE.Mesh(rifleGeo, jointMat);
-        this.weaponMesh.add(rifle);
-        this.registerMesh(rifle, jointMat);
+        // Precision Bolt-Action / DMR Sniper Rifle
+        const receiverGeo = new THREE.BoxGeometry(0.10 * s, 0.13 * s, 0.65 * s);
+        const sniperReceiver = new THREE.Mesh(receiverGeo, gunMat);
+        this.weaponMesh.add(sniperReceiver);
+        this.registerMesh(sniperReceiver, gunMat);
 
-        const scopeGeo = new THREE.CylinderGeometry(0.04 * s, 0.04 * s, 0.25 * s, 8);
+        // Extended long precision barrel & muzzle brake
+        const barrelGeo = new THREE.CylinderGeometry(0.028 * s, 0.028 * s, 0.48 * s, 8);
+        barrelGeo.rotateX(Math.PI / 2);
+        const sniperBarrel = new THREE.Mesh(barrelGeo, gunMat);
+        sniperBarrel.position.z = 0.52 * s;
+        this.weaponMesh.add(sniperBarrel);
+        this.registerMesh(sniperBarrel, gunMat);
+
+        // High-power telescopic optical scope
+        const scopeGeo = new THREE.CylinderGeometry(0.042 * s, 0.042 * s, 0.32 * s, 8);
         scopeGeo.rotateX(Math.PI / 2);
-        const scope = new THREE.Mesh(scopeGeo, highlightMat);
-        scope.position.set(0, 0.10 * s, 0);
-        this.weaponMesh.add(scope);
-        this.registerMesh(scope, highlightMat);
+        const sniperScope = new THREE.Mesh(scopeGeo, gunDetailMat);
+        sniperScope.position.set(0, 0.11 * s, 0.04 * s);
+        this.weaponMesh.add(sniperScope);
+        this.registerMesh(sniperScope, gunDetailMat);
+
+        // Cheek rest stock
+        const stockGeo = new THREE.BoxGeometry(0.09 * s, 0.14 * s, 0.28 * s);
+        const sniperStock = new THREE.Mesh(stockGeo, gunDetailMat);
+        sniperStock.position.set(0, -0.02 * s, -0.42 * s);
+        this.weaponMesh.add(sniperStock);
+        this.registerMesh(sniperStock, gunDetailMat);
       } else {
-        // Standard Insurgent / Commando Assault Rifle
-        const receiverGeo = new THREE.BoxGeometry(0.12 * s, 0.16 * s, 0.65 * s);
-        const rifleMesh = new THREE.Mesh(receiverGeo, jointMat);
-        this.weaponMesh.add(rifleMesh);
-        this.registerMesh(rifleMesh, jointMat);
+        // Tactical Assault Rifle (Insurgent / Spec-Ops rifle)
+        const receiverGeo = new THREE.BoxGeometry(0.10 * s, 0.15 * s, 0.58 * s);
+        const rifleReceiver = new THREE.Mesh(receiverGeo, gunMat);
+        this.weaponMesh.add(rifleReceiver);
+        this.registerMesh(rifleReceiver, gunMat);
 
-        const trimGeo = new THREE.BoxGeometry(0.13 * s, 0.04 * s, 0.50 * s);
-        const trimMesh = new THREE.Mesh(trimGeo, highlightMat);
-        trimMesh.position.y = 0.08 * s;
-        this.weaponMesh.add(trimMesh);
-        this.registerMesh(trimMesh, highlightMat);
+        // Barrel & Flash Hider
+        const barrelGeo = new THREE.CylinderGeometry(0.03 * s, 0.03 * s, 0.28 * s, 8);
+        barrelGeo.rotateX(Math.PI / 2);
+        const rifleBarrel = new THREE.Mesh(barrelGeo, gunMat);
+        rifleBarrel.position.z = 0.42 * s;
+        this.weaponMesh.add(rifleBarrel);
+        this.registerMesh(rifleBarrel, gunMat);
 
-        const magGeo = new THREE.BoxGeometry(0.08 * s, 0.18 * s, 0.14 * s);
-        const magMesh = new THREE.Mesh(magGeo, jointMat);
-        magMesh.position.set(0, -0.14 * s, -0.05 * s);
-        this.weaponMesh.add(magMesh);
-        this.registerMesh(magMesh, jointMat);
+        // Curved 30-round STANAG magazine
+        const magGeo = new THREE.BoxGeometry(0.07 * s, 0.19 * s, 0.13 * s);
+        const rifleMag = new THREE.Mesh(magGeo, gunDetailMat);
+        rifleMag.position.set(0, -0.15 * s, 0.04 * s);
+        rifleMag.rotation.x = -0.15;
+        this.weaponMesh.add(rifleMag);
+        this.registerMesh(rifleMag, gunDetailMat);
+
+        // Buffer tube stock
+        const stockGeo = new THREE.BoxGeometry(0.08 * s, 0.12 * s, 0.22 * s);
+        const rifleStock = new THREE.Mesh(stockGeo, gunDetailMat);
+        rifleStock.position.set(0, 0, -0.36 * s);
+        this.weaponMesh.add(rifleStock);
+        this.registerMesh(rifleStock, gunDetailMat);
+
+        // Top picatinny optic sight
+        const opticGeo = new THREE.BoxGeometry(0.06 * s, 0.05 * s, 0.14 * s);
+        const rifleOptic = new THREE.Mesh(opticGeo, gunDetailMat);
+        rifleOptic.position.set(0, 0.10 * s, 0.02 * s);
+        this.weaponMesh.add(rifleOptic);
+        this.registerMesh(rifleOptic, gunDetailMat);
       }
 
       // Default Weapon Hold Pose
@@ -658,69 +1155,106 @@ export class Enemy {
     this.leftLegGroup.position.set(-0.16 * s, 0, 0);
     this.pelvis.add(this.leftLegGroup);
 
-    // Thigh (Upper Leg)
+    // Thigh (Tactical cargo pants)
     const thighGeo = new THREE.BoxGeometry(0.17 * s, 0.42 * s, 0.19 * s);
-    const leftThigh = new THREE.Mesh(thighGeo, uniformMat);
+    const leftThigh = new THREE.Mesh(thighGeo, pantsMat);
     leftThigh.position.y = -0.21 * s;
     this.leftLegGroup.add(leftThigh);
-    this.registerMesh(leftThigh, uniformMat);
+    this.registerMesh(leftThigh, pantsMat);
+
+    // Outer cargo pocket
+    const pocketGeo = new THREE.BoxGeometry(0.04 * s, 0.13 * s, 0.12 * s);
+    const leftPocket = new THREE.Mesh(pocketGeo, pantsMat);
+    leftPocket.position.set(-0.095 * s, -0.18 * s, 0);
+    this.leftLegGroup.add(leftPocket);
+    this.registerMesh(leftPocket, pantsMat);
 
     // Left Knee Group (Knee pivot)
     this.leftKneeGroup.position.set(0, -0.42 * s, 0);
     this.leftLegGroup.add(this.leftKneeGroup);
 
-    // Knee Armor Pad (Highlighted color)
-    const kneePadGeo = new THREE.BoxGeometry(0.16 * s, 0.12 * s, 0.08 * s);
-    const leftKneePad = new THREE.Mesh(kneePadGeo, highlightMat);
+    // Tactical Strapped Knee Pad
+    const kneePadGeo = new THREE.BoxGeometry(0.16 * s, 0.12 * s, 0.06 * s);
+    const leftKneePad = new THREE.Mesh(kneePadGeo, gearMat);
     leftKneePad.position.set(0, 0, 0.10 * s);
     this.leftKneeGroup.add(leftKneePad);
-    this.registerMesh(leftKneePad, highlightMat);
+    this.registerMesh(leftKneePad, gearMat);
 
-    // Shin / Calf (Lower Leg)
+    // Shin / Calf (Cargo pant leg tucked into combat boot)
     const shinGeo = new THREE.BoxGeometry(0.15 * s, 0.38 * s, 0.17 * s);
-    const leftShin = new THREE.Mesh(shinGeo, uniformMat);
+    const leftShin = new THREE.Mesh(shinGeo, pantsMat);
     leftShin.position.y = -0.19 * s;
     this.leftKneeGroup.add(leftShin);
-    this.registerMesh(leftShin, uniformMat);
+    this.registerMesh(leftShin, pantsMat);
 
-    // Combat Boot
-    const bootGeo = new THREE.BoxGeometry(0.17 * s, 0.14 * s, 0.28 * s);
-    const leftBoot = new THREE.Mesh(bootGeo, jointMat);
-    leftBoot.position.set(0, -0.40 * s, 0.04 * s);
-    this.leftKneeGroup.add(leftBoot);
-    this.registerMesh(leftBoot, jointMat);
+    // Combat Boot Ankle Collar & Foot Box
+    const bootUpperGeo = new THREE.BoxGeometry(0.16 * s, 0.16 * s, 0.20 * s);
+    const leftBootUpper = new THREE.Mesh(bootUpperGeo, bootMat);
+    leftBootUpper.position.set(0, -0.34 * s, 0.01 * s);
+    this.leftKneeGroup.add(leftBootUpper);
+    this.registerMesh(leftBootUpper, bootMat);
+
+    const bootToeGeo = new THREE.BoxGeometry(0.16 * s, 0.10 * s, 0.16 * s);
+    const leftBootToe = new THREE.Mesh(bootToeGeo, bootMat);
+    leftBootToe.position.set(0, -0.39 * s, 0.13 * s);
+    this.leftKneeGroup.add(leftBootToe);
+    this.registerMesh(leftBootToe, bootMat);
+
+    // Lugged Rubber Boot Sole
+    const soleGeo = new THREE.BoxGeometry(0.17 * s, 0.04 * s, 0.30 * s);
+    const leftSole = new THREE.Mesh(soleGeo, soleMat);
+    leftSole.position.set(0, -0.43 * s, 0.06 * s);
+    this.leftKneeGroup.add(leftSole);
+    this.registerMesh(leftSole, soleMat);
 
     // 7. Right Leg Group (Hip pivot at right bottom of pelvis)
     this.rightLegGroup.position.set(0.16 * s, 0, 0);
     this.pelvis.add(this.rightLegGroup);
 
-    // Thigh (Upper Leg)
-    const rightThigh = new THREE.Mesh(thighGeo, uniformMat);
+    // Thigh (Tactical cargo pants)
+    const rightThigh = new THREE.Mesh(thighGeo, pantsMat);
     rightThigh.position.y = -0.21 * s;
     this.rightLegGroup.add(rightThigh);
-    this.registerMesh(rightThigh, uniformMat);
+    this.registerMesh(rightThigh, pantsMat);
+
+    // Outer cargo pocket
+    const rightPocket = new THREE.Mesh(pocketGeo, pantsMat);
+    rightPocket.position.set(0.095 * s, -0.18 * s, 0);
+    this.rightLegGroup.add(rightPocket);
+    this.registerMesh(rightPocket, pantsMat);
 
     // Right Knee Group (Knee pivot)
     this.rightKneeGroup.position.set(0, -0.42 * s, 0);
     this.rightLegGroup.add(this.rightKneeGroup);
 
-    // Knee Armor Pad (Highlighted color)
-    const rightKneePad = new THREE.Mesh(kneePadGeo, highlightMat);
+    // Tactical Strapped Knee Pad
+    const rightKneePad = new THREE.Mesh(kneePadGeo, gearMat);
     rightKneePad.position.set(0, 0, 0.10 * s);
     this.rightKneeGroup.add(rightKneePad);
-    this.registerMesh(rightKneePad, highlightMat);
+    this.registerMesh(rightKneePad, gearMat);
 
-    // Shin / Calf (Lower Leg)
-    const rightShin = new THREE.Mesh(shinGeo, uniformMat);
+    // Shin / Calf
+    const rightShin = new THREE.Mesh(shinGeo, pantsMat);
     rightShin.position.y = -0.19 * s;
     this.rightKneeGroup.add(rightShin);
-    this.registerMesh(rightShin, uniformMat);
+    this.registerMesh(rightShin, pantsMat);
 
-    // Combat Boot
-    const rightBoot = new THREE.Mesh(bootGeo, jointMat);
-    rightBoot.position.set(0, -0.40 * s, 0.04 * s);
-    this.rightKneeGroup.add(rightBoot);
-    this.registerMesh(rightBoot, jointMat);
+    // Combat Boot Ankle Collar & Foot Box
+    const rightBootUpper = new THREE.Mesh(bootUpperGeo, bootMat);
+    rightBootUpper.position.set(0, -0.34 * s, 0.01 * s);
+    this.rightKneeGroup.add(rightBootUpper);
+    this.registerMesh(rightBootUpper, bootMat);
+
+    const rightBootToe = new THREE.Mesh(bootToeGeo, bootMat);
+    rightBootToe.position.set(0, -0.39 * s, 0.13 * s);
+    this.rightKneeGroup.add(rightBootToe);
+    this.registerMesh(rightBootToe, bootMat);
+
+    // Lugged Rubber Boot Sole
+    const rightSole = new THREE.Mesh(soleGeo, soleMat);
+    rightSole.position.set(0, -0.43 * s, 0.06 * s);
+    this.rightKneeGroup.add(rightSole);
+    this.registerMesh(rightSole, soleMat);
   }
 
   public updateHealthBar() {
