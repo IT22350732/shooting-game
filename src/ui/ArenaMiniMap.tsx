@@ -116,7 +116,7 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        border: '1px solid rgba(2, 132, 199, 0.28)',
+        border: '1px solid rgba(34, 197, 94, 0.35)',
         boxShadow: '0 10px 30px rgba(15, 23, 42, 0.10), 0 1px 3px rgba(15, 23, 42, 0.05)',
         background: 'rgba(255, 255, 255, 0.88)',
         backdropFilter: 'blur(20px)',
@@ -134,17 +134,17 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
           justifyContent: 'space-between',
           padding: isMobile ? '4px 8px' : '6px 12px',
           background: 'rgba(248, 250, 252, 0.94)',
-          borderBottom: '1px solid rgba(2, 132, 199, 0.18)'
+          borderBottom: '1px solid rgba(34, 197, 94, 0.20)'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <Radio size={isMobile ? 12 : 14} color="#0284c7" className="pulse-glow" />
+          <Radio size={isMobile ? 12 : 14} color="#16a34a" className="pulse-glow" />
           <span
             style={{
               fontSize: isMobile ? '0.62rem' : '0.72rem',
               fontWeight: 900,
               letterSpacing: 0.8,
-              color: '#0284c7',
+              color: '#15803d',
               textTransform: 'uppercase'
             }}
           >
@@ -181,13 +181,13 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
         </div>
       </div>
 
-      {/* MAP SVG DISPLAY (CLEAN LIGHT CANVAS) */}
+      {/* MAP SVG DISPLAY (CLEAN LIGHT CANVAS WITH LIGHT GREEN FLOOR) */}
       <div
         style={{
           position: 'relative',
           width: mapWidth,
           height: mapHeight,
-          background: 'radial-gradient(ellipse at center, #ffffff 0%, #f1f5f9 100%)',
+          background: 'radial-gradient(ellipse at center, #f0fdf4 0%, #dcfce7 100%)',
           overflow: 'hidden'
         }}
       >
@@ -198,10 +198,16 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
           style={{ width: '100%', height: '100%', display: 'block' }}
         >
           <defs>
+            {/* Light Green Arena Floor Pattern */}
+            <pattern id="arenaFloorPattern" width="16" height="16" patternUnits="userSpaceOnUse">
+              <rect width="16" height="16" fill="#ecfdf5" />
+              <path d="M 16 0 L 0 0 0 16" fill="none" stroke="rgba(34, 197, 94, 0.14)" strokeWidth="0.8" />
+            </pattern>
+
             {/* Subtle light radar sweep gradient */}
             <linearGradient id="arenaRadarSweepLight" x1="0" y1="1" x2="0" y2="0">
-              <stop offset="0%" stopColor="rgba(2, 132, 199, 0)" />
-              <stop offset="100%" stopColor="rgba(2, 132, 199, 0.3)" />
+              <stop offset="0%" stopColor="rgba(34, 197, 94, 0)" />
+              <stop offset="100%" stopColor="rgba(34, 197, 94, 0.28)" />
             </linearGradient>
 
             {/* Player Vision Cone Gradient */}
@@ -213,24 +219,49 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
 
           {/* ROTATING WORLD CONTAINER (Heading-Up mode aligned with player's gaze) */}
           <g transform={`rotate(${mapRotDeg} ${cx} ${cy})`}>
-            {/* Tactical Grid Background (Light cyan) - Spans full rotated box */}
-            <g opacity="0.12">
+            {/* Arena Floor (Light Green Terrain with Outer Perimeter Boundary) */}
+            {(() => {
+              const half = arenaSize / 2;
+              const p1 = worldToSvg(-half, -half);
+              const p2 = worldToSvg(half, -half);
+              const p3 = worldToSvg(half, half);
+              const p4 = worldToSvg(-half, half);
+              return (
+                <g>
+                  {/* Light Green Arena Floor Slab */}
+                  <polygon
+                    points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
+                    fill="url(#arenaFloorPattern)"
+                    stroke="#86efac"
+                    strokeWidth="1.6"
+                  />
+                  {/* Outer Perimeter Wall Boundary Border */}
+                  <polygon
+                    points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
+                    fill="none"
+                    stroke="#22c55e"
+                    strokeWidth="2.5"
+                    strokeDasharray="6,3"
+                    opacity="0.85"
+                  />
+                </g>
+              );
+            })()}
+
+            {/* Tactical Grid Background (Light green) - Spans full rotated box */}
+            <g opacity="0.15">
               {[-120, -90, -60, -30, 0, 30, 60, 90, 120].map((coord) => {
                 const s = worldToSvg(coord, coord);
                 return (
                   <React.Fragment key={coord}>
-                    <line x1={s.x} y1={-150} x2={s.x} y2={mapHeight + 150} stroke="#0284c7" strokeWidth="0.8" strokeDasharray="3,4" />
-                    <line x1={-150} y1={s.y} x2={mapWidth + 150} y2={s.y} stroke="#0284c7" strokeWidth="0.8" strokeDasharray="3,4" />
+                    <line x1={s.x} y1={-150} x2={s.x} y2={mapHeight + 150} stroke="#16a34a" strokeWidth="0.8" strokeDasharray="3,4" />
+                    <line x1={-150} y1={s.y} x2={mapWidth + 150} y2={s.y} stroke="#16a34a" strokeWidth="0.8" strokeDasharray="3,4" />
                   </React.Fragment>
                 );
               })}
             </g>
 
-            {/* Concentric Range Rings (25m and 50m tactical distance) */}
-            <circle cx={cx} cy={cy} r={25 * scale} fill="none" stroke="rgba(2, 132, 199, 0.16)" strokeWidth="0.8" strokeDasharray="2,3" />
-            <circle cx={cx} cy={cy} r={50 * scale} fill="none" stroke="rgba(2, 132, 199, 0.22)" strokeWidth="1" strokeDasharray="4,4" />
-
-            {/* Roads & Avenues (Light gray with subtle yellow dash) - Spans full screen across map box */}
+            {/* Roads & Avenues (Clean off-white with yellow dashed centerlines) */}
             {(() => {
               const roadW = 8;
               const extent = Math.max(arenaSize, 180);
@@ -239,12 +270,12 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
               const rLeft = worldToSvg(-extent, 0);
               const rRight = worldToSvg(extent, 0);
               return (
-                <g opacity="0.6">
-                  <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#e2e8f0" strokeWidth={roadW * scale} />
-                  <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#e2e8f0" strokeWidth={roadW * scale} />
+                <g opacity="0.75">
+                  <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f1f5f9" strokeWidth={roadW * scale} />
+                  <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f1f5f9" strokeWidth={roadW * scale} />
                   {/* Yellow centerlines */}
-                  <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.75" />
-                  <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.75" />
+                  <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.8" />
+                  <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.8" />
                 </g>
               );
             })()}
@@ -364,7 +395,7 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
             />
           </g>
 
-          {/* PLAYER MARKER (Accurate Directional Vision Cone & Pointer Arrow) */}
+          {/* PLAYER MARKER (Accurate Directional Vision Cone & Pointer Arrow - No Radius Circle) */}
           <g transform={`translate(${cx}, ${cy})`}>
             {/* Forward Vision Flashlight Arc */}
             <path
@@ -373,9 +404,6 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
               stroke="rgba(2, 132, 199, 0.25)"
               strokeWidth="0.6"
             />
-
-            {/* Player Aura Ring */}
-            <circle cx={0} cy={0} r={5.5} fill="rgba(2, 132, 199, 0.25)" />
 
             {/* Player Directional Arrow */}
             <polygon
