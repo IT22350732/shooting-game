@@ -1332,6 +1332,8 @@ export class Enemy {
       const obs = obstacles[i];
       // Skip stair ramps and floor slabs: they should never block line of sight!
       if (obs.stairRamp || obs.isFloor) continue;
+      // Skip transparent ballistic glass walls so enemies have clear visual tracking through glass
+      if (obs.isGlass) continue;
       // Skip waist-high cover obstacles so enemies can shoot over low crates, fences and car hoods
       if (obs.isCover && obs.box.max.y < 1.35) continue;
 

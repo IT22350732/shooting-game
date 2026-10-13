@@ -29,6 +29,7 @@ export interface ArenaObstacle {
   ceilingY?: number;
   stairRamp?: StairRamp;
   floorPlane?: FloorPlane;
+  isGlass?: boolean;
 }
 
 export interface InteriorZone {
@@ -1408,12 +1409,14 @@ export class ArenaManager {
     const steelMat = new THREE.MeshStandardMaterial({
       color: steelColor,
       roughness: 0.5,
-      metalness: 0.8
+      metalness: 0.8,
+      side: THREE.DoubleSide
     });
     const accentMat = new THREE.MeshStandardMaterial({
       color: accentColor,
       roughness: 0.3,
-      metalness: 0.7
+      metalness: 0.7,
+      side: THREE.DoubleSide
     });
 
     // 1. ELEVATED DECK SLAB (THE "UPFLOOR")
@@ -1606,17 +1609,20 @@ export class ArenaManager {
 
     group.add(stairGroup);
 
-    // 4. PERIMETER BALLISTIC SAFETY GUARDRAILS (WITH 100% UNBLOCKABLE STAIRWAY ENTRANCE)
-    const railH = 1.10;
-    const postGeo = new THREE.BoxGeometry(0.08, railH, 0.08);
+    // 4. PERIMETER BALLISTIC SAFETY WALLS (WITH 100% UNBLOCKABLE STAIRWAY ENTRANCE)
+    // Fortified architectural perimeter walls: stops player from clipping or passing through, zero graphic issues.
+    const railH = 1.45;
+    const postGeo = new THREE.BoxGeometry(0.12, railH, 0.12);
     const railMeshGroup = new THREE.Group();
+    group.add(railMeshGroup); // Attached immediately to group hierarchy so all matrix transforms are preserved!
 
     const glassMat = new THREE.MeshStandardMaterial({
       color: glassColor,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.55,
       roughness: 0.1,
-      metalness: 0.85
+      metalness: 0.85,
+      side: THREE.DoubleSide
     });
 
     const createSingleRailing = (
@@ -1629,57 +1635,116 @@ export class ArenaManager {
       seg.position.set(posX, h, posZ);
       if (rotAngle) seg.rotation.y = rotAngle;
 
-      // Ballistic glass panel
-      const glassGeo = new THREE.BoxGeometry(length - 0.08, railH - 0.15, 0.04);
-      const glass = new THREE.Mesh(glassGeo, glassMat);
-      glass.position.y = railH / 2;
-      seg.add(glass);
-
-      // Steel top rail
-      const topBarGeo = new THREE.BoxGeometry(length, 0.06, 0.06);
-      const topBar = new THREE.Mesh(topBarGeo, steelMat);
-      topBar.position.y = railH;
-      seg.add(topBar);
-
-      // Kickplate
-      const kickGeo = new THREE.BoxGeometry(length, 0.12, 0.03);
+      // Heavy industrial kickplate & base curb (height 0.28m, thickness 0.10m)
+      const kickH = 0.28;
+      const kickThick = 0.10;
+      const kickGeo = new THREE.BoxGeometry(length, kickH, kickThick);
       const kick = new THREE.Mesh(kickGeo, steelMat);
-      kick.position.y = 0.06;
+      kick.position.y = kickH / 2;
+      kick.castShadow = true;
+      kick.receiveShadow = true;
       seg.add(kick);
 
-      // Posts at ends
-      [-length / 2, length / 2].forEach((px) => {
+      // Warning hazard nosing trim above base curb
+      const kickTrimGeo = new THREE.BoxGeometry(length, 0.03, kickThick + 0.02);
+      const kickTrim = new THREE.Mesh(kickTrimGeo, accentMat);
+      kickTrim.position.y = kickH + 0.015;
+      seg.add(kickTrim);
+
+      // High-strength ballistic glass panel (double-sided, clear tactical sightlines)
+      const glassH = railH - kickH - 0.12;
+      const glassThick = 0.04;
+      const glassGeo = new THREE.BoxGeometry(length - 0.08, glassH, glassThick);
+      const glass = new THREE.Mesh(glassGeo, glassMat);
+      glass.position.y = kickH + 0.03 + glassH / 2;
+      seg.add(glass);
+
+      // Mid-height structural reinforcement crossbar
+      const midBarGeo = new THREE.BoxGeometry(length, 0.05, 0.08);
+      const midBar = new THREE.Mesh(midBarGeo, steelMat);
+      midBar.position.y = kickH + glassH * 0.5;
+      seg.add(midBar);
+
+      // Heavy structural top coping rail with safety chamfer
+      const topBarGeo = new THREE.BoxGeometry(length, 0.08, 0.12);
+      const topBar = new THREE.Mesh(topBarGeo, steelMat);
+      topBar.position.y = railH - 0.04;
+      topBar.castShadow = true;
+      seg.add(topBar);
+
+      // Hazard safety strip on top rail surface
+      const topAccentGeo = new THREE.BoxGeometry(length, 0.02, 0.06);
+      const topAccent = new THREE.Mesh(topAccentGeo, accentMat);
+      topAccent.position.y = railH + 0.01;
+      seg.add(topAccent);
+
+      // Vertical structural support posts (at ends and intermediate stanchions every ~1.6m)
+      const numSegments = Math.max(1, Math.round(length / 1.6));
+      for (let s = 0; s <= numSegments; s++) {
+        const px = -length / 2 + (s / numSegments) * length;
         const post = new THREE.Mesh(postGeo, steelMat);
         post.position.set(px, railH / 2, 0);
+        post.castShadow = true;
+        post.receiveShadow = true;
         seg.add(post);
-      });
+      }
+
+      // Invisible solid physical barrier collider mesh:
+      // Depth = 0.38m (generous physical thickness prevents any tunneling)
+      // Height = 3.6m (extends from deck y=0 to y=3.6m so players cannot jump over or through)
+      const barrierGeo = new THREE.BoxGeometry(length, 3.6, 0.38);
+      const barrierMat = new THREE.MeshBasicMaterial({ visible: false });
+      const barrierMesh = new THREE.Mesh(barrierGeo, barrierMat);
+      barrierMesh.position.set(0, 1.8, 0);
+      seg.add(barrierMesh);
 
       railMeshGroup.add(seg);
 
-      // Register individual Box3 obstacle ONLY for this specific solid rail segment
-      group.updateMatrixWorld(true);
+      // Compute precise world-space AABB obstacle with active arena transforms
+      this.arenaGroup.updateMatrixWorld(true);
       const segBox = new THREE.Box3().setFromObject(seg);
       this.obstacles.push({
         mesh: seg,
         box: segBox,
-        isCover: true
+        isCover: false,
+        isGlass: true
       });
     };
 
-    // A. Back Railing (full width -Z)
+    // A. Back Wall (full width -Z)
     createSingleRailing(w, 0, -d / 2);
 
-    // B. Left Railing (full depth -X)
+    // B. Left Wall (full depth -X)
     createSingleRailing(d, -w / 2, 0, Math.PI / 2);
 
-    // C. Right Railing (full depth +X)
+    // C. Right Wall (full depth +X)
     createSingleRailing(d, w / 2, 0, Math.PI / 2);
 
-    // D. Front Railing (ONLY covers left section, leaving stair doorway 100% open on right!)
+    // D. Front Wall (covers left section, leaving stair doorway open on right!)
     if (frontRailSpan > 0.4) {
       createSingleRailing(frontRailSpan, -w / 2 + frontRailSpan / 2, d / 2);
     }
-    group.add(railMeshGroup);
+
+    // Corner junction posts (heavy reinforced square columns at outer corners)
+    const cornerPillarGeo = new THREE.BoxGeometry(0.18, railH + 0.08, 0.18);
+    const cornerCapGeo = new THREE.BoxGeometry(0.22, 0.04, 0.22);
+    const addCornerColumn = (cx: number, cz: number) => {
+      const col = new THREE.Mesh(cornerPillarGeo, steelMat);
+      col.position.set(cx, h + (railH + 0.08) / 2, cz);
+      col.castShadow = true;
+      col.receiveShadow = true;
+      group.add(col);
+
+      const cap = new THREE.Mesh(cornerCapGeo, accentMat);
+      cap.position.set(cx, h + railH + 0.08 + 0.02, cz);
+      group.add(cap);
+    };
+
+    addCornerColumn(-w / 2, -d / 2);
+    addCornerColumn(w / 2, -d / 2);
+    addCornerColumn(-w / 2, d / 2);
+    addCornerColumn(w / 2 - stairW, d / 2); // Left entrance post of stairs
+    addCornerColumn(w / 2, d / 2); // Right entrance post of stairs
     // NOTICE: Front-Right (+Z from w/2 - stairW to w/2) HAS ZERO OBSTACLES! Player walks straight in!
 
     // 5. UPFLOOR TACTICAL PERKS: SNIPER COVER, FLOODLIGHT, COMMS MAST
@@ -2197,15 +2262,23 @@ export class ArenaManager {
       beacon.position.set(0, wallH + 0.2 + towerH + 6.1, 0);
       group.add(beacon);
     } else {
-      // Flat roof with parapet railing + AC unit
-      const parapetGeo = new THREE.BoxGeometry(w + 0.3, 0.6, 0.2);
-      const parapetMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6 });
+      // Flat roof with complete perimeter parapet railing walls + AC unit
+      const parapetGeo = new THREE.BoxGeometry(w + 0.3, 0.7, 0.25);
+      const parapetMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6, side: THREE.DoubleSide });
       const pFront = new THREE.Mesh(parapetGeo, parapetMat);
-      pFront.position.set(0, wallH + 0.5, d / 2);
+      pFront.position.set(0, wallH + 0.55, d / 2);
       group.add(pFront);
       const pBack = new THREE.Mesh(parapetGeo, parapetMat);
-      pBack.position.set(0, wallH + 0.5, -d / 2);
+      pBack.position.set(0, wallH + 0.55, -d / 2);
       group.add(pBack);
+
+      const pSideGeo = new THREE.BoxGeometry(0.25, 0.7, d + 0.3);
+      const pLeft = new THREE.Mesh(pSideGeo, parapetMat);
+      pLeft.position.set(-w / 2, wallH + 0.55, 0);
+      group.add(pLeft);
+      const pRight = new THREE.Mesh(pSideGeo, parapetMat);
+      pRight.position.set(w / 2, wallH + 0.55, 0);
+      group.add(pRight);
 
       // Rooftop AC unit
       const acGeo = new THREE.BoxGeometry(2.0, 1.2, 1.8);
@@ -2230,6 +2303,12 @@ export class ArenaManager {
           topY: roofBaseY
         }
       });
+
+      // Register perimeter parapet wall obstacles
+      for (const pMesh of [pFront, pBack, pLeft, pRight]) {
+        const pBox = new THREE.Box3().setFromObject(pMesh);
+        this.obstacles.push({ mesh: pMesh, box: pBox, isCover: true });
+      }
 
       const acBox = new THREE.Box3().setFromObject(ac);
       this.obstacles.push({ mesh: ac, box: acBox, isCover: true });

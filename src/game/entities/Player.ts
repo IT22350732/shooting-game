@@ -330,7 +330,7 @@ export class Player {
 
     // Check landing on top of waist-high cover obstacles, stair ramps, or elevated upfloor slabs
     let groundY = this.eyeHeight;
-    const searchDist = 4.5;
+    const searchDist = 7.0;
 
     const nearby = Player._nearbyObstacles;
     nearby.length = 0;
@@ -497,10 +497,9 @@ export class Player {
         // Stairs guide player smoothly via stairRamp, and floor slabs are walkable decks (never lateral walls!)
         if (obs.stairRamp || obs.isFloor) continue;
 
-        // Skip horizontal blocking if standing safely on top or obstacle is above head
-        if (newPos.y > obs.box.max.y + this.eyeHeight - 0.05) continue;
-        if (obs.box.max.y <= feetY + 0.05) continue;
-        if (obs.box.min.y >= newPos.y + 0.1) continue;
+        // Skip horizontal blocking if player is entirely above or entirely below obstacle
+        if (obs.box.max.y <= feetY + 0.05) continue; // Obstacle is beneath player feet (standing on top or jumped clear)
+        if (obs.box.min.y >= newPos.y + 0.15) continue; // Obstacle is above player head (underneath arch/ceiling)
 
         const clampX = THREE.MathUtils.clamp(newPos.x, obs.box.min.x, obs.box.max.x);
         const clampZ = THREE.MathUtils.clamp(newPos.z, obs.box.min.z, obs.box.max.z);
