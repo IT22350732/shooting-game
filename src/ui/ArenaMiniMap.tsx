@@ -45,28 +45,37 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
     return () => cancelAnimationFrame(animId);
   }, []);
 
-  // Dimensions: 1:1 square display so full arena (130x130m) maps without distortion
+  // Dimensions
   const mapWidth = isMobile ? 175 : 250;
-  const mapHeight = isMobile ? 175 : 250;
+  const mapHeight = isMobile ? 140 : 185;
   const cx = mapWidth / 2;
   const cy = mapHeight / 2;
+  const maxBoxDiagonal = Math.hypot(mapWidth, mapHeight);
 
-  // Margin padding for perimeter wall outline
-  const pad = 4;
-  const innerDim = mapWidth - pad * 2;
-  const half = arenaSize / 2;
-  const scale = innerDim / arenaSize;
+  // Tactical view range: distance from center to vertical bounds (~54m)
+  const viewRange = 54;
+  const scale = cy / viewRange;
 
   // Active enemies count
   const enemyCount = useMemo(() => {
     return pings.filter((p) => p.type === 'enemy' || p.type === 'boss').length;
   }, [pings]);
 
-  // World to SVG Coordinate Conversion (North-Up Full Map: West->East = X, North->South = -Z->+Z)
+  // Heading-Up dynamic rotation: aligns world with player's gaze so forward/going direction is always UP
+  const mapRotDeg = (playerYaw * 180) / Math.PI;
+
+  // World to SVG Coordinate Conversion (centered on player position)
   const worldToSvg = (wx: number, wz: number): { x: number; y: number; isVisible: boolean } => {
-    const sx = pad + (wx + half) * scale;
-    const sy = pad + (wz + half) * scale;
-    const isVisible = sx >= 0 && sx <= mapWidth && sy >= 0 && sy <= mapHeight;
+    const dx = wx - playerPos.x;
+    const dz = wz - playerPos.z;
+
+    const sx = cx + dx * scale;
+    const sy = cy + dz * scale; // in 3D: -Z is North (up), +Z is South (down)
+
+    const distMeters = Math.hypot(dx, dz);
+    const maxVisibleMeters = (maxBoxDiagonal / 2 + 50) / scale;
+    const isVisible = distMeters <= maxVisibleMeters;
+
     return { x: sx, y: sy, isVisible };
   };
 
@@ -97,6 +106,18 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
 
     return pts.join(' ');
   };
+
+  // Cardinal compass points orbiting dynamically with heading
+  const cardinals = [
+    { label: 'N', baseAngle: 0, color: '#0284c7' },
+    { label: 'E', baseAngle: 90, color: '#64748b' },
+    { label: 'S', baseAngle: 180, color: '#64748b' },
+    { label: 'W', baseAngle: 270, color: '#64748b' }
+  ];
+
+  // Extended terrain dimensions to cover entire rotated view with no black borders
+  const terrainExtent = maxBoxDiagonal + 60;
+  const half = arenaSize / 2;
 
   return (
     <div
@@ -172,7 +193,7 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
         </div>
       </div>
 
-      {/* FULL ARENA MAP DISPLAY (CLEAN LIGHT THEME - FILLS ENTIRE MAP BOX) */}
+      {/* MAP SVG DISPLAY (CLEAN LIGHT THEME - STRICTLY NO BLACK VOIDS) */}
       <div
         style={{
           position: 'relative',
@@ -189,11 +210,6 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
           style={{ width: '100%', height: '100%', display: 'block' }}
         >
           <defs>
-            {/* Playable Area Clip: strictly inside perimeter walls */}
-            <clipPath id="arenaPlayableAreaClip">
-              <rect x={pad} y={pad} width={innerDim} height={innerDim} rx={3} ry={3} />
-            </clipPath>
-
             {/* Light Green Arena Floor Pattern */}
             <pattern id="arenaFloorPattern" width="16" height="16" patternUnits="userSpaceOnUse">
               <rect width="16" height="16" fill="#ecfdf5" />
@@ -213,43 +229,80 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
             </radialGradient>
           </defs>
 
-          {/* Arena Floor (Full map fills the box) */}
-          <rect x={pad} y={pad} width={innerDim} height={innerDim} fill="#dcfce7" />
-          <rect x={pad} y={pad} width={innerDim} height={innerDim} fill="url(#arenaFloorPattern)" />
+          {/* DYNAMIC ROTATING WORLD CONTAINER (Heading-Up mode aligned with player's gaze) */}
+          <g transform={`rotate(${mapRotDeg} ${cx} ${cy})`}>
+            {/* Full-coverage arena terrain (eliminates any black corners completely) */}
+            <rect
+              x={cx - terrainExtent}
+              y={cy - terrainExtent}
+              width={terrainExtent * 2}
+              height={terrainExtent * 2}
+              fill="#dcfce7"
+            />
+            <rect
+              x={cx - terrainExtent}
+              y={cy - terrainExtent}
+              width={terrainExtent * 2}
+              height={terrainExtent * 2}
+              fill="url(#arenaFloorPattern)"
+            />
 
-          {/* Tactical Grid Background */}
-          <g opacity="0.18" clipPath="url(#arenaPlayableAreaClip)">
-            {[-45, -30, -15, 0, 15, 30, 45].map((coord) => {
-              const s = worldToSvg(coord, coord);
+            {/* Tactical Grid Background */}
+            <g opacity="0.16">
+              {[-90, -60, -30, 0, 30, 60, 90].map((coord) => {
+                const s = worldToSvg(coord, coord);
+                return (
+                  <React.Fragment key={coord}>
+                    <line x1={s.x} y1={cy - terrainExtent} x2={s.x} y2={cy + terrainExtent} stroke="#16a34a" strokeWidth="0.8" strokeDasharray="3,4" />
+                    <line x1={cx - terrainExtent} y1={s.y} x2={cx + terrainExtent} y2={s.y} stroke="#16a34a" strokeWidth="0.8" strokeDasharray="3,4" />
+                  </React.Fragment>
+                );
+              })}
+            </g>
+
+            {/* Arena Floor Slab & Perimeter Wall */}
+            {(() => {
+              const p1 = worldToSvg(-half, -half);
+              const p2 = worldToSvg(half, -half);
+              const p3 = worldToSvg(half, half);
+              const p4 = worldToSvg(-half, half);
               return (
-                <React.Fragment key={coord}>
-                  <line x1={s.x} y1={pad} x2={s.x} y2={pad + innerDim} stroke="#16a34a" strokeWidth="0.8" strokeDasharray="3,4" />
-                  <line x1={pad} y1={s.y} x2={pad + innerDim} y2={s.y} stroke="#16a34a" strokeWidth="0.8" strokeDasharray="3,4" />
-                </React.Fragment>
+                <g>
+                  {/* Subtle highlight for inner playable arena */}
+                  <polygon
+                    points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
+                    fill="rgba(255, 255, 255, 0.22)"
+                  />
+                  {/* Solid perimeter wall border enclosing playable area */}
+                  <polygon
+                    points={`${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y} ${p4.x},${p4.y}`}
+                    fill="none"
+                    stroke="#334155"
+                    strokeWidth="2.8"
+                  />
+                </g>
               );
-            })}
-          </g>
+            })()}
 
-          {/* Roads & Avenues (Wall-to-wall clean thoroughfares) */}
-          {(() => {
-            const roadW = 8;
-            const rTop = worldToSvg(0, -half);
-            const rBottom = worldToSvg(0, half);
-            const rLeft = worldToSvg(-half, 0);
-            const rRight = worldToSvg(half, 0);
-            return (
-              <g opacity="0.85" clipPath="url(#arenaPlayableAreaClip)">
-                <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f1f5f9" strokeWidth={roadW * scale} />
-                <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f1f5f9" strokeWidth={roadW * scale} />
-                {/* Yellow centerlines */}
-                <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.85" />
-                <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.85" />
-              </g>
-            );
-          })()}
+            {/* Roads & Avenues (Clean thoroughfares) */}
+            {(() => {
+              const roadW = 8;
+              const rTop = worldToSvg(0, -half);
+              const rBottom = worldToSvg(0, half);
+              const rLeft = worldToSvg(-half, 0);
+              const rRight = worldToSvg(half, 0);
+              return (
+                <g opacity="0.85">
+                  <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f1f5f9" strokeWidth={roadW * scale} />
+                  <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f1f5f9" strokeWidth={roadW * scale} />
+                  {/* Yellow centerlines */}
+                  <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.85" />
+                  <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.85" />
+                </g>
+              );
+            })()}
 
-          {/* Enterable Buildings (Clean light fill with crisp cyan outline) */}
-          <g clipPath="url(#arenaPlayableAreaClip)">
+            {/* Enterable Buildings (Clean light fill with crisp cyan outline) */}
             {buildings.map((b) => {
               const polyPts = getBuildingPolygon(b);
               const centerSvg = worldToSvg(b.x, b.z);
@@ -277,11 +330,12 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
                     />
                   )}
 
-                  {/* Building Label */}
+                  {/* Building Label (counter-rotated so text stays upright and readable) */}
                   {centerSvg.isVisible && (
                     <text
                       x={centerSvg.x}
                       y={centerSvg.y + 3}
+                      transform={`rotate(${-mapRotDeg} ${centerSvg.x} ${centerSvg.y + 3})`}
                       fill="#334155"
                       fontSize={isMobile ? '6.5' : '7.5'}
                       fontWeight="900"
@@ -294,49 +348,8 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
                 </g>
               );
             })}
-          </g>
 
-          {/* Radar Scanning Sweep Beam - Sweeps across full arena */}
-          <g transform={`rotate(${sweepAngle} ${cx} ${cy})`} clipPath="url(#arenaPlayableAreaClip)">
-            <line
-              x1={cx}
-              y1={cy}
-              x2={cx}
-              y2={cy - Math.hypot(cx, cy)}
-              stroke="url(#arenaRadarSweepLight)"
-              strokeWidth="2.5"
-            />
-          </g>
-
-          {/* SOLID PERIMETER BOUNDARY WALL (Neat border enclosing full map) */}
-          <rect
-            x={pad}
-            y={pad}
-            width={innerDim}
-            height={innerDim}
-            fill="none"
-            stroke="#334155"
-            strokeWidth="2.5"
-            rx={3}
-            ry={3}
-          />
-
-          {/* CARDINAL COMPASS HEADINGS (N, S, E, W) */}
-          <text x={cx} y={pad + 9} fill="#0284c7" fontSize="7.5" fontWeight="900" textAnchor="middle" opacity="0.85">
-            N
-          </text>
-          <text x={cx} y={pad + innerDim - 3} fill="#64748b" fontSize="7" fontWeight="900" textAnchor="middle" opacity="0.6">
-            S
-          </text>
-          <text x={pad + innerDim - 6} y={cy + 2.5} fill="#64748b" fontSize="7" fontWeight="900" textAnchor="middle" opacity="0.6">
-            E
-          </text>
-          <text x={pad + 6} y={cy + 2.5} fill="#64748b" fontSize="7" fontWeight="900" textAnchor="middle" opacity="0.6">
-            W
-          </text>
-
-          {/* ENEMIES & COMBATANTS (All enemies across the arena) */}
-          <g clipPath="url(#arenaPlayableAreaClip)">
+            {/* ENEMIES & COMBATANTS (All enemies oriented with player heading) */}
             {pings.map((ping) => {
               const svg = worldToSvg(ping.x, ping.z);
               if (!svg.isVisible) return null;
@@ -361,6 +374,7 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
                     <text
                       x={svg.x}
                       y={svg.y - 8}
+                      transform={`rotate(${-mapRotDeg} ${svg.x} ${svg.y - 8})`}
                       fill="#d97706"
                       fontSize="7"
                       fontWeight="900"
@@ -391,36 +405,68 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
             })}
           </g>
 
-          {/* PLAYER MARKER (Accurate Directional Vision Cone & Pointer Arrow) */}
-          {(() => {
-            const pSvg = worldToSvg(playerPos.x, playerPos.z);
-            // In North-Up full map, Three.js player yaw maps: 0 = North (Up, 0 deg in SVG),
-            // turning right decreases yaw -> positive clockwise in SVG.
-            const playerAngleDeg = (-playerYaw * 180) / Math.PI;
+          {/* Radar Scanning Sweep Beam */}
+          <g transform={`rotate(${sweepAngle} ${cx} ${cy})`}>
+            <line
+              x1={cx}
+              y1={cy}
+              x2={cx}
+              y2={cy - maxBoxDiagonal}
+              stroke="url(#arenaRadarSweepLight)"
+              strokeWidth="2.5"
+            />
+          </g>
+
+          {/* PLAYER MARKER: Centered & facing the user's forward going direction (always straight UP) */}
+          <g transform={`translate(${cx}, ${cy})`}>
+            {/* Forward Vision Flashlight Arc */}
+            <path
+              d="M 0 0 L -14 -34 A 38 38 0 0 1 14 -34 Z"
+              fill="url(#playerVisionConeLight)"
+              stroke="rgba(2, 132, 199, 0.3)"
+              strokeWidth="0.6"
+            />
+
+            {/* Player Aura Pulse */}
+            <circle cx={0} cy={0} r={4.5} fill="rgba(2, 132, 199, 0.2)" />
+
+            {/* Player Directional Arrow (aligned with going direction) */}
+            <polygon
+              points="0,-8 5,5 0,2 -5,5"
+              fill="#0284c7"
+              stroke="#ffffff"
+              strokeWidth="1"
+            />
+          </g>
+
+          {/* DYNAMIC CARDINAL COMPASS HEADINGS (Orbiting cleanly around rim with heading) */}
+          {cardinals.map((c) => {
+            const angleDeg = c.baseAngle + mapRotDeg;
+            const angleRad = (angleDeg * Math.PI) / 180;
+            const labelRadius = Math.min(cx, cy) - 9;
+            const tx = cx + Math.sin(angleRad) * labelRadius;
+            const ty = cy - Math.cos(angleRad) * labelRadius;
+
+            // Clamp smoothly within box edges
+            const clampedX = Math.max(9, Math.min(mapWidth - 9, tx));
+            const clampedY = Math.max(11, Math.min(mapHeight - 5, ty + 3));
 
             return (
-              <g transform={`translate(${pSvg.x}, ${pSvg.y}) rotate(${playerAngleDeg})`}>
-                {/* Forward Vision Flashlight Arc */}
-                <path
-                  d="M 0 0 L -14 -32 A 36 36 0 0 1 14 -32 Z"
-                  fill="url(#playerVisionConeLight)"
-                  stroke="rgba(2, 132, 199, 0.25)"
-                  strokeWidth="0.6"
-                />
-
-                {/* Player Position Pulse Ring */}
-                <circle cx={0} cy={0} r={4.5} fill="rgba(2, 132, 199, 0.2)" />
-
-                {/* Player Directional Pointer Arrow */}
-                <polygon
-                  points="0,-7 5,5 0,2 -5,5"
-                  fill="#0284c7"
-                  stroke="#ffffff"
-                  strokeWidth="1"
-                />
-              </g>
+              <text
+                key={c.label}
+                x={clampedX}
+                y={clampedY}
+                fill={c.color}
+                fontSize={isMobile ? '7' : '8.5'}
+                fontWeight="900"
+                textAnchor="middle"
+                opacity={0.85}
+                style={{ pointerEvents: 'none' }}
+              >
+                {c.label}
+              </text>
             );
-          })()}
+          })}
         </svg>
       </div>
     </div>
