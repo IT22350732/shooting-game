@@ -36,7 +36,7 @@ import { MultiplayerScoreboard } from './multiplayer/MultiplayerScoreboard';
 import { SquadVoiceHUD } from './multiplayer/SquadVoiceHUD';
 import { KillFeedEntry } from '../game/multiplayer/MultiplayerTypes';
 import { multiplayerService } from '../game/multiplayer/MultiplayerService';
-import { TacticalRadar, RadarPing } from './multiplayer/TacticalRadar';
+import { RadarPing } from './multiplayer/TacticalRadar';
 import { ArenaMiniMap, ArenaBuildingInfo } from './ArenaMiniMap';
 
 interface HUDProps {

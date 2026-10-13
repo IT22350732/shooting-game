@@ -3,11 +3,9 @@ import {
   Mic,
   MicOff,
   VolumeX,
-  Radio,
-  Shield,
   Users
 } from 'lucide-react';
-import { voiceChatService, VoiceChatServiceState, VoicePeerInfo } from '../../game/multiplayer/VoiceChatService';
+import { voiceChatService, VoiceChatServiceState } from '../../game/multiplayer/VoiceChatService';
 import { multiplayerService } from '../../game/multiplayer/MultiplayerService';
 import { soundManager } from '../../audio/SoundManager';
 

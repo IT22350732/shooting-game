@@ -1277,6 +1277,7 @@ export class Enemy {
     if (this.isDead) return;
     this.isDead = true;
     this.health = 0;
+    this.applyHitFlash(false);
     this.updateHealthBar();
     soundManager.playEnemyDeath(this.type);
   }

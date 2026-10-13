@@ -210,8 +210,9 @@ export class GameEngine {
     // WebGL Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.1;
+    this.renderer.toneMappingExposure = 1.15;
     this.container.appendChild(this.renderer.domElement);
 
     this.player = new Player(this.camera, savedData.upgrades);
@@ -957,7 +958,7 @@ export class GameEngine {
 
   public applyGraphicsQuality(quality: GraphicsQuality, updateMaterials: boolean = true) {
     this.graphicsQuality = quality;
-    const isLow = quality === 'low' || quality === 'normal';
+    const isLow = quality === 'low';
 
     // 1. Pixel Ratio & Canvas Scaling
     const dpr = this.getTargetPixelRatio();

@@ -8,7 +8,6 @@ import {
   Check,
   Send,
   Radio,
-  Wifi,
   Crown,
   CheckCircle2,
   X,
@@ -21,10 +20,7 @@ import {
   MicOff,
   Settings,
   HelpCircle,
-  Info,
   Bot,
-  Sparkles,
-  BookOpen,
   Crosshair
 } from 'lucide-react';
 import {
@@ -34,7 +30,6 @@ import {
   MultiplayerMode,
   RoomConfig,
   NetworkPlayerState,
-  TeamId,
   ChatMessage
 } from '../../game/multiplayer/MultiplayerTypes';
 import { ArenaId } from '../../types/game';
@@ -298,7 +293,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                     fontFamily: 'var(--font-display)'
                   }}
                 >
-                  ONLINE PVP
+                  {connectionStatus ? connectionStatus.toUpperCase() : 'ONLINE PVP'}
                 </span>
               </div>
             </div>
@@ -797,6 +792,32 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                         checked={createEnableBots}
                         onChange={(e) => setCreateEnableBots(e.target.checked)}
                         style={{ width: 18, height: 18, accentColor: '#0284c7', cursor: 'pointer' }}
+                      />
+                    </div>
+
+                    {/* CUSTOM ROOM CODE INPUT */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.78rem', color: '#94a3b8', fontWeight: 800, marginBottom: 6 }}>
+                        CUSTOM SQUAD ACCESS CODE (OPTIONAL)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. ALPHA1 (Leave blank for random code)"
+                        value={createCustomCode}
+                        onChange={(e) => setCreateCustomCode(e.target.value.toUpperCase())}
+                        maxLength={8}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          background: 'rgba(0, 0, 0, 0.4)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: 8,
+                          color: '#38bdf8',
+                          fontFamily: 'monospace',
+                          fontSize: '0.9rem',
+                          fontWeight: 700,
+                          letterSpacing: 2
+                        }}
                       />
                     </div>
                   </div>

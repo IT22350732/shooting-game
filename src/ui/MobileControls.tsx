@@ -765,8 +765,6 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
     e.stopPropagation();
     setSelectedControl(id);
 
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     dragTouchIdRef.current = 'touches' in e ? e.touches[0].identifier : 999;
 
     const onMove = (moveEv: TouchEvent | MouseEvent) => {
