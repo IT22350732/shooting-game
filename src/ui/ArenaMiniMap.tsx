@@ -383,9 +383,9 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
           {(() => {
             const pSvg = worldToSvg(playerPos.x, playerPos.z);
             // Player directional angle in SVG coordinates:
-            // 0 deg = Facing Top (+Z, Up in SVG)
-            // turning right decreases yaw -> rotates clockwise in SVG
-            const playerAngleDeg = 180 + (playerYaw * 180) / Math.PI;
+            // 0 deg = Facing Front/Top (+Z, Up in SVG towards Suburban Workshop)
+            // Turning right decreases playerYaw -> rotates clockwise in SVG
+            const playerAngleDeg = 90 - (playerYaw * 180) / Math.PI;
 
             return (
               <g transform={`translate(${pSvg.x}, ${pSvg.y}) rotate(${playerAngleDeg})`}>
