@@ -367,20 +367,18 @@ export class Player {
           const along = px * uX + pz * uZ;
           let across = px * perpX + pz * perpZ;
 
-          // PHYSICAL STAIR FENCE RETENTION:
+          // PHYSICAL STAIR FENCE RETENTION & JUMP-OUT SUPPORT:
           // Stair width is sr.width. The stair fences/handrails sit at across = ±(sr.width / 2).
-          // When the player gets close to or touches the stair fence, the fence physically stops
-          // them from falling off, keeping them safely on the steps and allowing them to slide
-          // smoothly along the fence without dropping down!
+          // When walking (grounded), the fence physically stops the player from falling off.
+          // When jumping (airborne / jump key pressed), the player can vault/leap over the fence to the outside!
           const maxFenceAcross = Math.max(0.45, (sr.width / 2) - 0.06);
           const rampSupportHalfW = sr.width / 2 + 0.95; // Wide support zone so height NEVER drops when near fence
+          const isJumping = !this.isGrounded || this.velocity.y > 0;
 
           if (along >= -0.20 && along <= len + 0.60) {
-            const currentStepY = sr.bottomY + Math.max(0, Math.min(1, along / len)) * (sr.topY - sr.bottomY);
-            const playerFeetY = this.position.y - this.eyeHeight;
-            const isVaultingOverFence = playerFeetY > currentStepY + 1.15 && this.velocity.y > 0;
-
-            if (!isVaultingOverFence && Math.abs(across) > maxFenceAcross) {
+            // While walking on steps, retain player between handrails.
+            // When jumping, allow leaping freely over the handrail to the outside!
+            if (!isJumping && Math.abs(across) > maxFenceAcross) {
               across = Math.sign(across) * maxFenceAcross;
               newPos.x = sr.p1.x + along * uX + across * perpX;
               newPos.z = sr.p1.z + along * uZ + across * perpZ;
@@ -388,7 +386,10 @@ export class Player {
           }
 
           // Inside stair boundaries (with smooth approach & generous top transition onto deck)
-          if (along >= -0.55 && along <= len + 1.25 && Math.abs(across) <= rampSupportHalfW) {
+          // If the player intentionally jumped outside the fence, release stair support so they fall naturally!
+          const jumpedOutside = isJumping && Math.abs(across) > maxFenceAcross;
+
+          if (!jumpedOutside && along >= -0.55 && along <= len + 1.25 && Math.abs(across) <= rampSupportHalfW) {
             const t = Math.max(0, Math.min(1, along / len));
             const stepY = sr.bottomY + t * (sr.topY - sr.bottomY);
             const stairEyeY = stepY + this.eyeHeight;
@@ -419,10 +420,10 @@ export class Player {
           const lz = newPos.z - fp.center.z;
           const rx = lx * Math.cos(-fp.rotY) - lz * Math.sin(-fp.rotY);
           const rz = lx * Math.sin(-fp.rotY) + lz * Math.cos(-fp.rotY);
-          // Floor boundary tolerance (+0.08m): supports deck edges while allowing immediate fall when jumping outside
+          // Floor boundary tolerance (+0.25m): supports deck edges and allows fluid rooftop landing
           if (
-            Math.abs(rx) <= fp.halfW + 0.08 &&
-            Math.abs(rz) <= fp.halfD + 0.08
+            Math.abs(rx) <= fp.halfW + 0.25 &&
+            Math.abs(rz) <= fp.halfD + 0.25
           ) {
             inside = true;
             // Pitched / Gable roof support: height rises toward central ridge along rx = 0
@@ -433,10 +434,10 @@ export class Player {
           }
         } else {
           if (
-            newPos.x >= obs.box.min.x - 0.45 &&
-            newPos.x <= obs.box.max.x + 0.45 &&
-            newPos.z >= obs.box.min.z - 0.45 &&
-            newPos.z <= obs.box.max.z + 0.45
+            newPos.x >= obs.box.min.x - 0.55 &&
+            newPos.x <= obs.box.max.x + 0.55 &&
+            newPos.z >= obs.box.min.z - 0.55 &&
+            newPos.z <= obs.box.max.z + 0.55
           ) {
             inside = true;
           }
@@ -444,8 +445,8 @@ export class Player {
 
         if (inside) {
           const topY = floorTop + this.eyeHeight;
-          // Player landing on floor/roof from above or stepping onto it
-          if (this.position.y >= floorTop + this.eyeHeight - 0.90) {
+          // Player landing on floor/roof from above or leaping from upfloor
+          if (this.position.y >= floorTop + this.eyeHeight - 1.25) {
             if (topY > groundY) groundY = topY;
           }
         }
@@ -527,9 +528,15 @@ export class Player {
         if (onActiveStair && obs.box.max.y < groundY - this.eyeHeight + 0.35) continue;
 
         // Skip horizontal blocking if player is vertically outside the obstacle:
-        // A. Entirely above the obstacle (standing on top, jumping over, or vaulting over low barrier)
-        const jumpClearance = (this.velocity.y > 0 && !this.isGrounded) ? 0.35 : 0.05;
-        if (obs.box.max.y <= feetY + jumpClearance) continue; // Obstacle is beneath player feet or cleared during jump vault
+        // A. Entirely above the obstacle, or vaulting/leaping over low waist-high barrier/railing/parapet during jump
+        const barrierH = obs.box.max.y - obs.box.min.y;
+        const isAirborneOrJumping = !this.isGrounded || this.velocity.y > 0;
+        const isWaistBarrier = barrierH <= 1.45 && (feetY >= obs.box.min.y - 0.40);
+        const jumpClearance = (isAirborneOrJumping && isWaistBarrier)
+          ? 1.40
+          : (isAirborneOrJumping ? 0.35 : 0.05);
+
+        if (obs.box.max.y <= feetY + jumpClearance) continue; // Obstacle is beneath player feet or vaulted during jump
         // B. Entirely below the obstacle (underneath arch/ceiling)
         if (obs.box.min.y >= newPos.y + 0.15) continue; // Obstacle is above player head (underneath arch/ceiling)
 

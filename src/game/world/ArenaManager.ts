@@ -534,30 +534,30 @@ export class ArenaManager {
     this.addExplosiveBarrel(34, 0, 14);
     this.addExplosiveBarrel(-14, 0, 34);
     // OUTDOOR ELEVATED PLATFORMS ("UPSTAIRS" & "UPFLOOR" OBSERVATION GANTRIES)
-    // North Observation Deck (overlooks Lakeside Cabin and North Street)
+    // North Observation Deck (adjacent to West Manor: jump directly over railing to Manor roof)
     this.createOutdoorElevatedPlatform({
       id: 'suburb-platform-north',
       name: 'North Observation Deck',
-      x: -13,
-      z: -33,
+      x: -12.3,
+      z: -24,
       rotY: 0,
       width: 7.0,
       depth: 5.0,
-      height: 3.4,
+      height: 4.2,
       stairRun: 4.5,
       theme: 'suburban'
     });
 
-    // South Observation Deck (overlooks Suburban Workshop and South Street)
+    // South Observation Deck (adjacent to East Colonial: jump directly over railing to Colonial roof)
     this.createOutdoorElevatedPlatform({
       id: 'suburb-platform-south',
       name: 'South Observation Deck',
-      x: 13,
-      z: 33,
+      x: 12.3,
+      z: 24,
       rotY: Math.PI,
       width: 7.0,
       depth: 5.0,
-      height: 3.4,
+      height: 4.2,
       stairRun: 4.5,
       theme: 'suburban'
     });
@@ -565,24 +565,24 @@ export class ArenaManager {
     // =========================================================================
     // NATURAL TREES & ENTERABLE TREE HOUSES
     // =========================================================================
-    // North-West Ancient Woods Treehouse (overlooks West Manor and North Parkway)
+    // North-West Ancient Woods Treehouse (adjacent to West Manor: jump directly from treehouse deck to Manor roof)
     this.createEnterableTreehouse({
       id: 'suburb-treehouse-nw',
       name: 'Oak Treehouse Haven',
-      x: -40,
-      z: -38,
-      rotY: 0.15,
-      height: 3.8
+      x: -36.5,
+      z: -24,
+      rotY: 0,
+      height: 4.2
     });
 
-    // South-East Orchard Treehouse (overlooks East Colonial and South Parkway)
+    // South-East Orchard Treehouse (adjacent to East Colonial: jump directly from treehouse deck to Colonial roof)
     this.createEnterableTreehouse({
       id: 'suburb-treehouse-se',
       name: 'Orchard Treehouse Lookout',
-      x: 40,
-      z: 38,
-      rotY: Math.PI + 0.15,
-      height: 3.8
+      x: 36.5,
+      z: 24,
+      rotY: Math.PI,
+      height: 4.2
     });
 
     // Suburban Landscape Trees across front lawns, yards, and parkways
@@ -859,30 +859,30 @@ export class ArenaManager {
     this.addExplosiveBarrel(6, 0, -32);
 
     // OUTDOOR ELEVATED PLATFORMS ("UPSTAIRS" & "UPFLOOR" URBAN SKYWALK GANTRIES)
-    // North Skywalk Gantry (overlooks Police Precinct and Central Avenue)
+    // North Skywalk Gantry (adjacent to Metro Lounge: jump directly over railing to Metro Lounge roof terrace)
     this.createOutdoorElevatedPlatform({
       id: 'city-platform-north',
       name: 'North Skywalk Gantry',
-      x: -14,
-      z: -33,
+      x: -13.0,
+      z: -25,
       rotY: 0,
       width: 6.5,
       depth: 5.0,
-      height: 3.4,
+      height: 4.4,
       stairRun: 4.5,
       theme: 'city'
     });
 
-    // South Skywalk Gantry (overlooks Neon Diner and Southern Avenue)
+    // South Skywalk Gantry (adjacent to Cyber Clinic: jump directly over railing to Cyber Clinic roof terrace)
     this.createOutdoorElevatedPlatform({
       id: 'city-platform-south',
       name: 'South Skywalk Gantry',
-      x: 14,
-      z: 33,
+      x: 13.0,
+      z: 25,
       rotY: Math.PI,
       width: 6.5,
       depth: 5.0,
-      height: 3.4,
+      height: 4.4,
       stairRun: 4.5,
       theme: 'city'
     });
@@ -890,14 +890,14 @@ export class ArenaManager {
     // =========================================================================
     // DOWNTOWN PARK TREES & ENTERABLE ECO-TREEHOUSE
     // =========================================================================
-    // Central Plaza Park Treehouse
+    // Central Plaza Park Treehouse (adjacent to Metro Lounge: jump directly from treehouse deck to Metro Lounge roof terrace)
     this.createEnterableTreehouse({
       id: 'city-treehouse-nw',
       name: 'Park Eco-Treehouse',
-      x: -38,
-      z: -38,
-      rotY: 0.3,
-      height: 3.8
+      x: -38.0,
+      z: -25,
+      rotY: 0,
+      height: 4.4
     });
 
     const cityTrees: [number, number, number, 'oak' | 'pine'][] = [
@@ -1134,30 +1134,30 @@ export class ArenaManager {
     this.addExplosiveBarrel(9, 0, -34);
 
     // OUTDOOR ELEVATED PLATFORMS ("UPSTAIRS" & "UPFLOOR" DESERT OBSERVATION OUTPOSTS)
-    // North Desert Outpost (overlooks North Watchtower and Bazaar)
+    // North Desert Outpost (adjacent to Desert Residence: jump directly over railing to Desert Residence roof)
     this.createOutdoorElevatedPlatform({
       id: 'desert-platform-north',
       name: 'North Desert Outpost',
-      x: -14,
-      z: -33,
+      x: -13.5,
+      z: -25,
       rotY: 0,
       width: 6.5,
       depth: 5.0,
-      height: 3.4,
+      height: 4.0,
       stairRun: 4.5,
       theme: 'desert'
     });
 
-    // South Desert Outpost (overlooks South Barracks and Desert Tavern)
+    // South Desert Outpost (adjacent to Desert Tavern: jump directly over railing to Desert Tavern roof)
     this.createOutdoorElevatedPlatform({
       id: 'desert-platform-south',
       name: 'South Desert Outpost',
-      x: 14,
-      z: 33,
+      x: 13.5,
+      z: 25,
       rotY: Math.PI,
       width: 6.5,
       depth: 5.0,
-      height: 3.4,
+      height: 4.0,
       stairRun: 4.5,
       theme: 'desert'
     });
@@ -1165,14 +1165,14 @@ export class ArenaManager {
     // =========================================================================
     // DESERT OASIS DATE PALMS & ENTERABLE OASIS TREEHOUSE
     // =========================================================================
-    // Desert Canyon Oasis Treehouse
+    // Desert Canyon Oasis Treehouse (adjacent to Caravan Quarters: jump directly from treehouse deck to Caravan Quarters roof)
     this.createEnterableTreehouse({
       id: 'desert-treehouse-sw',
       name: 'Oasis Treehouse Lookout',
-      x: -38,
-      z: 38,
-      rotY: -0.25,
-      height: 3.8
+      x: -37.5,
+      z: 25,
+      rotY: 0,
+      height: 4.0
     });
 
     const desertTrees: [number, number, number, 'palm'][] = [
@@ -1415,30 +1415,30 @@ export class ArenaManager {
     this.addExplosiveBarrel(4, 0, -32);
 
     // OUTDOOR ELEVATED PLATFORMS ("UPSTAIRS" & "UPFLOOR" INDUSTRIAL CATWALK GANTRIES)
-    // North Yard Catwalk Gantry (overlooks Rail Control, Silos, and Depot Alpha)
+    // North Yard Catwalk Gantry (adjacent to Depot Alpha: jump directly over railing to Depot Alpha roof)
     this.createOutdoorElevatedPlatform({
       id: 'ind-platform-north',
       name: 'North Catwalk Gantry',
-      x: -12,
-      z: -32,
+      x: -12.3,
+      z: -25,
       rotY: 0,
       width: 7.0,
       depth: 5.0,
-      height: 3.4,
+      height: 4.8,
       stairRun: 4.5,
       theme: 'industrial'
     });
 
-    // South Yard Catwalk Gantry (overlooks Shipping Containers and Power Vault)
+    // South Yard Catwalk Gantry (adjacent to Distribution Delta: jump directly over railing to Distribution Delta roof)
     this.createOutdoorElevatedPlatform({
       id: 'ind-platform-south',
       name: 'South Catwalk Gantry',
-      x: 12,
-      z: 32,
+      x: 12.3,
+      z: 25,
       rotY: Math.PI,
       width: 7.0,
       depth: 5.0,
-      height: 3.4,
+      height: 4.8,
       stairRun: 4.5,
       theme: 'industrial'
     });
@@ -1446,13 +1446,14 @@ export class ArenaManager {
     // =========================================================================
     // INDUSTRIAL ARBORETUM & OVERLOOK TREEHOUSE
     // =========================================================================
+    // Arboretum Treehouse Lookout (adjacent to Workshop Bravo: jump directly from treehouse deck to Workshop Bravo roof)
     this.createEnterableTreehouse({
       id: 'ind-treehouse-ne',
       name: 'Arboretum Treehouse Lookout',
-      x: 38,
-      z: -38,
-      rotY: 2.3,
-      height: 4.0
+      x: 38.5,
+      z: -25,
+      rotY: 0,
+      height: 4.8
     });
 
     const indTrees: [number, number, number, 'pine' | 'oak'][] = [
