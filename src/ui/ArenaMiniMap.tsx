@@ -45,38 +45,28 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
     return () => cancelAnimationFrame(animId);
   }, []);
 
-  // Dimensions
+  // Dimensions: 1:1 square display so full arena (130x130m) maps without distortion
   const mapWidth = isMobile ? 175 : 250;
-  const mapHeight = isMobile ? 140 : 175;
+  const mapHeight = isMobile ? 175 : 250;
   const cx = mapWidth / 2;
   const cy = mapHeight / 2;
-  const maxBoxDiagonal = Math.hypot(mapWidth, mapHeight);
 
-  // Range in world meters: distance from center to vertical bounds (~48m)
-  const viewRangeY = 48;
-  const scale = cy / viewRangeY;
+  // Margin padding for perimeter wall outline
+  const pad = 4;
+  const innerDim = mapWidth - pad * 2;
+  const half = arenaSize / 2;
+  const scale = innerDim / arenaSize;
 
   // Active enemies count
   const enemyCount = useMemo(() => {
     return pings.filter((p) => p.type === 'enemy' || p.type === 'boss').length;
   }, [pings]);
 
-  // Orientation settings: forward view is always Top (-Y in SVG)
-  const mapRotDeg = (playerYaw * 180) / Math.PI;
-
-  // World to SVG Coordinate Conversion
+  // World to SVG Coordinate Conversion (North-Up Full Map: West->East = X, North->South = -Z->+Z)
   const worldToSvg = (wx: number, wz: number): { x: number; y: number; isVisible: boolean } => {
-    const dx = wx - playerPos.x;
-    const dz = wz - playerPos.z;
-
-    const sx = cx + dx * scale;
-    const sy = cy + dz * scale; // in 3D: -Z is North (up), +Z is South (down)
-
-    // Visibility test: keep anything within rotated view box diagonal + safety buffer visible
-    const distMeters = Math.hypot(dx, dz);
-    const maxVisibleMeters = (maxBoxDiagonal / 2 + 35) / scale;
-    const isVisible = distMeters <= maxVisibleMeters;
-
+    const sx = pad + (wx + half) * scale;
+    const sy = pad + (wz + half) * scale;
+    const isVisible = sx >= 0 && sx <= mapWidth && sy >= 0 && sy <= mapHeight;
     return { x: sx, y: sy, isVisible };
   };
 
@@ -95,7 +85,8 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
     ];
 
     const pts = corners.map((c) => {
-      // Three.js right-handed rotation around Y: x' = x*cos + z*sin, z' = -x*sin + z*cos
+      // Three.js right-handed rotation around Y:
+      // x' = x*cos + z*sin, z' = -x*sin + z*cos
       const rx = c.lx * cosR + c.lz * sinR;
       const rz = -c.lx * sinR + c.lz * cosR;
       const wx = b.x + rx;
@@ -181,241 +172,246 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
         </div>
       </div>
 
-      {/* MAP SVG DISPLAY (MAP AREA STRICTLY WITHIN PERIMETER WALLS) */}
+      {/* FULL ARENA MAP DISPLAY (CLEAN LIGHT THEME - FILLS ENTIRE MAP BOX) */}
       <div
         style={{
           position: 'relative',
           width: mapWidth,
           height: mapHeight,
-          background: '#090d16',
+          background: '#ecfdf5',
           overflow: 'hidden'
         }}
       >
-        {(() => {
-          const half = arenaSize / 2;
-          const arenaLeft = cx + (-half - playerPos.x) * scale;
-          const arenaTop = cy + (-half - playerPos.z) * scale;
-          const arenaDim = arenaSize * scale;
+        <svg
+          width={mapWidth}
+          height={mapHeight}
+          viewBox={`0 0 ${mapWidth} ${mapHeight}`}
+          style={{ width: '100%', height: '100%', display: 'block' }}
+        >
+          <defs>
+            {/* Playable Area Clip: strictly inside perimeter walls */}
+            <clipPath id="arenaPlayableAreaClip">
+              <rect x={pad} y={pad} width={innerDim} height={innerDim} rx={3} ry={3} />
+            </clipPath>
 
-          return (
-            <svg
-              width={mapWidth}
-              height={mapHeight}
-              viewBox={`0 0 ${mapWidth} ${mapHeight}`}
-              style={{ width: '100%', height: '100%', display: 'block' }}
-            >
-              <defs>
-                {/* Playable Area Clip: strictly bounds map display inside the perimeter walls */}
-                <clipPath id="arenaPlayableAreaClip">
-                  <rect x={arenaLeft} y={arenaTop} width={arenaDim} height={arenaDim} />
-                </clipPath>
+            {/* Light Green Arena Floor Pattern */}
+            <pattern id="arenaFloorPattern" width="16" height="16" patternUnits="userSpaceOnUse">
+              <rect width="16" height="16" fill="#ecfdf5" />
+              <path d="M 16 0 L 0 0 0 16" fill="none" stroke="rgba(34, 197, 94, 0.15)" strokeWidth="0.8" />
+            </pattern>
 
-                {/* Out-of-bounds tactical void pattern for areas outside the walls */}
-                <pattern id="outOfBoundsPattern" width="12" height="12" patternUnits="userSpaceOnUse">
-                  <rect width="12" height="12" fill="#090d16" />
-                  <path d="M 0 12 L 12 0 M 6 18 L 18 6 M -6 6 L 6 -6" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="0.8" />
-                </pattern>
+            {/* Subtle light radar sweep gradient */}
+            <linearGradient id="arenaRadarSweepLight" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%" stopColor="rgba(34, 197, 94, 0)" />
+              <stop offset="100%" stopColor="rgba(34, 197, 94, 0.28)" />
+            </linearGradient>
 
-                {/* Light Green Arena Floor Pattern */}
-                <pattern id="arenaFloorPattern" width="16" height="16" patternUnits="userSpaceOnUse">
-                  <rect width="16" height="16" fill="#ecfdf5" />
-                  <path d="M 16 0 L 0 0 0 16" fill="none" stroke="rgba(34, 197, 94, 0.15)" strokeWidth="0.8" />
-                </pattern>
+            {/* Player Vision Cone Gradient */}
+            <radialGradient id="playerVisionConeLight" cx="0%" cy="100%" r="100%">
+              <stop offset="0%" stopColor="rgba(2, 132, 199, 0.35)" />
+              <stop offset="100%" stopColor="rgba(2, 132, 199, 0)" />
+            </radialGradient>
+          </defs>
 
-                {/* Subtle light radar sweep gradient */}
-                <linearGradient id="arenaRadarSweepLight" x1="0" y1="1" x2="0" y2="0">
-                  <stop offset="0%" stopColor="rgba(34, 197, 94, 0)" />
-                  <stop offset="100%" stopColor="rgba(34, 197, 94, 0.28)" />
-                </linearGradient>
+          {/* Arena Floor (Full map fills the box) */}
+          <rect x={pad} y={pad} width={innerDim} height={innerDim} fill="#dcfce7" />
+          <rect x={pad} y={pad} width={innerDim} height={innerDim} fill="url(#arenaFloorPattern)" />
 
-                {/* Player Vision Cone Gradient */}
-                <radialGradient id="playerVisionConeLight" cx="0%" cy="100%" r="100%">
-                  <stop offset="0%" stopColor="rgba(2, 132, 199, 0.35)" />
-                  <stop offset="100%" stopColor="rgba(2, 132, 199, 0)" />
-                </radialGradient>
-              </defs>
+          {/* Tactical Grid Background */}
+          <g opacity="0.18" clipPath="url(#arenaPlayableAreaClip)">
+            {[-45, -30, -15, 0, 15, 30, 45].map((coord) => {
+              const s = worldToSvg(coord, coord);
+              return (
+                <React.Fragment key={coord}>
+                  <line x1={s.x} y1={pad} x2={s.x} y2={pad + innerDim} stroke="#16a34a" strokeWidth="0.8" strokeDasharray="3,4" />
+                  <line x1={pad} y1={s.y} x2={pad + innerDim} y2={s.y} stroke="#16a34a" strokeWidth="0.8" strokeDasharray="3,4" />
+                </React.Fragment>
+              );
+            })}
+          </g>
 
-              {/* Base background outside the walls (Out of Bounds) */}
-              <rect width={mapWidth} height={mapHeight} fill="#090d16" />
-              <rect width={mapWidth} height={mapHeight} fill="url(#outOfBoundsPattern)" />
+          {/* Roads & Avenues (Wall-to-wall clean thoroughfares) */}
+          {(() => {
+            const roadW = 8;
+            const rTop = worldToSvg(0, -half);
+            const rBottom = worldToSvg(0, half);
+            const rLeft = worldToSvg(-half, 0);
+            const rRight = worldToSvg(half, 0);
+            return (
+              <g opacity="0.85" clipPath="url(#arenaPlayableAreaClip)">
+                <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f1f5f9" strokeWidth={roadW * scale} />
+                <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f1f5f9" strokeWidth={roadW * scale} />
+                {/* Yellow centerlines */}
+                <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.85" />
+                <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.85" />
+              </g>
+            );
+          })()}
 
-              {/* ROTATING WORLD CONTAINER (Heading-Up mode aligned with player's gaze) */}
-              <g transform={`rotate(${mapRotDeg} ${cx} ${cy})`}>
-                {/* MAP AREA STRICTLY WITHIN WALLS */}
-                <g clipPath="url(#arenaPlayableAreaClip)">
-                  {/* Light Green Arena Floor */}
-                  <rect x={arenaLeft} y={arenaTop} width={arenaDim} height={arenaDim} fill="#dcfce7" />
-                  <rect x={arenaLeft} y={arenaTop} width={arenaDim} height={arenaDim} fill="url(#arenaFloorPattern)" />
+          {/* Enterable Buildings (Clean light fill with crisp cyan outline) */}
+          <g clipPath="url(#arenaPlayableAreaClip)">
+            {buildings.map((b) => {
+              const polyPts = getBuildingPolygon(b);
+              const centerSvg = worldToSvg(b.x, b.z);
+              const doorSvg = worldToSvg(b.doorX, b.doorZ);
 
-                  {/* Tactical Grid Background (Light green, strictly within walls) */}
-                  <g opacity="0.18">
-                    {[-120, -90, -60, -30, 0, 30, 60, 90, 120].map((coord) => {
-                      const s = worldToSvg(coord, coord);
-                      return (
-                        <React.Fragment key={coord}>
-                          <line x1={s.x} y1={arenaTop} x2={s.x} y2={arenaTop + arenaDim} stroke="#16a34a" strokeWidth="0.8" strokeDasharray="3,4" />
-                          <line x1={arenaLeft} y1={s.y} x2={arenaLeft + arenaDim} y2={s.y} stroke="#16a34a" strokeWidth="0.8" strokeDasharray="3,4" />
-                        </React.Fragment>
-                      );
-                    })}
+              return (
+                <g key={b.id}>
+                  {/* Building Footprint */}
+                  <polygon
+                    points={polyPts}
+                    fill="rgba(241, 245, 249, 0.95)"
+                    stroke="#0284c7"
+                    strokeWidth="1.4"
+                  />
+
+                  {/* Building Doorway Notch */}
+                  {doorSvg.isVisible && (
+                    <circle
+                      cx={doorSvg.x}
+                      cy={doorSvg.y}
+                      r={2.2}
+                      fill={b.isDoorOpen ? '#16a34a' : '#0284c7'}
+                      stroke="#ffffff"
+                      strokeWidth="0.8"
+                    />
+                  )}
+
+                  {/* Building Label */}
+                  {centerSvg.isVisible && (
+                    <text
+                      x={centerSvg.x}
+                      y={centerSvg.y + 3}
+                      fill="#334155"
+                      fontSize={isMobile ? '6.5' : '7.5'}
+                      fontWeight="900"
+                      textAnchor="middle"
+                      style={{ pointerEvents: 'none' }}
+                    >
+                      {b.name.replace(/Villa|Bungalow|Residence|Depot|Station/i, '').trim() || b.name}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </g>
+
+          {/* Radar Scanning Sweep Beam - Sweeps across full arena */}
+          <g transform={`rotate(${sweepAngle} ${cx} ${cy})`} clipPath="url(#arenaPlayableAreaClip)">
+            <line
+              x1={cx}
+              y1={cy}
+              x2={cx}
+              y2={cy - Math.hypot(cx, cy)}
+              stroke="url(#arenaRadarSweepLight)"
+              strokeWidth="2.5"
+            />
+          </g>
+
+          {/* SOLID PERIMETER BOUNDARY WALL (Neat border enclosing full map) */}
+          <rect
+            x={pad}
+            y={pad}
+            width={innerDim}
+            height={innerDim}
+            fill="none"
+            stroke="#334155"
+            strokeWidth="2.5"
+            rx={3}
+            ry={3}
+          />
+
+          {/* CARDINAL COMPASS HEADINGS (N, S, E, W) */}
+          <text x={cx} y={pad + 9} fill="#0284c7" fontSize="7.5" fontWeight="900" textAnchor="middle" opacity="0.85">
+            N
+          </text>
+          <text x={cx} y={pad + innerDim - 3} fill="#64748b" fontSize="7" fontWeight="900" textAnchor="middle" opacity="0.6">
+            S
+          </text>
+          <text x={pad + innerDim - 6} y={cy + 2.5} fill="#64748b" fontSize="7" fontWeight="900" textAnchor="middle" opacity="0.6">
+            E
+          </text>
+          <text x={pad + 6} y={cy + 2.5} fill="#64748b" fontSize="7" fontWeight="900" textAnchor="middle" opacity="0.6">
+            W
+          </text>
+
+          {/* ENEMIES & COMBATANTS (All enemies across the arena) */}
+          <g clipPath="url(#arenaPlayableAreaClip)">
+            {pings.map((ping) => {
+              const svg = worldToSvg(ping.x, ping.z);
+              if (!svg.isVisible) return null;
+
+              if (ping.type === 'teammate') {
+                return (
+                  <g key={ping.id}>
+                    <circle cx={svg.x} cy={svg.y} r={4.5} fill="rgba(2, 132, 199, 0.22)" />
+                    <circle cx={svg.x} cy={svg.y} r={2.5} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
                   </g>
-
-                  {/* Roads & Avenues (Clean off-white with yellow dashed centerlines - stops at walls) */}
-                  {(() => {
-                    const roadW = 8;
-                    const rTop = worldToSvg(0, -half);
-                    const rBottom = worldToSvg(0, half);
-                    const rLeft = worldToSvg(-half, 0);
-                    const rRight = worldToSvg(half, 0);
-                    return (
-                      <g opacity="0.85">
-                        <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f1f5f9" strokeWidth={roadW * scale} />
-                        <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f1f5f9" strokeWidth={roadW * scale} />
-                        {/* Yellow centerlines */}
-                        <line x1={rTop.x} y1={rTop.y} x2={rBottom.x} y2={rBottom.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.85" />
-                        <line x1={rLeft.x} y1={rLeft.y} x2={rRight.x} y2={rRight.y} stroke="#f59e0b" strokeWidth="0.8" strokeDasharray="3,4" opacity="0.85" />
-                      </g>
-                    );
-                  })()}
-
-                  {/* Enterable Buildings (Clean light fill with crisp cyan outline) */}
-                  {buildings.map((b) => {
-                    const polyPts = getBuildingPolygon(b);
-                    const centerSvg = worldToSvg(b.x, b.z);
-                    const doorSvg = worldToSvg(b.doorX, b.doorZ);
-
-                    return (
-                      <g key={b.id}>
-                        {/* Building Footprint */}
-                        <polygon
-                          points={polyPts}
-                          fill="rgba(241, 245, 249, 0.95)"
-                          stroke="#0284c7"
-                          strokeWidth="1.4"
-                        />
-
-                        {/* Building Doorway Notch */}
-                        {doorSvg.isVisible && (
-                          <circle
-                            cx={doorSvg.x}
-                            cy={doorSvg.y}
-                            r={2.2}
-                            fill={b.isDoorOpen ? '#16a34a' : '#0284c7'}
-                            stroke="#ffffff"
-                            strokeWidth="0.8"
-                          />
-                        )}
-
-                        {/* Building Label (counter-rotated so text stays upright and readable) */}
-                        {centerSvg.isVisible && (
-                          <text
-                            x={centerSvg.x}
-                            y={centerSvg.y + 3}
-                            transform={`rotate(${-mapRotDeg} ${centerSvg.x} ${centerSvg.y + 3})`}
-                            fill="#334155"
-                            fontSize={isMobile ? '6.5' : '7.5'}
-                            fontWeight="900"
-                            textAnchor="middle"
-                            style={{ pointerEvents: 'none' }}
-                          >
-                            {b.name.replace(/Villa|Bungalow|Residence|Depot|Station/i, '').trim() || b.name}
-                          </text>
-                        )}
-                      </g>
-                    );
-                  })}
-
-                  {/* ENEMIES & COMBATANTS */}
-                  {pings.map((ping) => {
-                    const svg = worldToSvg(ping.x, ping.z);
-                    if (!svg.isVisible) return null;
-
-                    if (ping.type === 'teammate') {
-                      return (
-                        <g key={ping.id}>
-                          <circle cx={svg.x} cy={svg.y} r={4.5} fill="rgba(2, 132, 199, 0.22)" />
-                          <circle cx={svg.x} cy={svg.y} r={2.5} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
-                        </g>
-                      );
-                    } else if (ping.type === 'boss') {
-                      return (
-                        <g key={ping.id}>
-                          <circle cx={svg.x} cy={svg.y} r={7} fill="rgba(217, 119, 6, 0.25)" />
-                          <polygon
-                            points={`${svg.x},${svg.y - 6} ${svg.x + 6},${svg.y} ${svg.x},${svg.y + 6} ${svg.x - 6},${svg.y}`}
-                            fill="#d97706"
-                            stroke="#ffffff"
-                            strokeWidth="1.2"
-                          />
-                          <text
-                            x={svg.x}
-                            y={svg.y - 8}
-                            transform={`rotate(${-mapRotDeg} ${svg.x} ${svg.y - 8})`}
-                            fill="#d97706"
-                            fontSize="7"
-                            fontWeight="900"
-                            textAnchor="middle"
-                          >
-                            BOSS
-                          </text>
-                        </g>
-                      );
-                    } else {
-                      // Hostile Enemy Combatant - PURE RED DOT
-                      return (
-                        <g key={ping.id}>
-                          {/* Glowing red threat aura */}
-                          <circle cx={svg.x} cy={svg.y} r={5.5} fill="rgba(225, 29, 72, 0.25)" />
-                          {/* Core red threat ping */}
-                          <circle
-                            cx={svg.x}
-                            cy={svg.y}
-                            r={3.2}
-                            fill="#e11d48"
-                            stroke="#ffffff"
-                            strokeWidth="1"
-                          />
-                        </g>
-                      );
-                    }
-                  })}
-
-                  {/* Radar Scanning Sweep Beam - Strictly clipped inside arena walls */}
-                  <g transform={`rotate(${sweepAngle - mapRotDeg} ${cx} ${cy})`}>
-                    <line
-                      x1={cx}
-                      y1={cy}
-                      x2={cx}
-                      y2={cy - maxBoxDiagonal}
-                      stroke="url(#arenaRadarSweepLight)"
-                      strokeWidth="2.5"
+                );
+              } else if (ping.type === 'boss') {
+                return (
+                  <g key={ping.id}>
+                    <circle cx={svg.x} cy={svg.y} r={7} fill="rgba(217, 119, 6, 0.25)" />
+                    <polygon
+                      points={`${svg.x},${svg.y - 6} ${svg.x + 6},${svg.y} ${svg.x},${svg.y + 6} ${svg.x - 6},${svg.y}`}
+                      fill="#d97706"
+                      stroke="#ffffff"
+                      strokeWidth="1.2"
+                    />
+                    <text
+                      x={svg.x}
+                      y={svg.y - 8}
+                      fill="#d97706"
+                      fontSize="7"
+                      fontWeight="900"
+                      textAnchor="middle"
+                    >
+                      BOSS
+                    </text>
+                  </g>
+                );
+              } else {
+                // Hostile Enemy Combatant - PURE RED DOT
+                return (
+                  <g key={ping.id}>
+                    {/* Glowing red threat aura */}
+                    <circle cx={svg.x} cy={svg.y} r={5.5} fill="rgba(225, 29, 72, 0.25)" />
+                    {/* Core red threat ping */}
+                    <circle
+                      cx={svg.x}
+                      cy={svg.y}
+                      r={3.2}
+                      fill="#e11d48"
+                      stroke="#ffffff"
+                      strokeWidth="1"
                     />
                   </g>
-                </g>
+                );
+              }
+            })}
+          </g>
 
-                {/* SOLID PERIMETER BOUNDARY WALL (Solid stone/slate border enclosing map, no broken lines) */}
-                <rect
-                  x={arenaLeft}
-                  y={arenaTop}
-                  width={arenaDim}
-                  height={arenaDim}
-                  fill="none"
-                  stroke="#334155"
-                  strokeWidth="2.8"
-                />
-              </g>
+          {/* PLAYER MARKER (Accurate Directional Vision Cone & Pointer Arrow) */}
+          {(() => {
+            const pSvg = worldToSvg(playerPos.x, playerPos.z);
+            // In North-Up full map, Three.js player yaw maps: 0 = North (Up, 0 deg in SVG),
+            // turning right decreases yaw -> positive clockwise in SVG.
+            const playerAngleDeg = (-playerYaw * 180) / Math.PI;
 
-              {/* PLAYER MARKER (Accurate Directional Vision Cone & Pointer Arrow - No Radius Circle) */}
-              <g transform={`translate(${cx}, ${cy})`}>
+            return (
+              <g transform={`translate(${pSvg.x}, ${pSvg.y}) rotate(${playerAngleDeg})`}>
                 {/* Forward Vision Flashlight Arc */}
                 <path
-                  d="M 0 0 L -18 -38 A 42 42 0 0 1 18 -38 Z"
+                  d="M 0 0 L -14 -32 A 36 36 0 0 1 14 -32 Z"
                   fill="url(#playerVisionConeLight)"
                   stroke="rgba(2, 132, 199, 0.25)"
                   strokeWidth="0.6"
                 />
 
-                {/* Player Directional Arrow */}
+                {/* Player Position Pulse Ring */}
+                <circle cx={0} cy={0} r={4.5} fill="rgba(2, 132, 199, 0.2)" />
+
+                {/* Player Directional Pointer Arrow */}
                 <polygon
                   points="0,-7 5,5 0,2 -5,5"
                   fill="#0284c7"
@@ -423,11 +419,10 @@ export const ArenaMiniMap: React.FC<ArenaMiniMapProps> = ({
                   strokeWidth="1"
                 />
               </g>
-            </svg>
-          );
-        })()}
+            );
+          })()}
+        </svg>
       </div>
     </div>
   );
 };
-
