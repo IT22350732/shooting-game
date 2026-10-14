@@ -7,21 +7,46 @@ import { GraphicsQuality } from '../../types/game';
  */
 export class TextureGenerator {
   private static cache: Map<string, THREE.CanvasTexture> = new Map();
+  public static currentQuality: GraphicsQuality = 'high';
   public static currentAnisotropy: number = 4;
 
   public static setQuality(quality: GraphicsQuality) {
+    const prevQuality = this.currentQuality;
+    this.currentQuality = quality;
+
     if (quality === 'low' || quality === 'normal') {
       this.currentAnisotropy = 1;
     } else if (quality === 'ultra') {
-      this.currentAnisotropy = 16;
+      this.currentAnisotropy = 8;
     } else {
       this.currentAnisotropy = 4;
+    }
+
+    const wasLow = prevQuality === 'low' || prevQuality === 'normal';
+    const isNowLow = quality === 'low' || quality === 'normal';
+
+    if (wasLow !== isNowLow) {
+      this.cache.clear();
     }
 
     this.cache.forEach((tex) => {
       tex.anisotropy = this.currentAnisotropy;
       tex.needsUpdate = true;
     });
+  }
+
+  private static createCanvas(logicalSize: number = 512): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; size: number } {
+    const isLow = this.currentQuality === 'low' || this.currentQuality === 'normal';
+    // Downscale standard 512x512 textures to 256x256 in low mode to cut VRAM by 75% for 4GB RAM laptops
+    const pixelSize = (isLow && logicalSize >= 256) ? Math.round(logicalSize / 2) : logicalSize;
+    const canvas = document.createElement('canvas');
+    canvas.width = pixelSize;
+    canvas.height = pixelSize;
+    const ctx = canvas.getContext('2d')!;
+    if (pixelSize !== logicalSize) {
+      ctx.scale(pixelSize / logicalSize, pixelSize / logicalSize);
+    }
+    return { canvas, ctx, size: logicalSize };
   }
 
   private static finalizeTexture(
@@ -36,9 +61,15 @@ export class TextureGenerator {
       texture.repeat.set(repeatX, repeatY);
     }
     texture.anisotropy = this.currentAnisotropy;
-    texture.generateMipmaps = true;
-    texture.minFilter = THREE.LinearMipmapLinearFilter;
-    texture.magFilter = THREE.LinearFilter;
+    if (this.currentQuality === 'low' || this.currentQuality === 'normal') {
+      texture.generateMipmaps = false;
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+    } else {
+      texture.generateMipmaps = true;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+    }
     return texture;
   }
 
@@ -49,11 +80,7 @@ export class TextureGenerator {
     const key = 'hex_tile';
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const size = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const { canvas, ctx, size } = this.createCanvas(512);
 
     // Clean pearl white base
     ctx.fillStyle = '#f8fafc';
@@ -92,11 +119,7 @@ export class TextureGenerator {
     const key = 'panel';
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const size = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const { canvas, ctx, size } = this.createCanvas(512);
 
     // Clean white metallic background
     ctx.fillStyle = '#f1f5f9';
@@ -201,11 +224,7 @@ export class TextureGenerator {
     const key = `brick_${brickColor}_${mortarColor}`;
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const size = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const { canvas, ctx, size } = this.createCanvas(512);
 
     // Mortar background
     ctx.fillStyle = mortarColor;
@@ -243,11 +262,7 @@ export class TextureGenerator {
     const key = `roof_${tileColor}`;
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const size = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const { canvas, ctx, size } = this.createCanvas(512);
 
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(0, 0, size, size);
@@ -285,11 +300,7 @@ export class TextureGenerator {
     const key = 'asphalt_road';
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const size = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const { canvas, ctx, size } = this.createCanvas(512);
 
     // Rich dark charcoal asphalt base
     ctx.fillStyle = '#212327';
@@ -332,11 +343,7 @@ export class TextureGenerator {
     const key = 'sidewalk';
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const size = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const { canvas, ctx, size } = this.createCanvas(512);
 
     ctx.fillStyle = '#e2e8f0';
     ctx.fillRect(0, 0, size, size);
@@ -370,11 +377,7 @@ export class TextureGenerator {
     const key = `window_facade_${frameColor}`;
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const size = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const { canvas, ctx, size } = this.createCanvas(512);
 
     // Wall facade base
     ctx.fillStyle = '#cbd5e1';
@@ -433,11 +436,7 @@ export class TextureGenerator {
     const key = `wood_siding_${color}`;
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const size = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const { canvas, ctx, size } = this.createCanvas(512);
 
     ctx.fillStyle = color;
     ctx.fillRect(0, 0, size, size);
@@ -464,11 +463,7 @@ export class TextureGenerator {
     const key = `corrugated_${color}`;
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const size = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const { canvas, ctx, size } = this.createCanvas(512);
 
     ctx.fillStyle = color;
     ctx.fillRect(0, 0, size, size);
@@ -497,11 +492,7 @@ export class TextureGenerator {
     const key = 'grass';
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const size = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const { canvas, ctx, size } = this.createCanvas(512);
 
     ctx.fillStyle = '#22c55e';
     ctx.fillRect(0, 0, size, size);
@@ -527,11 +518,7 @@ export class TextureGenerator {
     const key = `bark_${baseColor}_${furrowColor}`;
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const size = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const { canvas, ctx, size } = this.createCanvas(512);
 
     ctx.fillStyle = baseColor;
     ctx.fillRect(0, 0, size, size);
@@ -566,11 +553,7 @@ export class TextureGenerator {
     const key = `foliage_${baseColor}_${highlightColor}`;
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const size = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const { canvas, ctx, size } = this.createCanvas(512);
 
     ctx.fillStyle = baseColor;
     ctx.fillRect(0, 0, size, size);
@@ -605,11 +588,7 @@ export class TextureGenerator {
     const key = 'adobe';
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const size = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const { canvas, ctx, size } = this.createCanvas(512);
 
     ctx.fillStyle = '#d97706';
     ctx.fillRect(0, 0, size, size);
@@ -635,11 +614,7 @@ export class TextureGenerator {
     const key = 'wood_parquet';
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const size = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const { canvas, ctx, size } = this.createCanvas(512);
 
     ctx.fillStyle = '#78350f'; // Rich mahogany/warm walnut base
     ctx.fillRect(0, 0, size, size);
@@ -675,11 +650,7 @@ export class TextureGenerator {
     const key = `floor_tile_${color1}_${color2}`;
     if (this.cache.has(key)) return this.cache.get(key)!;
 
-    const size = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
+    const { canvas, ctx, size } = this.createCanvas(512);
 
     const tileSize = 64;
     for (let x = 0; x < size; x += tileSize) {

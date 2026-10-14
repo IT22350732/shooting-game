@@ -386,7 +386,7 @@ export class ArenaManager {
     sun.position.set(38, 55, 28);
     sun.castShadow = !isLow;
     if (!isLow) {
-      const mapSize = this.graphicsQuality === 'ultra' ? 2048 : 1024;
+      const mapSize = this.graphicsQuality === 'ultra' ? 1536 : 1024;
       sun.shadow.mapSize.width = mapSize;
       sun.shadow.mapSize.height = mapSize;
       sun.shadow.camera.near = 0.5;
@@ -398,7 +398,7 @@ export class ArenaManager {
       sun.shadow.camera.bottom = -d;
       sun.shadow.bias = -0.00008;
       sun.shadow.normalBias = 0.04;
-      sun.shadow.radius = 1.5;
+      sun.shadow.radius = this.graphicsQuality === 'ultra' ? 1.2 : 1.0;
     }
     this.arenaGroup.add(sun);
 
@@ -715,7 +715,7 @@ export class ArenaManager {
     sun.position.set(-32, 58, 25);
     sun.castShadow = !isLowCity;
     if (!isLowCity) {
-      const mapSize = this.graphicsQuality === 'ultra' ? 2048 : 1024;
+      const mapSize = this.graphicsQuality === 'ultra' ? 1536 : 1024;
       sun.shadow.mapSize.width = mapSize;
       sun.shadow.mapSize.height = mapSize;
       const d = 48;
@@ -725,7 +725,7 @@ export class ArenaManager {
       sun.shadow.camera.bottom = -d;
       sun.shadow.bias = -0.00008;
       sun.shadow.normalBias = 0.04;
-      sun.shadow.radius = 1.5;
+      sun.shadow.radius = this.graphicsQuality === 'ultra' ? 1.2 : 1.0;
     }
     this.arenaGroup.add(sun);
 
@@ -1017,7 +1017,7 @@ export class ArenaManager {
     sun.position.set(42, 60, 22);
     sun.castShadow = !isLowDesert;
     if (!isLowDesert) {
-      const mapSize = this.graphicsQuality === 'ultra' ? 2048 : 1024;
+      const mapSize = this.graphicsQuality === 'ultra' ? 1536 : 1024;
       sun.shadow.mapSize.width = mapSize;
       sun.shadow.mapSize.height = mapSize;
       const d = 48;
@@ -1027,7 +1027,7 @@ export class ArenaManager {
       sun.shadow.camera.bottom = -d;
       sun.shadow.bias = -0.00008;
       sun.shadow.normalBias = 0.04;
-      sun.shadow.radius = 1.5;
+      sun.shadow.radius = this.graphicsQuality === 'ultra' ? 1.2 : 1.0;
     }
     this.arenaGroup.add(sun);
 
@@ -1291,7 +1291,7 @@ export class ArenaManager {
     sun.position.set(-30, 55, 30);
     sun.castShadow = !isLowIndustrial;
     if (!isLowIndustrial) {
-      const mapSize = this.graphicsQuality === 'ultra' ? 2048 : 1024;
+      const mapSize = this.graphicsQuality === 'ultra' ? 1536 : 1024;
       sun.shadow.mapSize.width = mapSize;
       sun.shadow.mapSize.height = mapSize;
       const d = 48;
@@ -1301,7 +1301,7 @@ export class ArenaManager {
       sun.shadow.camera.bottom = -d;
       sun.shadow.bias = -0.00008;
       sun.shadow.normalBias = 0.04;
-      sun.shadow.radius = 1.5;
+      sun.shadow.radius = this.graphicsQuality === 'ultra' ? 1.2 : 1.0;
     }
     this.arenaGroup.add(sun);
 

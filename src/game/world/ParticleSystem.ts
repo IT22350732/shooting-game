@@ -24,9 +24,11 @@ interface BulletTracer {
 
 export class ParticleSystem {
   private scene: THREE.Scene;
+  private static readonly _p1 = new THREE.Vector3();
+  private static readonly _p2 = new THREE.Vector3();
   
   // Point cloud for sparks, debris, explosion particles
-  private maxParticles = 600;
+  private maxParticles = 300;
   private particleList: Particle[] = [];
   private pointGeometry: THREE.BufferGeometry;
   private pointMaterial: THREE.PointsMaterial;
@@ -34,22 +36,24 @@ export class ParticleSystem {
   private positions: Float32Array;
   private colors: Float32Array;
   private sizes: Float32Array;
+  private hadActiveParticles = false;
 
   // Bullet Tracers
   private tracers: BulletTracer[] = [];
   private tracerLines: THREE.LineSegments;
   private tracerPositions: Float32Array;
   private tracerColors: Float32Array;
-  private maxTracers = 40;
+  private maxTracers = 30;
+  private hadActiveTracers = false;
 
   // Atmospheric Particles (Rain / Dust / Ash / Stardust)
   private ambientMesh: THREE.Points | null = null;
   private ambientPositions: Float32Array | null = null;
   private ambientVelocity: THREE.Vector3 = new THREE.Vector3();
-  private ambientCount = 350;
+  private ambientCount = 160;
   private currentArenaType: string = 'suburban';
   private quality: GraphicsQuality = 'high';
-  private qualityScale: number = 0.75;
+  private qualityScale: number = 0.55;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -63,6 +67,7 @@ export class ParticleSystem {
     this.pointGeometry.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
     this.pointGeometry.setAttribute('color', new THREE.BufferAttribute(this.colors, 3));
     this.pointGeometry.setAttribute('size', new THREE.BufferAttribute(this.sizes, 1));
+    this.pointGeometry.setDrawRange(0, 0);
 
     this.pointMaterial = new THREE.PointsMaterial({
       size: 0.15,
@@ -83,6 +88,7 @@ export class ParticleSystem {
     const tracerGeo = new THREE.BufferGeometry();
     tracerGeo.setAttribute('position', new THREE.BufferAttribute(this.tracerPositions, 3));
     tracerGeo.setAttribute('color', new THREE.BufferAttribute(this.tracerColors, 3));
+    tracerGeo.setDrawRange(0, 0);
 
     const tracerMat = new THREE.LineBasicMaterial({
       vertexColors: true,
@@ -100,14 +106,17 @@ export class ParticleSystem {
   public setQuality(quality: GraphicsQuality) {
     this.quality = quality;
     if (quality === 'low' || quality === 'normal') {
-      this.qualityScale = 0.12;
+      // Lightweight settings for Intel i3 8th Gen 4GB RAM laptop
+      this.qualityScale = 0.08;
       this.ambientCount = 0; // Disable atmosphere particles completely on low-end hardware
     } else if (quality === 'high') {
-      this.qualityScale = 0.75;
-      this.ambientCount = 200;
+      // Balanced settings to eliminate small lag
+      this.qualityScale = 0.55;
+      this.ambientCount = 100;
     } else {
-      this.qualityScale = 1.0;
-      this.ambientCount = 350;
+      // Tuned for MacBook Air M4 fanless thermals
+      this.qualityScale = 0.8;
+      this.ambientCount = 160;
     }
 
     if (this.ambientMesh) {
@@ -235,7 +244,8 @@ export class ParticleSystem {
   }
 
   public addTracer(start: THREE.Vector3, target: THREE.Vector3, colorHex: number = 0x38bdf8) {
-    if (this.tracers.length >= this.maxTracers) {
+    const maxActiveTracers = (this.quality === 'low' || this.quality === 'normal') ? 6 : (this.quality === 'high' ? 16 : 24);
+    if (this.tracers.length >= maxActiveTracers) {
       this.tracers.shift();
     }
     this.tracers.push({
@@ -251,97 +261,102 @@ export class ParticleSystem {
 
   public update(delta: number) {
     // 1. Update Point Particles
-    for (let i = this.particleList.length - 1; i >= 0; i--) {
-      const p = this.particleList[i];
-      p.life -= delta;
-
-      if (p.life <= 0) {
-        this.particleList.splice(i, 1);
-        continue;
-      }
-
-      p.velocity.y -= p.gravity * delta;
-      p.position.addScaledVector(p.velocity, delta);
-
-      // Bounce off floor
-      if (p.position.y < 0.05) {
-        p.position.y = 0.05;
-        p.velocity.y *= -0.3;
-        p.velocity.x *= 0.7;
-        p.velocity.z *= 0.7;
-      }
-    }
-
-    // Write to point buffer
-    for (let i = 0; i < this.maxParticles; i++) {
-      if (i < this.particleList.length) {
+    const activeCount = this.particleList.length;
+    if (activeCount > 0 || this.hadActiveParticles) {
+      for (let i = activeCount - 1; i >= 0; i--) {
         const p = this.particleList[i];
-        this.positions[i * 3 + 0] = p.position.x;
-        this.positions[i * 3 + 1] = p.position.y;
-        this.positions[i * 3 + 2] = p.position.z;
+        p.life -= delta;
 
-        const lifeRatio = p.life / p.maxLife;
-        this.colors[i * 3 + 0] = p.color.r * lifeRatio;
-        this.colors[i * 3 + 1] = p.color.g * lifeRatio;
-        this.colors[i * 3 + 2] = p.color.b * lifeRatio;
+        if (p.life <= 0) {
+          this.particleList.splice(i, 1);
+          continue;
+        }
 
-        this.sizes[i] = p.size * lifeRatio;
+        p.velocity.y -= p.gravity * delta;
+        p.position.addScaledVector(p.velocity, delta);
+
+        // Bounce off floor
+        if (p.position.y < 0.05) {
+          p.position.y = 0.05;
+          p.velocity.y *= -0.3;
+          p.velocity.x *= 0.7;
+          p.velocity.z *= 0.7;
+        }
+      }
+
+      const newCount = this.particleList.length;
+      if (newCount > 0) {
+        const limit = Math.min(newCount, this.maxParticles);
+        for (let i = 0; i < limit; i++) {
+          const p = this.particleList[i];
+          this.positions[i * 3 + 0] = p.position.x;
+          this.positions[i * 3 + 1] = p.position.y;
+          this.positions[i * 3 + 2] = p.position.z;
+
+          const lifeRatio = p.life / p.maxLife;
+          this.colors[i * 3 + 0] = p.color.r * lifeRatio;
+          this.colors[i * 3 + 1] = p.color.g * lifeRatio;
+          this.colors[i * 3 + 2] = p.color.b * lifeRatio;
+
+          this.sizes[i] = p.size * lifeRatio;
+        }
+        this.pointGeometry.setDrawRange(0, limit);
+        this.pointGeometry.attributes.position.needsUpdate = true;
+        this.pointGeometry.attributes.color.needsUpdate = true;
+        this.pointGeometry.attributes.size.needsUpdate = true;
+        this.hadActiveParticles = true;
       } else {
-        this.positions[i * 3 + 0] = 0;
-        this.positions[i * 3 + 1] = -9999;
-        this.positions[i * 3 + 2] = 0;
-        this.sizes[i] = 0;
+        this.pointGeometry.setDrawRange(0, 0);
+        this.hadActiveParticles = false;
       }
     }
-
-    this.pointGeometry.attributes.position.needsUpdate = true;
-    this.pointGeometry.attributes.color.needsUpdate = true;
-    this.pointGeometry.attributes.size.needsUpdate = true;
 
     // 2. Update Tracers
-    let tracerIdx = 0;
-    for (let i = this.tracers.length - 1; i >= 0; i--) {
-      const t = this.tracers[i];
-      const dist = t.start.distanceTo(t.end);
-      t.progress += (t.speed * delta) / Math.max(1, dist);
+    if (this.tracers.length > 0 || this.hadActiveTracers) {
+      let tracerIdx = 0;
+      for (let i = this.tracers.length - 1; i >= 0; i--) {
+        const t = this.tracers[i];
+        const dist = t.start.distanceTo(t.end);
+        t.progress += (t.speed * delta) / Math.max(1, dist);
 
-      if (t.progress >= 1) {
-        this.tracers.splice(i, 1);
-        continue;
+        if (t.progress >= 1) {
+          this.tracers.splice(i, 1);
+          continue;
+        }
+
+        if (tracerIdx < this.maxTracers) {
+          ParticleSystem._p1.lerpVectors(t.start, t.end, Math.max(0, t.progress - 0.15));
+          ParticleSystem._p2.lerpVectors(t.start, t.end, Math.min(1, t.progress));
+
+          this.tracerPositions[tracerIdx * 6 + 0] = ParticleSystem._p1.x;
+          this.tracerPositions[tracerIdx * 6 + 1] = ParticleSystem._p1.y;
+          this.tracerPositions[tracerIdx * 6 + 2] = ParticleSystem._p1.z;
+          this.tracerPositions[tracerIdx * 6 + 3] = ParticleSystem._p2.x;
+          this.tracerPositions[tracerIdx * 6 + 4] = ParticleSystem._p2.y;
+          this.tracerPositions[tracerIdx * 6 + 5] = ParticleSystem._p2.z;
+
+          for (let c = 0; c < 2; c++) {
+            this.tracerColors[tracerIdx * 6 + c * 3 + 0] = t.color.r;
+            this.tracerColors[tracerIdx * 6 + c * 3 + 1] = t.color.g;
+            this.tracerColors[tracerIdx * 6 + c * 3 + 2] = t.color.b;
+          }
+
+          tracerIdx++;
+        }
       }
 
-      const p1 = new THREE.Vector3().lerpVectors(t.start, t.end, Math.max(0, t.progress - 0.15));
-      const p2 = new THREE.Vector3().lerpVectors(t.start, t.end, Math.min(1, t.progress));
-
-      this.tracerPositions[tracerIdx * 6 + 0] = p1.x;
-      this.tracerPositions[tracerIdx * 6 + 1] = p1.y;
-      this.tracerPositions[tracerIdx * 6 + 2] = p1.z;
-      this.tracerPositions[tracerIdx * 6 + 3] = p2.x;
-      this.tracerPositions[tracerIdx * 6 + 4] = p2.y;
-      this.tracerPositions[tracerIdx * 6 + 5] = p2.z;
-
-      for (let c = 0; c < 2; c++) {
-        this.tracerColors[tracerIdx * 6 + c * 3 + 0] = t.color.r;
-        this.tracerColors[tracerIdx * 6 + c * 3 + 1] = t.color.g;
-        this.tracerColors[tracerIdx * 6 + c * 3 + 2] = t.color.b;
+      this.tracerLines.geometry.setDrawRange(0, tracerIdx * 2);
+      if (tracerIdx > 0) {
+        this.tracerLines.geometry.attributes.position.needsUpdate = true;
+        this.tracerLines.geometry.attributes.color.needsUpdate = true;
+        this.hadActiveTracers = true;
+      } else {
+        this.hadActiveTracers = false;
       }
-
-      tracerIdx++;
     }
-
-    // Zero out unused tracer lines
-    for (let i = tracerIdx; i < this.maxTracers; i++) {
-      for (let k = 0; k < 6; k++) {
-        this.tracerPositions[i * 6 + k] = 0;
-        this.tracerColors[i * 6 + k] = 0;
-      }
-    }
-
-    this.tracerLines.geometry.attributes.position.needsUpdate = true;
-    this.tracerLines.geometry.attributes.color.needsUpdate = true;
 
     // 3. Update Atmosphere
-    if (this.ambientMesh && this.ambientPositions) {
+    if (this.ambientMesh && this.ambientPositions && this.ambientCount > 0) {
       for (let i = 0; i < this.ambientCount; i++) {
         this.ambientPositions[i * 3 + 0] += this.ambientVelocity.x * delta;
         this.ambientPositions[i * 3 + 1] += this.ambientVelocity.y * delta;

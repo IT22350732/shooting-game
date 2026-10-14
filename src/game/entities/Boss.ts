@@ -47,16 +47,20 @@ export class Boss {
 
   private build3DModel() {
     // Sleek White Ceramic Armor + Polished Chrome Chassis
-    const whiteArmor = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      metalness: 0.5,
-      roughness: 0.18
-    });
-    const chromeFrame = new THREE.MeshStandardMaterial({
-      color: 0x334155,
-      metalness: 0.9,
-      roughness: 0.2
-    });
+    const whiteArmor = Boss.isLowGraphics
+      ? new THREE.MeshLambertMaterial({ color: 0xffffff })
+      : new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          metalness: 0.5,
+          roughness: 0.18
+        });
+    const chromeFrame = Boss.isLowGraphics
+      ? new THREE.MeshLambertMaterial({ color: 0x334155 })
+      : new THREE.MeshStandardMaterial({
+          color: 0x334155,
+          metalness: 0.9,
+          roughness: 0.2
+        });
     const redGlow = new THREE.MeshBasicMaterial({ color: 0xef4444 });
     const coreGlow = new THREE.MeshBasicMaterial({ color: 0x0ea5e9 });
 

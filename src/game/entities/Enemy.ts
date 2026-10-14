@@ -222,7 +222,9 @@ export class Enemy {
   // Visual flash on damage
   private hitFlashTimer: number = 0;
   private originalMaterials: Map<THREE.Mesh, THREE.Material> = new Map();
-  private flashMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  private static readonly flashMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  private static readonly healthBarBgMat = new THREE.MeshBasicMaterial({ color: 0x0f172a, side: THREE.DoubleSide });
+  private static readonly healthBarMat = new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide });
 
   // Floating Health Bar & Highlight Aura
   private healthBarMesh: THREE.Mesh;
@@ -358,18 +360,13 @@ export class Enemy {
 
     // Create Floating Health Bar billboard
     const bgGeo = new THREE.PlaneGeometry(1.0, 0.12);
-    const bgMat = new THREE.MeshBasicMaterial({ color: 0x0f172a, side: THREE.DoubleSide });
-    this.healthBarBg = new THREE.Mesh(bgGeo, bgMat);
+    this.healthBarBg = new THREE.Mesh(bgGeo, Enemy.healthBarBgMat);
     this.healthBarBg.position.y = this.getHeight() + 0.35;
     this.healthBarBg.raycast = () => {};
     this.mesh.add(this.healthBarBg);
 
     const barGeo = new THREE.PlaneGeometry(0.96, 0.08);
-    const barMat = new THREE.MeshBasicMaterial({
-      color: 0xef4444,
-      side: THREE.DoubleSide
-    });
-    this.healthBarMesh = new THREE.Mesh(barGeo, barMat);
+    this.healthBarMesh = new THREE.Mesh(barGeo, Enemy.healthBarMat);
     this.healthBarMesh.position.y = this.getHeight() + 0.35;
     this.healthBarMesh.position.z = 0.01;
     this.healthBarMesh.raycast = () => {};
@@ -387,6 +384,58 @@ export class Enemy {
   }
 
   public static isLowGraphics: boolean = false;
+  private static materialCache: Map<string, Record<string, THREE.Material>> = new Map();
+
+  private static getOrCreateMaterials(theme: HumanTheme, isLow: boolean): Record<string, THREE.Material> {
+    const key = `${theme.name}_${isLow ? 'low' : 'high'}`;
+    let cached = Enemy.materialCache.get(key);
+    if (cached) return cached;
+
+    if (isLow) {
+      // MeshLambertMaterial provides fast Gouraud vertex lighting on Intel i3 laptops without heavy PBR fragment overhead
+      cached = {
+        skinMat: new THREE.MeshLambertMaterial({ color: theme.skinHex }),
+        uniformMat: new THREE.MeshLambertMaterial({ color: theme.uniformHex }),
+        pantsMat: new THREE.MeshLambertMaterial({ color: theme.pantsHex }),
+        vestMat: new THREE.MeshLambertMaterial({ color: theme.vestHex }),
+        gearMat: new THREE.MeshLambertMaterial({ color: theme.gearAccentHex }),
+        headwearMat: new THREE.MeshLambertMaterial({ color: theme.headwearHex }),
+        hairMat: new THREE.MeshLambertMaterial({ color: theme.hairHex }),
+        bootMat: new THREE.MeshLambertMaterial({ color: theme.bootHex }),
+        soleMat: new THREE.MeshLambertMaterial({ color: 0x78716c }),
+        gloveMat: new THREE.MeshLambertMaterial({ color: 0x9a3412 }),
+        gunMat: new THREE.MeshLambertMaterial({ color: 0x52525b }),
+        gunDetailMat: new THREE.MeshLambertMaterial({ color: 0x78716c }),
+        eyeWhiteMat: new THREE.MeshBasicMaterial({ color: 0xf1f5f9 }),
+        eyePupilMat: new THREE.MeshBasicMaterial({ color: 0x3f3f46 }),
+        shadesMat: new THREE.MeshLambertMaterial({ color: 0x1e3a8a }),
+        gogglesFrameMat: new THREE.MeshLambertMaterial({ color: 0x78716c }),
+        gogglesLensMat: new THREE.MeshLambertMaterial({ color: 0x60a5fa })
+      };
+    } else {
+      cached = {
+        skinMat: new THREE.MeshStandardMaterial({ color: theme.skinHex, roughness: 0.78, metalness: 0.04 }),
+        uniformMat: new THREE.MeshStandardMaterial({ color: theme.uniformHex, roughness: 0.85, metalness: 0.06 }),
+        pantsMat: new THREE.MeshStandardMaterial({ color: theme.pantsHex, roughness: 0.88, metalness: 0.05 }),
+        vestMat: new THREE.MeshStandardMaterial({ color: theme.vestHex, roughness: 0.72, metalness: 0.1 }),
+        gearMat: new THREE.MeshStandardMaterial({ color: theme.gearAccentHex, roughness: 0.7, metalness: 0.12 }),
+        headwearMat: new THREE.MeshStandardMaterial({ color: theme.headwearHex, roughness: 0.76, metalness: 0.1 }),
+        hairMat: new THREE.MeshStandardMaterial({ color: theme.hairHex, roughness: 0.95, metalness: 0.0 }),
+        bootMat: new THREE.MeshStandardMaterial({ color: theme.bootHex, roughness: 0.82, metalness: 0.1 }),
+        soleMat: new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.88, metalness: 0.05 }),
+        gloveMat: new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.75, metalness: 0.08 }),
+        gunMat: new THREE.MeshStandardMaterial({ color: 0x52525b, roughness: 0.38, metalness: 0.78 }),
+        gunDetailMat: new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.55, metalness: 0.25 }),
+        eyeWhiteMat: new THREE.MeshBasicMaterial({ color: 0xf1f5f9 }),
+        eyePupilMat: new THREE.MeshBasicMaterial({ color: 0x3f3f46 }),
+        shadesMat: new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.15, metalness: 0.85 }),
+        gogglesFrameMat: new THREE.MeshStandardMaterial({ color: 0x78716c, roughness: 0.65, metalness: 0.15 }),
+        gogglesLensMat: new THREE.MeshStandardMaterial({ color: 0x60a5fa, roughness: 0.18, metalness: 0.8 })
+      };
+    }
+    Enemy.materialCache.set(key, cached);
+    return cached;
+  }
 
   private registerMesh(mesh: THREE.Mesh, mat: THREE.Material) {
     this.originalMaterials.set(mesh, mat);
@@ -397,123 +446,33 @@ export class Enemy {
   private buildHumanModel() {
     const s = this.scaleFactor;
     const theme = this.theme;
-
-    // 1. Realistic Human & Tactical Materials
-    const skinMat = new THREE.MeshStandardMaterial({
-      color: theme.skinHex,
-      roughness: 0.78,
-      metalness: 0.04
-    });
-
-    const uniformMat = new THREE.MeshStandardMaterial({
-      color: theme.uniformHex,
-      roughness: 0.85,
-      metalness: 0.06
-    });
-
-    const pantsMat = new THREE.MeshStandardMaterial({
-      color: theme.pantsHex,
-      roughness: 0.88,
-      metalness: 0.05
-    });
-
-    const vestMat = new THREE.MeshStandardMaterial({
-      color: theme.vestHex,
-      roughness: 0.72,
-      metalness: 0.1
-    });
-
-    const gearMat = new THREE.MeshStandardMaterial({
-      color: theme.gearAccentHex,
-      roughness: 0.7,
-      metalness: 0.12
-    });
-
-    const headwearMat = new THREE.MeshStandardMaterial({
-      color: theme.headwearHex,
-      roughness: 0.76,
-      metalness: 0.1
-    });
-
-    const hairMat = new THREE.MeshStandardMaterial({
-      color: theme.hairHex,
-      roughness: 0.95,
-      metalness: 0.0
-    });
-
-    const bootMat = new THREE.MeshStandardMaterial({
-      color: theme.bootHex,
-      roughness: 0.82,
-      metalness: 0.1
-    });
-
-    const soleMat = new THREE.MeshStandardMaterial({
-      color: 0x78716c, // Stone/tan rubber sole
-      roughness: 0.88,
-      metalness: 0.05
-    });
-
-    const gloveMat = new THREE.MeshStandardMaterial({
-      color: 0x9a3412, // Warm brown/tan leather shooting gloves
-      roughness: 0.75,
-      metalness: 0.08
-    });
-
-    const gunMat = new THREE.MeshStandardMaterial({
-      color: 0x52525b, // Polished gunmetal steel (not black)
-      roughness: 0.38,
-      metalness: 0.78
-    });
-
-    const gunDetailMat = new THREE.MeshStandardMaterial({
-      color: 0x78716c, // Tactical polymer tan furniture
-      roughness: 0.55,
-      metalness: 0.25
-    });
-
-    const eyeWhiteMat = new THREE.MeshBasicMaterial({
-      color: 0xf1f5f9
-    });
-
-    const eyePupilMat = new THREE.MeshBasicMaterial({
-      color: 0x3f3f46
-    });
-
-    const shadesMat = new THREE.MeshStandardMaterial({
-      color: 0x1e3a8a, // Polarized cobalt blue lenses
-      roughness: 0.15,
-      metalness: 0.85
-    });
-
-    const gogglesFrameMat = new THREE.MeshStandardMaterial({
-      color: 0x78716c, // Tan tactical goggles frame
-      roughness: 0.65,
-      metalness: 0.15
-    });
-
-    const gogglesLensMat = new THREE.MeshStandardMaterial({
-      color: 0x60a5fa, // Tinted anti-fragmentation blue lens
-      roughness: 0.18,
-      metalness: 0.8
-    });
+    const mats = Enemy.getOrCreateMaterials(theme, Enemy.isLowGraphics);
+    const {
+      skinMat, uniformMat, pantsMat, vestMat, gearMat,
+      headwearMat, hairMat, bootMat, soleMat, gloveMat,
+      gunMat, gunDetailMat, eyeWhiteMat, eyePupilMat,
+      shadesMat, gogglesFrameMat, gogglesLensMat
+    } = mats;
 
     // Root of Human Body
     this.mesh.add(this.humanGroup);
 
-    // 0. Soft Ground Contact Shadow (Natural human ground contact - replaces neon sci-fi circle)
-    const shadowGeo = new THREE.CircleGeometry(0.42 * s, 24);
-    const shadowMat = new THREE.MeshBasicMaterial({
-      color: 0x334155,
-      transparent: true,
-      opacity: 0.22,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-    this.groundHighlightRing = new THREE.Mesh(shadowGeo, shadowMat);
-    this.groundHighlightRing.rotation.x = -Math.PI / 2;
-    this.groundHighlightRing.position.y = 0.015;
-    this.groundHighlightRing.raycast = () => {};
-    this.mesh.add(this.groundHighlightRing);
+    // 0. Soft Ground Contact Shadow (Natural human ground contact - skipped in low graphics)
+    if (!Enemy.isLowGraphics) {
+      const shadowGeo = new THREE.CircleGeometry(0.42 * s, 16);
+      const shadowMat = new THREE.MeshBasicMaterial({
+        color: 0x334155,
+        transparent: true,
+        opacity: 0.22,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      this.groundHighlightRing = new THREE.Mesh(shadowGeo, shadowMat);
+      this.groundHighlightRing.rotation.x = -Math.PI / 2;
+      this.groundHighlightRing.position.y = 0.015;
+      this.groundHighlightRing.raycast = () => {};
+      this.mesh.add(this.groundHighlightRing);
+    }
 
     // 1. Pelvis / Hips (Root of body motion)
     this.basePelvisY = 0.92 * s;
@@ -1322,7 +1281,7 @@ export class Enemy {
 
   private applyHitFlash(flash: boolean) {
     this.originalMaterials.forEach((origMat, mesh) => {
-      mesh.material = flash ? this.flashMaterial : origMat;
+      mesh.material = flash ? Enemy.flashMaterial : origMat;
     });
   }
 
@@ -1885,11 +1844,6 @@ export class Enemy {
     this.originalMaterials.clear();
     this.mesh.traverse((child) => {
       if ((child as THREE.Mesh).geometry) (child as THREE.Mesh).geometry.dispose();
-      if ((child as THREE.Mesh).material) {
-        const mat = (child as THREE.Mesh).material;
-        if (Array.isArray(mat)) mat.forEach(m => m.dispose());
-        else mat.dispose();
-      }
     });
   }
 }

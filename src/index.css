@@ -84,17 +84,20 @@ canvas {
   touch-action: none;
 }
 
-/* ULTRA LOW GRAPHICS MODE OPTIMIZATIONS (Eliminates GPU compositor lag on low-end Windows laptops) */
+/* ULTRA LOW GRAPHICS MODE OPTIMIZATIONS (Eliminates GPU & compositor lag on Intel i3 4GB RAM laptops) */
 body.low-graphics,
 body.low-graphics * {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   text-shadow: none !important;
   box-shadow: none !important;
+  transition: none !important;
+  animation-duration: 0.001s !important;
 }
 
 body.low-graphics .glass-panel {
-  background: rgba(255, 255, 255, 0.96) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-color: rgba(226, 232, 240, 0.8) !important;
 }
 
 /* Custom Sleek Scrollbar */
