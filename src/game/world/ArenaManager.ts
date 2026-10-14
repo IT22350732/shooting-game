@@ -563,27 +563,25 @@ export class ArenaManager {
     });
 
     // =========================================================================
-    // NATURAL TREES & ENTERABLE TREE HOUSES
+    // NATURAL TREES & GRAND CANOPY SANCTUARY TREEHOUSE
     // =========================================================================
-    // North-West Ancient Woods Treehouse (adjacent to West Manor: jump directly from treehouse deck to Manor roof)
+    // North-West Grand Canopy Sanctuary Treehouse (The sole, iconic 3-story sanctuary treehouse with panoramic transparent glass walls, calming lounge, rich loot crates, and open 3rd-floor rooftop)
     this.createEnterableTreehouse({
-      id: 'suburb-treehouse-nw',
-      name: 'Oak Treehouse Haven',
+      id: 'suburb-grand-treehouse',
+      name: 'Grand Canopy Sanctuary Treehouse',
       x: -36.5,
       z: -24,
       rotY: 0,
-      height: 4.2
+      height: 4.6,
+      deckWidth: 11.2,
+      deckDepth: 9.6,
+      stairRun: 6.2,
+      isGrandThreeStory: true
     });
 
-    // South-East Orchard Treehouse (adjacent to East Colonial: jump directly from treehouse deck to Colonial roof)
-    this.createEnterableTreehouse({
-      id: 'suburb-treehouse-se',
-      name: 'Orchard Treehouse Lookout',
-      x: 36.5,
-      z: 24,
-      rotY: Math.PI,
-      height: 4.2
-    });
+    // South-East Botanical Orchard Garden & Pergola Pavilion
+    // (Replaces duplicate treehouse so the Grand Canopy Sanctuary is the sole iconic treehouse in the arena)
+    this.createOrchardGarden(36.5, 24);
 
     // Suburban Landscape Trees across front lawns, yards, and parkways
     const suburbTrees: [number, number, number, 'oak' | 'pine'][] = [
@@ -2818,6 +2816,16 @@ export class ArenaManager {
    * walkable wooden access stairway, elevated timber lookout deck, hollow wooden cabin room,
    * sniper windows, interactive door, warm interior lantern, sniper vantage points, and interior sanctuary registration.
    */
+  /**
+   * Builds the Grand Canopy Sanctuary Treehouse:
+   * 1. Ground Nature Sanctuary Grounds (fencing, flagstone path, stone fountain basin, benches, lantern posts, root buttresses)
+   * 2. Grand timber access stairway from ground to elevated 2nd floor deck (with StairRamp)
+   * 3. Elevated Balcony Deck (11.2m x 9.6m at Y=4.6m) with floorPlane & perimeter balustrades
+   * 4. 2nd Floor Calming Panoramic Transparent Glass House (crystal-clear glass walls on all 4 sides with walnut framing, French glass doors, calming lounge furniture, and rich loot crates)
+   * 5. 2nd -> 3rd Floor Timber Staircase (with StairRamp)
+   * 6. 3rd Floor Open Rooftop Observation Deck (solid walkable timber deck at Y=8.0m with floorPlane, balustrades, brass telescope, observation bench, fairy lanterns, and high-ground loot)
+   * 7. Overarching ancient cathedral tree canopy framing the open sky
+   */
   public createEnterableTreehouse(options: {
     id: string;
     name: string;
@@ -2828,6 +2836,7 @@ export class ArenaManager {
     deckWidth?: number;
     deckDepth?: number;
     stairRun?: number;
+    isGrandThreeStory?: boolean;
   }): THREE.Group {
     const group = new THREE.Group();
     group.position.set(options.x, 0, options.z);
@@ -2837,17 +2846,40 @@ export class ArenaManager {
     const bRot = options.rotY || 0;
     const yAxis = new THREE.Vector3(0, 1, 0);
 
-    const deckH = options.height || 3.8;
-    const deckW = options.deckWidth || 8.0;
-    const deckD = options.deckDepth || 7.2;
-    const slabThick = 0.22;
-    const stairW = 1.6;
-    const stairRun = options.stairRun || 5.4;
+    // Architectural Dimensions
+    const deckH = options.height || 4.6;
+    const deckW = options.deckWidth || 11.2;
+    const deckD = options.deckDepth || 9.6;
+    const slabThick = 0.24;
+    const stairW = 1.8;
+    const stairRun = options.stairRun || 6.2;
 
+    const cabinW = 6.6;
+    const cabinD = 5.2;
+    const cabinH = 3.2;
+    const roomCenterX = 0.2;
+    const roomCenterZ = -deckD / 2 + cabinD / 2 + 0.6; // centered with generous front balcony
+    const doorW = 1.8;
+    const doorH = 2.5;
+
+    // Level 3 Open Rooftop Deck Dimensions
+    const roofDeckH = deckH + cabinH + 0.2; // Y = 8.0m
+    const roofDeckW = 9.0;
+    const roofDeckD = 6.4;
+    const roofCenterX = roomCenterX;
+    const roofCenterZ = roomCenterZ;
+
+    // Curated Harmonious Materials
     const timberMat = new THREE.MeshStandardMaterial({
       color: 0x854d0e,
-      roughness: 0.85,
+      roughness: 0.82,
       metalness: 0.05
+    });
+
+    const walnutFrameMat = new THREE.MeshStandardMaterial({
+      map: TextureGenerator.createWoodSidingTexture('#522b10'),
+      roughness: 0.72,
+      metalness: 0.08
     });
 
     const deckFloorMat = new THREE.MeshStandardMaterial({
@@ -2857,9 +2889,9 @@ export class ArenaManager {
     });
 
     const barkMat = new THREE.MeshStandardMaterial({
-      map: TextureGenerator.createBarkTexture('#451a03', '#1c0d02'),
-      roughness: 0.9,
-      metalness: 0.05
+      map: TextureGenerator.createBarkTexture('#3b1a04', '#150801'),
+      roughness: 0.92,
+      metalness: 0.04
     });
 
     const foliageMat = new THREE.MeshStandardMaterial({
@@ -2867,49 +2899,272 @@ export class ArenaManager {
       roughness: 0.82
     });
 
-    // 1. MASSIVE ANCIENT SUPPORTING TREE TRUNK (Through & Under Platform)
-    const trunkH = deckH + 8.5;
-    const trunkGeo = new THREE.CylinderGeometry(0.85, 1.35, trunkH, 10);
+    const stoneMat = new THREE.MeshStandardMaterial({
+      map: TextureGenerator.createSidewalkTexture(),
+      roughness: 0.88,
+      metalness: 0.02
+    });
+
+    // High-clarity architectural crystal glass: 100% visible sightlines to the outside arena
+    const treehouseGlassMat = new THREE.MeshStandardMaterial({
+      color: 0xd6f0ff,
+      transparent: true,
+      opacity: 0.12,
+      roughness: 0.02,
+      metalness: 0.06,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+
+    // =========================================================================
+    // 1. NATURE SANCTUARY GROUNDS (Large Dedicated Area Around Single Treehouse)
+    // =========================================================================
+    const groundsW = 26.0;
+    const groundsD = 24.0;
+    const gateW = 3.8;
+
+    // Rustic Timber Post-and-Rail Fence Bounding Sanctuary
+    const fenceH = 1.15;
+    const fencePostGeo = new THREE.BoxGeometry(0.16, fenceH, 0.16);
+    const fenceRailGeo = (len: number) => new THREE.BoxGeometry(len, 0.08, 0.12);
+
+    const addFenceSegment = (x1: number, z1: number, x2: number, z2: number) => {
+      const dx = x2 - x1;
+      const dz = z2 - z1;
+      const len = Math.hypot(dx, dz);
+      const ang = Math.atan2(dx, dz);
+      const midX = (x1 + x2) / 2;
+      const midZ = (z1 + z2) / 2;
+
+      const fGroup = new THREE.Group();
+      fGroup.position.set(midX, 0, midZ);
+      fGroup.rotation.y = ang;
+
+      // Posts
+      const postCount = Math.max(2, Math.round(len / 3.0));
+      for (let p = 0; p <= postCount; p++) {
+        const post = new THREE.Mesh(fencePostGeo, timberMat);
+        const pz = -len / 2 + (p / postCount) * len;
+        post.position.set(0, fenceH / 2, pz);
+        post.castShadow = true;
+        fGroup.add(post);
+      }
+
+      // Upper & Lower Rails
+      const rUpper = new THREE.Mesh(fenceRailGeo(len), timberMat);
+      rUpper.rotation.y = Math.PI / 2;
+      rUpper.position.set(0, fenceH * 0.8, 0);
+      fGroup.add(rUpper);
+
+      const rLower = new THREE.Mesh(fenceRailGeo(len), timberMat);
+      rLower.rotation.y = Math.PI / 2;
+      rLower.position.set(0, fenceH * 0.42, 0);
+      fGroup.add(rLower);
+
+      group.add(fGroup);
+
+      // Obstacle barrier
+      const bGeo = new THREE.BoxGeometry(0.24, fenceH, len);
+      const bMat = new THREE.MeshBasicMaterial({ visible: false });
+      const barrier = new THREE.Mesh(bGeo, bMat);
+      barrier.position.set(midX, fenceH / 2, midZ);
+      barrier.rotation.y = ang;
+      group.add(barrier);
+
+      group.updateMatrixWorld(true);
+      const bBox = new THREE.Box3().setFromObject(barrier);
+      this.obstacles.push({ mesh: barrier, box: bBox, isCover: true });
+    };
+
+    // North, West, East perimeter fences
+    const halfGW = groundsW / 2;
+    const halfGD = groundsD / 2;
+    addFenceSegment(-halfGW, -halfGD, halfGW, -halfGD); // Back (North)
+    addFenceSegment(-halfGW, -halfGD, -halfGW, halfGD); // West
+    addFenceSegment(halfGW, -halfGD, halfGW, halfGD); // East
+
+    // South Fence with welcoming Sanctuary Gateway
+    addFenceSegment(-halfGW, halfGD, -gateW / 2, halfGD);
+    addFenceSegment(gateW / 2, halfGD, halfGW, halfGD);
+
+    // Stone Entrance Lantern Pillars at the Gateway
+    const pillarGeo = new THREE.BoxGeometry(0.55, 1.8, 0.55);
+    const pillarMat = new THREE.MeshStandardMaterial({
+      map: TextureGenerator.createBrickTexture('#64748b', '#cbd5e1'),
+      roughness: 0.85
+    });
+
+    [-gateW / 2, gateW / 2].forEach(px => {
+      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+      pillar.position.set(px, 0.9, halfGD);
+      pillar.castShadow = true;
+      group.add(pillar);
+
+      const lanternCap = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.35, 4), timberMat);
+      lanternCap.position.set(px, 1.8 + 0.35, halfGD);
+      lanternCap.rotation.y = Math.PI / 4;
+      group.add(lanternCap);
+
+      const lanternCore = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.12, 0.14, 0.28, 8),
+        new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xf59e0b, emissiveIntensity: 0.85 })
+      );
+      lanternCore.position.set(px, 1.8 + 0.16, halfGD);
+      group.add(lanternCore);
+
+      const gateLight = new THREE.PointLight(0xfef08a, 1.2, 10);
+      gateLight.position.set(px, 1.8 + 0.2, halfGD);
+      group.add(gateLight);
+
+      group.updateMatrixWorld(true);
+      const pBox = new THREE.Box3().setFromObject(pillar);
+      this.obstacles.push({ mesh: pillar, box: pBox, isCover: true });
+    });
+
+    // Meandering Stone Flagstone Pathway from Gateway to Stair Foot
+    const pathSegments = 9;
+    const stairFootX = -cabinW / 2 + stairW / 2 + 0.4;
+    const stairFootZ = deckD / 2 + stairRun;
+    for (let i = 0; i < pathSegments; i++) {
+      const t = i / (pathSegments - 1);
+      const px = (1 - t) * 0.0 + t * stairFootX + Math.sin(t * Math.PI) * 0.9;
+      const pz = (1 - t) * halfGD + t * (stairFootZ + 0.4);
+
+      const stoneGeo = new THREE.CylinderGeometry(0.65, 0.72, 0.08, 8);
+      const stoneMesh = new THREE.Mesh(stoneGeo, stoneMat);
+      stoneMesh.position.set(px, 0.04, pz);
+      stoneMesh.receiveShadow = true;
+      stoneMesh.rotation.y = i * 0.7;
+      group.add(stoneMesh);
+    }
+
+    // Calming Sanctuary Water Basin / Birdbath Fountain
+    const fountainGroup = new THREE.Group();
+    fountainGroup.position.set(4.8, 0, 4.5);
+    group.add(fountainGroup);
+
+    const fBasin = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.3, 0.65, 12), stoneMat);
+    fBasin.position.y = 0.65 / 2;
+    fBasin.castShadow = true;
+    fBasin.receiveShadow = true;
+    fountainGroup.add(fBasin);
+
+    const fWater = new THREE.Mesh(
+      new THREE.CircleGeometry(1.45, 16),
+      new THREE.MeshStandardMaterial({
+        color: 0x38bdf8,
+        roughness: 0.08,
+        metalness: 0.2,
+        transparent: true,
+        opacity: 0.75
+      })
+    );
+    fWater.rotation.x = -Math.PI / 2;
+    fWater.position.y = 0.58;
+    fountainGroup.add(fWater);
+
+    const fPedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 1.1, 8), stoneMat);
+    fPedestal.position.y = 0.55;
+    fountainGroup.add(fPedestal);
+
+    const fUpperBowl = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.5, 0.25, 10), stoneMat);
+    fUpperBowl.position.y = 1.1;
+    fountainGroup.add(fUpperBowl);
+
+    group.updateMatrixWorld(true);
+    const fBox = new THREE.Box3().setFromObject(fBasin);
+    this.obstacles.push({ mesh: fBasin, box: fBox, isCover: true });
+
+    // Weathered Garden Park Benches
+    const addGroundBench = (bx: number, bz: number, brot: number) => {
+      const benchGroup = new THREE.Group();
+      benchGroup.position.set(bx, 0, bz);
+      benchGroup.rotation.y = brot;
+
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.55), timberMat);
+      seat.position.y = 0.48;
+      seat.castShadow = true;
+      benchGroup.add(seat);
+
+      const back = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.45, 0.06), timberMat);
+      back.position.set(0, 0.82, -0.24);
+      back.castShadow = true;
+      benchGroup.add(back);
+
+      [-0.75, 0.75].forEach(lx => {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.48, 0.52), timberMat);
+        leg.position.set(lx, 0.24, 0);
+        benchGroup.add(leg);
+      });
+
+      group.add(benchGroup);
+
+      group.updateMatrixWorld(true);
+      const benchBox = new THREE.Box3().setFromObject(seat);
+      this.obstacles.push({ mesh: seat, box: benchBox, isCover: true });
+    };
+
+    addGroundBench(5.2, 1.8, -Math.PI / 3);
+    addGroundBench(-5.5, 4.2, Math.PI / 4);
+
+    // Rustic Planter Barrels with Colorful Blooming Flora
+    const addPlanterBarrel = (px: number, pz: number, bloomColor: number) => {
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.36, 0.65, 8), timberMat);
+      barrel.position.set(px, 0.65 / 2, pz);
+      barrel.castShadow = true;
+      group.add(barrel);
+
+      const soil = new THREE.Mesh(
+        new THREE.CircleGeometry(0.4, 8),
+        new THREE.MeshStandardMaterial({ color: 0x27170a, roughness: 0.95 })
+      );
+      soil.rotation.x = -Math.PI / 2;
+      soil.position.set(px, 0.63, pz);
+      group.add(soil);
+
+      const bloomGeo = new THREE.DodecahedronGeometry(0.38, 1);
+      const bloomMat = new THREE.MeshStandardMaterial({ color: bloomColor, roughness: 0.65 });
+      const flowers = new THREE.Mesh(bloomGeo, bloomMat);
+      flowers.position.set(px, 0.85, pz);
+      group.add(flowers);
+
+      group.updateMatrixWorld(true);
+      const bBox = new THREE.Box3().setFromObject(barrel);
+      this.obstacles.push({ mesh: barrel, box: bBox, isCover: true });
+    };
+
+    addPlanterBarrel(-gateW / 2 - 1.0, halfGD - 0.5, 0xf43f5e);
+    addPlanterBarrel(gateW / 2 + 1.0, halfGD - 0.5, 0x38bdf8);
+    addPlanterBarrel(stairFootX + stairW + 0.5, stairFootZ, 0xfacc15);
+
+    // =========================================================================
+    // 2. MASSIVE ANCIENT SUPPORTING TREE TRUNK & BOUGHS
+    // =========================================================================
+    const trunkH = deckH + 13.5; // reaches through deck and up to Y=18.1m
+    const trunkGeo = new THREE.CylinderGeometry(1.05, 1.6, trunkH, 12);
     const trunk = new THREE.Mesh(trunkGeo, barkMat);
-    const trunkLocalX = deckW * 0.26;
-    const trunkLocalZ = -deckD * 0.24;
+    const trunkLocalX = deckW * 0.22;
+    const trunkLocalZ = -deckD * 0.22;
     trunk.position.set(trunkLocalX, trunkH / 2, trunkLocalZ);
     trunk.castShadow = true;
     trunk.receiveShadow = true;
     group.add(trunk);
 
-    // Giant Supporting Tree Boughs / Limbs
-    const boughAngles = [0.8, 2.2, 3.8, 5.2];
-    boughAngles.forEach(ang => {
-      const boughGeo = new THREE.CylinderGeometry(0.32, 0.46, 4.6, 8);
-      const bough = new THREE.Mesh(boughGeo, barkMat);
-      bough.position.set(
-        trunkLocalX + Math.sin(ang) * 1.5,
-        deckH * 0.85,
-        trunkLocalZ + Math.cos(ang) * 1.5
+    // Colossal Mossy Root Buttresses Flaring into Soil
+    const rootAngles = [0.4, 1.6, 2.8, 4.1, 5.3];
+    rootAngles.forEach(ang => {
+      const rootLength = 3.8;
+      const rootGeo = new THREE.CylinderGeometry(0.24, 0.65, rootLength, 8);
+      const rootMesh = new THREE.Mesh(rootGeo, barkMat);
+      rootMesh.position.set(
+        trunkLocalX + Math.sin(ang) * (rootLength * 0.45),
+        0.35,
+        trunkLocalZ + Math.cos(ang) * (rootLength * 0.45)
       );
-      bough.rotation.y = ang;
-      bough.rotation.z = 0.58;
-      bough.castShadow = true;
-      group.add(bough);
-    });
-
-    // Giant Sheltering Tree Canopy Over the Treehouse
-    const canopyClusters = [
-      { x: trunkLocalX, y: deckH + 6.2, z: trunkLocalZ, r: 4.2 },
-      { x: trunkLocalX - 2.8, y: deckH + 5.6, z: trunkLocalZ + 2.2, r: 3.4 },
-      { x: trunkLocalX + 2.6, y: deckH + 5.8, z: trunkLocalZ - 2.0, r: 3.2 },
-      { x: trunkLocalX - 1.5, y: deckH + 5.2, z: trunkLocalZ - 2.8, r: 3.0 },
-      { x: trunkLocalX + 2.2, y: deckH + 5.0, z: trunkLocalZ + 2.4, r: 3.2 }
-    ];
-    canopyClusters.forEach(cc => {
-      const cGeo = new THREE.DodecahedronGeometry(cc.r, 1);
-      const foliage = new THREE.Mesh(cGeo, foliageMat);
-      foliage.position.set(cc.x, cc.y, cc.z);
-      foliage.scale.set(1.0, 0.8, 1.0);
-      foliage.castShadow = true;
-      foliage.receiveShadow = true;
-      group.add(foliage);
+      rootMesh.rotation.y = ang;
+      rootMesh.rotation.z = 1.15;
+      rootMesh.castShadow = true;
+      group.add(rootMesh);
     });
 
     // Solid tree trunk cover obstacle at ground level
@@ -2917,17 +3172,50 @@ export class ArenaManager {
     const trunkWorldPos = new THREE.Vector3(trunkLocalX, deckH / 2, trunkLocalZ).applyAxisAngle(yAxis, bRot).add(group.position);
     const trunkBox = new THREE.Box3().setFromCenterAndSize(
       trunkWorldPos,
-      new THREE.Vector3(2.4, deckH, 2.4)
+      new THREE.Vector3(3.2, deckH, 3.2)
     );
     this.obstacles.push({ mesh: trunk, box: trunkBox, isCover: true });
 
-    // 2. HEAVY TIMBER STILTS & DIAGONAL BRACES
-    const stiltGeo = new THREE.BoxGeometry(0.24, deckH, 0.24);
+    // Giant Supporting Tree Boughs Underneath Platform & Rooftop
+    const boughAngles = [0.6, 2.1, 3.6, 5.1];
+    boughAngles.forEach(ang => {
+      // Lower boughs bracing Level 2 deck
+      const boughGeo = new THREE.CylinderGeometry(0.36, 0.52, 5.2, 8);
+      const bough = new THREE.Mesh(boughGeo, barkMat);
+      bough.position.set(
+        trunkLocalX + Math.sin(ang) * 1.8,
+        deckH * 0.85,
+        trunkLocalZ + Math.cos(ang) * 1.8
+      );
+      bough.rotation.y = ang;
+      bough.rotation.z = 0.58;
+      bough.castShadow = true;
+      group.add(bough);
+
+      // Upper boughs cradling 3rd Floor Rooftop
+      const upperBough = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.42, 6.2, 8), barkMat);
+      upperBough.position.set(
+        trunkLocalX + Math.sin(ang + 0.3) * 2.4,
+        roofDeckH + 1.2,
+        trunkLocalZ + Math.cos(ang + 0.3) * 2.4
+      );
+      upperBough.rotation.y = ang + 0.3;
+      upperBough.rotation.z = 0.52;
+      upperBough.castShadow = true;
+      group.add(upperBough);
+    });
+
+    // =========================================================================
+    // 3. HEAVY TIMBER STILTS & DIAGONAL BRACES
+    // =========================================================================
+    const stiltGeo = new THREE.BoxGeometry(0.28, deckH, 0.28);
     const stiltOffsets = [
-      { x: -deckW / 2 + 0.35, z: -deckD / 2 + 0.35 },
-      { x: deckW / 2 - 0.35, z: -deckD / 2 + 0.35 },
-      { x: -deckW / 2 + 0.35, z: deckD / 2 - 0.35 },
-      { x: deckW / 2 - 0.35, z: deckD / 2 - 0.35 }
+      { x: -deckW / 2 + 0.45, z: -deckD / 2 + 0.45 },
+      { x: deckW / 2 - 0.45, z: -deckD / 2 + 0.45 },
+      { x: -deckW / 2 + 0.45, z: deckD / 2 - 0.45 },
+      { x: deckW / 2 - 0.45, z: deckD / 2 - 0.45 },
+      { x: 0, z: -deckD / 2 + 0.45 },
+      { x: 0, z: deckD / 2 - 0.45 }
     ];
     stiltOffsets.forEach(so => {
       const stilt = new THREE.Mesh(stiltGeo, timberMat);
@@ -2936,15 +3224,17 @@ export class ArenaManager {
       stilt.receiveShadow = true;
       group.add(stilt);
 
-      const braceGeo = new THREE.BoxGeometry(0.12, 0.16, 2.2);
+      const braceGeo = new THREE.BoxGeometry(0.14, 0.18, 2.6);
       const brace = new THREE.Mesh(braceGeo, timberMat);
-      brace.position.set(so.x * 0.82, deckH - 0.8, so.z * 0.82);
+      brace.position.set(so.x * 0.82, deckH - 0.9, so.z * 0.82);
       brace.rotation.y = Math.atan2(so.z, so.x);
-      brace.rotation.z = 0.5;
+      brace.rotation.z = 0.52;
       group.add(brace);
     });
 
-    // 3. ELEVATED TIMBER PLANK DECK SLAB
+    // =========================================================================
+    // 4. LEVEL 2 ELEVATED TIMBER BALCONY DECK SLAB (Walkable Floor at Y=deckH)
+    // =========================================================================
     const deckGeo = new THREE.BoxGeometry(deckW, slabThick, deckD);
     const deckMesh = new THREE.Mesh(deckGeo, deckFloorMat);
     deckMesh.position.set(0, deckH - slabThick / 2, 0);
@@ -2952,7 +3242,6 @@ export class ArenaManager {
     deckMesh.receiveShadow = true;
     group.add(deckMesh);
 
-    // Register Walkable Elevated Deck Floor
     group.updateMatrixWorld(true);
     const deckLocalCenter = new THREE.Vector3(0, deckH, 0);
     const deckWorldCenter = deckLocalCenter.clone().applyAxisAngle(yAxis, bRot).add(group.position);
@@ -2973,16 +3262,18 @@ export class ArenaManager {
       }
     });
 
-    // 4. WOODEN ACCESS STAIRWAY (From Ground Y=0 to Deck Y=deckH)
-    const stairStartX = -deckW / 2 + stairW / 2 + 0.5;
+    // =========================================================================
+    // 5. LEVEL 1 -> LEVEL 2 GRAND ENTRANCE STAIRWAY (From Y=0 to Y=deckH)
+    // =========================================================================
+    const stairStartX = -deckW / 2 + stairW / 2 + 0.6;
     const zTop = deckD / 2;
     const zBottom = zTop + stairRun;
 
     const stairGroup = new THREE.Group();
-    const numSteps = 16;
+    const numSteps = 18;
     const stepDepth = stairRun / numSteps;
     const stepHeight = deckH / numSteps;
-    const stepPlankGeo = new THREE.BoxGeometry(stairW, 0.08, stepDepth + 0.06);
+    const stepPlankGeo = new THREE.BoxGeometry(stairW, 0.09, stepDepth + 0.08);
 
     for (let i = 0; i < numSteps; i++) {
       const stepY = i * stepHeight + stepHeight / 2;
@@ -2994,61 +3285,70 @@ export class ArenaManager {
       stairGroup.add(stepMesh);
     }
 
-    // Wooden Stair Stringers & Handrails
     const stairHypot = Math.hypot(stairRun, deckH);
     const stairAngle = Math.atan2(deckH, stairRun);
-    const stringerGeo = new THREE.BoxGeometry(0.12, 0.24, stairHypot);
+    const stringerGeo = new THREE.BoxGeometry(0.14, 0.26, stairHypot);
+
     const leftStringer = new THREE.Mesh(stringerGeo, timberMat);
     leftStringer.rotation.x = stairAngle;
-    leftStringer.position.set(stairStartX - stairW / 2 + 0.04, deckH / 2, (zBottom + zTop) / 2);
+    leftStringer.position.set(stairStartX - stairW / 2 + 0.05, deckH / 2, (zBottom + zTop) / 2);
     stairGroup.add(leftStringer);
 
     const rightStringer = new THREE.Mesh(stringerGeo, timberMat);
     rightStringer.rotation.x = stairAngle;
-    rightStringer.position.set(stairStartX + stairW / 2 - 0.04, deckH / 2, (zBottom + zTop) / 2);
+    rightStringer.position.set(stairStartX + stairW / 2 - 0.05, deckH / 2, (zBottom + zTop) / 2);
     stairGroup.add(rightStringer);
 
-    // Wooden handrails on stairs
-    const handrailGeo = new THREE.BoxGeometry(0.08, 0.08, stairHypot);
+    // Handrails on stairs
+    const handrailGeo = new THREE.BoxGeometry(0.09, 0.09, stairHypot);
     const handrailL = new THREE.Mesh(handrailGeo, timberMat);
     handrailL.rotation.x = stairAngle;
-    handrailL.position.set(stairStartX - stairW / 2 + 0.04, deckH / 2 + 1.0, (zBottom + zTop) / 2);
+    handrailL.position.set(stairStartX - stairW / 2 + 0.05, deckH / 2 + 1.0, (zBottom + zTop) / 2);
     stairGroup.add(handrailL);
 
     const handrailR = new THREE.Mesh(handrailGeo, timberMat);
     handrailR.rotation.x = stairAngle;
-    handrailR.position.set(stairStartX + stairW / 2 - 0.04, deckH / 2 + 1.0, (zBottom + zTop) / 2);
+    handrailR.position.set(stairStartX + stairW / 2 - 0.05, deckH / 2 + 1.0, (zBottom + zTop) / 2);
     stairGroup.add(handrailR);
 
     group.add(stairGroup);
 
-    // Register stair ramp physics for smooth ascension
+    // Register Level 1 -> Level 2 StairRamp Physics
     const p1Local = new THREE.Vector3(stairStartX, 0.0, zBottom);
     const p2Local = new THREE.Vector3(stairStartX, deckH, zTop);
     const p1World = p1Local.clone().applyAxisAngle(yAxis, bRot).add(group.position);
     const p2World = p2Local.clone().applyAxisAngle(yAxis, bRot).add(group.position);
 
-    const stairRamp: StairRamp = {
+    const mainStairRamp: StairRamp = {
       p1: p1World,
       p2: p2World,
-      width: stairW + 0.3,
+      width: stairW + 0.35,
       bottomY: 0.0,
       topY: deckH
     };
     stairGroup.updateMatrixWorld(true);
-    const stairBox = new THREE.Box3().setFromObject(stairGroup);
+    const mainStairBox = new THREE.Box3().setFromObject(stairGroup);
     this.obstacles.push({
       mesh: stairGroup,
-      box: stairBox,
+      box: mainStairBox,
       isCover: false,
-      stairRamp
+      stairRamp: mainStairRamp
     });
 
-    // 5. PERIMETER RUSTIC BALUSTRADE RAILINGS AROUND OPEN DECK
+    // =========================================================================
+    // 6. PERIMETER RUSTIC BALUSTRADES AROUND LEVEL 2 BALCONY DECK
+    // =========================================================================
     const railH = 1.05;
-    const addRailing = (len: number, rx: number, rz: number, angleY: number = 0) => {
+    const addRailing = (
+      parentGroup: THREE.Group,
+      len: number,
+      rx: number,
+      ry: number,
+      rz: number,
+      angleY: number = 0
+    ) => {
       const railSeg = new THREE.Group();
-      railSeg.position.set(rx, deckH, rz);
+      railSeg.position.set(rx, ry, rz);
       if (angleY) railSeg.rotation.y = angleY;
 
       const topRailGeo = new THREE.BoxGeometry(len, 0.08, 0.12);
@@ -3067,7 +3367,7 @@ export class ArenaManager {
       railSeg.add(bottomRail);
 
       const balusterGeo = new THREE.BoxGeometry(0.06, railH, 0.06);
-      const count = Math.max(1, Math.round(len / 0.6));
+      const count = Math.max(1, Math.round(len / 0.65));
       for (let b = 0; b <= count; b++) {
         const bx = -len / 2 + (b / count) * len;
         const baluster = new THREE.Mesh(balusterGeo, timberMat);
@@ -3076,65 +3376,44 @@ export class ArenaManager {
         railSeg.add(baluster);
       }
 
-      const barrierGeo = new THREE.BoxGeometry(len, railH, 0.22);
+      const barrierGeo = new THREE.BoxGeometry(len, railH, 0.24);
       const barrierMat = new THREE.MeshBasicMaterial({ visible: false });
       const barrier = new THREE.Mesh(barrierGeo, barrierMat);
       barrier.position.set(0, railH / 2, 0);
       railSeg.add(barrier);
 
-      group.add(railSeg);
+      parentGroup.add(railSeg);
 
       group.updateMatrixWorld(true);
       const rBox = new THREE.Box3().setFromObject(barrier);
       this.obstacles.push({ mesh: barrier, box: rBox, isCover: false });
     };
 
-    addRailing(deckD, -deckW / 2, 0, Math.PI / 2);
-    addRailing(deckW, 0, -deckD / 2, 0);
-    addRailing(deckD, deckW / 2, 0, Math.PI / 2);
-    const frontRailSpan = deckW - stairW - 1.0;
+    // Level 2 Balustrades
+    addRailing(group, deckD, -deckW / 2, deckH, 0, Math.PI / 2); // West
+    addRailing(group, deckW, 0, deckH, -deckD / 2, 0); // North
+    addRailing(group, deckD, deckW / 2, deckH, 0, Math.PI / 2); // East
+    const frontRailSpan = deckW - stairW - 1.2;
     if (frontRailSpan > 0.5) {
-      addRailing(frontRailSpan, deckW / 2 - frontRailSpan / 2, deckD / 2, 0);
+      addRailing(group, frontRailSpan, deckW / 2 - frontRailSpan / 2, deckH, deckD / 2, 0);
     }
 
-    // 6. ENTERABLE PANORAMIC GLASS TREEHOUSE CABIN ROOM
-    const roomW = 5.2;
-    const roomD = 4.2;
-    const roomH = 3.0;
-    const roomWallThick = 0.16;
-    const roomCenterX = 0.4;
-    const roomCenterZ = -deckD / 2 + roomD / 2 + 0.4;
-    const doorW = 1.6;
-    const doorH = 2.4;
-    const baseSillH = 0.35; // Timber kickplate sill along floor
-    const headerH = 0.22; // Top timber roofline header
-    const glassPaneH = roomH - baseSillH - headerH;
-
-    const timberFrameMat = new THREE.MeshStandardMaterial({
-      map: TextureGenerator.createWoodSidingTexture('#78350f'),
-      roughness: 0.75,
-      metalness: 0.1
-    });
-
-    // High-clarity architectural crystal glass: user inside sees the arena outside with 100% clarity
-    const treehouseGlassMat = new THREE.MeshStandardMaterial({
-      color: 0xc7e8ff,
-      transparent: true,
-      opacity: 0.18,
-      roughness: 0.04,
-      metalness: 0.15,
-      side: THREE.DoubleSide,
-      depthWrite: false
-    });
-
+    // =========================================================================
+    // 7. LEVEL 2 CALMING PANORAMIC TRANSPARENT GLASS CABIN
+    // =========================================================================
     const cabinGroup = new THREE.Group();
     cabinGroup.position.set(roomCenterX, deckH, roomCenterZ);
     group.add(cabinGroup);
 
+    const roomWallThick = 0.16;
+    const baseSillH = 0.32; // Rich walnut floor sill
+    const headerH = 0.22; // Walnut header beam
+    const glassPaneH = cabinH - baseSillH - headerH;
+
     const cabinWallMeshes: THREE.Mesh[] = [];
 
-    // Helper to construct architectural glass wall with timber sill, header, and vertical mullions
-    const createGlassWallSection = (
+    // Architectural Glass Wall Section with Walnut Framing, Sills & Mullions
+    const createPanoramicGlassWall = (
       width: number,
       px: number,
       pz: number,
@@ -3145,146 +3424,145 @@ export class ArenaManager {
       wallSection.rotation.y = rotY;
       cabinGroup.add(wallSection);
 
-      // Bottom timber sill
-      const sillGeo = new THREE.BoxGeometry(width, baseSillH, roomWallThick);
-      const sill = new THREE.Mesh(sillGeo, timberFrameMat);
+      // Bottom Walnut Sill
+      const sill = new THREE.Mesh(new THREE.BoxGeometry(width, baseSillH, roomWallThick), walnutFrameMat);
       sill.position.set(0, baseSillH / 2, 0);
       sill.castShadow = true;
       sill.receiveShadow = true;
       wallSection.add(sill);
 
-      // Top timber header
-      const headerGeo = new THREE.BoxGeometry(width, headerH, roomWallThick);
-      const header = new THREE.Mesh(headerGeo, timberFrameMat);
-      header.position.set(0, roomH - headerH / 2, 0);
+      // Top Walnut Header
+      const header = new THREE.Mesh(new THREE.BoxGeometry(width, headerH, roomWallThick), walnutFrameMat);
+      header.position.set(0, cabinH - headerH / 2, 0);
       header.castShadow = true;
       wallSection.add(header);
 
-      // Crystal transparent glass pane
-      const glassGeo = new THREE.BoxGeometry(width - 0.06, glassPaneH, 0.05);
-      const glass = new THREE.Mesh(glassGeo, treehouseGlassMat);
+      // Crystal Transparent Architectural Glass (100% visibility to outside)
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(width - 0.05, glassPaneH, 0.05), treehouseGlassMat);
       glass.position.set(0, baseSillH + glassPaneH / 2, 0);
       glass.renderOrder = 10;
       wallSection.add(glass);
 
-      // Vertical architectural timber mullions (support ribs)
-      const mulGeo = new THREE.BoxGeometry(0.08, glassPaneH, roomWallThick + 0.02);
-      const mul1 = new THREE.Mesh(mulGeo, timberFrameMat);
-      mul1.position.set(-width / 4, baseSillH + glassPaneH / 2, 0);
-      wallSection.add(mul1);
+      // Vertical Structural Walnut Mullions
+      const numMullions = Math.max(1, Math.round(width / 1.5));
+      for (let m = 1; m < numMullions; m++) {
+        const mx = -width / 2 + (m / numMullions) * width;
+        const mul = new THREE.Mesh(
+          new THREE.BoxGeometry(0.09, glassPaneH, roomWallThick + 0.02),
+          walnutFrameMat
+        );
+        mul.position.set(mx, baseSillH + glassPaneH / 2, 0);
+        wallSection.add(mul);
+      }
 
-      const mul2 = new THREE.Mesh(mulGeo, timberFrameMat);
-      mul2.position.set(width / 4, baseSillH + glassPaneH / 2, 0);
-      wallSection.add(mul2);
-
-      // Solid physical wall barrier collider across full room height (roomH)
-      const barrierGeo = new THREE.BoxGeometry(width, roomH, roomWallThick);
-      const barrierMat = new THREE.MeshBasicMaterial({ visible: false });
-      const barrier = new THREE.Mesh(barrierGeo, barrierMat);
-      barrier.position.set(0, roomH / 2, 0);
+      // Invisible Collision Barrier (with isGlass: true so bullets & optics interact cleanly)
+      const barrier = new THREE.Mesh(
+        new THREE.BoxGeometry(width, cabinH, roomWallThick),
+        new THREE.MeshBasicMaterial({ visible: false })
+      );
+      barrier.position.set(0, cabinH / 2, 0);
       wallSection.add(barrier);
       cabinWallMeshes.push(barrier);
     };
 
-    // Back Glass Wall (-Z)
-    createGlassWallSection(roomW, 0, -roomD / 2 + roomWallThick / 2, 0);
+    // Back Panoramic Glass Wall (-Z)
+    createPanoramicGlassWall(cabinW, 0, -cabinD / 2 + roomWallThick / 2, 0);
 
-    // Left Glass Wall (-X)
-    createGlassWallSection(roomD, -roomW / 2 + roomWallThick / 2, 0, Math.PI / 2);
+    // Left Panoramic Glass Wall (-X)
+    createPanoramicGlassWall(cabinD, -cabinW / 2 + roomWallThick / 2, 0, Math.PI / 2);
 
-    // Right Glass Wall (+X)
-    createGlassWallSection(roomD, roomW / 2 - roomWallThick / 2, 0, Math.PI / 2);
+    // Right Panoramic Glass Wall (+X)
+    createPanoramicGlassWall(cabinD, cabinW / 2 - roomWallThick / 2, 0, Math.PI / 2);
 
-    // Front Wall with Doorway (+Z): Glass panels flanking entrance
-    const frontSideW = (roomW - doorW) / 2;
+    // Front Panoramic Glass Wall (+Z): Glass panels flanking French double door
+    const frontSideW = (cabinW - doorW) / 2;
 
     // Front Left Glass Panel
     const flSection = new THREE.Group();
-    flSection.position.set(-roomW / 2 + frontSideW / 2, 0, roomD / 2 - roomWallThick / 2);
+    flSection.position.set(-cabinW / 2 + frontSideW / 2, 0, cabinD / 2 - roomWallThick / 2);
     cabinGroup.add(flSection);
 
-    const flSill = new THREE.Mesh(new THREE.BoxGeometry(frontSideW, baseSillH, roomWallThick), timberFrameMat);
+    const flSill = new THREE.Mesh(new THREE.BoxGeometry(frontSideW, baseSillH, roomWallThick), walnutFrameMat);
     flSill.position.set(0, baseSillH / 2, 0);
     flSection.add(flSill);
 
-    const flHeader = new THREE.Mesh(new THREE.BoxGeometry(frontSideW, headerH, roomWallThick), timberFrameMat);
-    flHeader.position.set(0, roomH - headerH / 2, 0);
+    const flHeader = new THREE.Mesh(new THREE.BoxGeometry(frontSideW, headerH, roomWallThick), walnutFrameMat);
+    flHeader.position.set(0, cabinH - headerH / 2, 0);
     flSection.add(flHeader);
 
-    const flGlass = new THREE.Mesh(new THREE.BoxGeometry(frontSideW - 0.06, glassPaneH, 0.05), treehouseGlassMat);
+    const flGlass = new THREE.Mesh(new THREE.BoxGeometry(frontSideW - 0.05, glassPaneH, 0.05), treehouseGlassMat);
     flGlass.position.set(0, baseSillH + glassPaneH / 2, 0);
     flGlass.renderOrder = 10;
     flSection.add(flGlass);
 
-    const flBarrierGeo = new THREE.BoxGeometry(frontSideW, roomH, roomWallThick);
-    const flBarrierMat = new THREE.MeshBasicMaterial({ visible: false });
-    const flBarrier = new THREE.Mesh(flBarrierGeo, flBarrierMat);
-    flBarrier.position.set(0, roomH / 2, 0);
+    const flBarrier = new THREE.Mesh(
+      new THREE.BoxGeometry(frontSideW, cabinH, roomWallThick),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    flBarrier.position.set(0, cabinH / 2, 0);
     flSection.add(flBarrier);
     cabinWallMeshes.push(flBarrier);
 
     // Front Right Glass Panel
     const frSection = new THREE.Group();
-    frSection.position.set(roomW / 2 - frontSideW / 2, 0, roomD / 2 - roomWallThick / 2);
+    frSection.position.set(cabinW / 2 - frontSideW / 2, 0, cabinD / 2 - roomWallThick / 2);
     cabinGroup.add(frSection);
 
-    const frSill = new THREE.Mesh(new THREE.BoxGeometry(frontSideW, baseSillH, roomWallThick), timberFrameMat);
+    const frSill = new THREE.Mesh(new THREE.BoxGeometry(frontSideW, baseSillH, roomWallThick), walnutFrameMat);
     frSill.position.set(0, baseSillH / 2, 0);
     frSection.add(frSill);
 
-    const frHeader = new THREE.Mesh(new THREE.BoxGeometry(frontSideW, headerH, roomWallThick), timberFrameMat);
-    frHeader.position.set(0, roomH - headerH / 2, 0);
+    const frHeader = new THREE.Mesh(new THREE.BoxGeometry(frontSideW, headerH, roomWallThick), walnutFrameMat);
+    frHeader.position.set(0, cabinH - headerH / 2, 0);
     frSection.add(frHeader);
 
-    const frGlass = new THREE.Mesh(new THREE.BoxGeometry(frontSideW - 0.06, glassPaneH, 0.05), treehouseGlassMat);
+    const frGlass = new THREE.Mesh(new THREE.BoxGeometry(frontSideW - 0.05, glassPaneH, 0.05), treehouseGlassMat);
     frGlass.position.set(0, baseSillH + glassPaneH / 2, 0);
     frGlass.renderOrder = 10;
     frSection.add(frGlass);
 
-    const frBarrierGeo = new THREE.BoxGeometry(frontSideW, roomH, roomWallThick);
-    const frBarrierMat = new THREE.MeshBasicMaterial({ visible: false });
-    const frBarrier = new THREE.Mesh(frBarrierGeo, frBarrierMat);
-    frBarrier.position.set(0, roomH / 2, 0);
+    const frBarrier = new THREE.Mesh(
+      new THREE.BoxGeometry(frontSideW, cabinH, roomWallThick),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    frBarrier.position.set(0, cabinH / 2, 0);
     frSection.add(frBarrier);
     cabinWallMeshes.push(frBarrier);
 
     // Doorway Lintel Header
-    const lintelH = roomH - doorH;
+    const lintelH = cabinH - doorH;
     if (lintelH > 0.05) {
-      const lintelGeo = new THREE.BoxGeometry(doorW, lintelH, roomWallThick);
-      const lintel = new THREE.Mesh(lintelGeo, timberFrameMat);
-      lintel.position.set(0, doorH + lintelH / 2, roomD / 2 - roomWallThick / 2);
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(doorW, lintelH, roomWallThick), walnutFrameMat);
+      lintel.position.set(0, doorH + lintelH / 2, cabinD / 2 - roomWallThick / 2);
       cabinGroup.add(lintel);
     }
 
-    // 4 Corner Timber Posts
-    const colGeo = new THREE.BoxGeometry(0.18, roomH, 0.18);
-    const colCoords: [number, number][] = [
-      [-roomW / 2 + 0.09, -roomD / 2 + 0.09],
-      [roomW / 2 - 0.09, -roomD / 2 + 0.09],
-      [-roomW / 2 + 0.09, roomD / 2 - 0.09],
-      [roomW / 2 - 0.09, roomD / 2 - 0.09]
-    ];
-    colCoords.forEach(([cx, cz]) => {
-      const col = new THREE.Mesh(colGeo, timberFrameMat);
-      col.position.set(cx, roomH / 2, cz);
+    // 4 Corner Timber Structural Posts
+    const colGeo = new THREE.BoxGeometry(0.2, cabinH, 0.2);
+    [
+      [-cabinW / 2 + 0.1, -cabinD / 2 + 0.1],
+      [cabinW / 2 - 0.1, -cabinD / 2 + 0.1],
+      [-cabinW / 2 + 0.1, cabinD / 2 - 0.1],
+      [cabinW / 2 - 0.1, cabinD / 2 - 0.1]
+    ].forEach(([cx, cz]) => {
+      const col = new THREE.Mesh(colGeo, walnutFrameMat);
+      col.position.set(cx, cabinH / 2, cz);
       col.castShadow = true;
       cabinGroup.add(col);
     });
 
-    // Register individual perimeter glass wall Box3 obstacles (with isGlass: true)
+    // Register Glass Wall Obstacles (with isGlass: true)
     group.updateMatrixWorld(true);
     cabinWallMeshes.forEach(mesh => {
       const box = new THREE.Box3().setFromObject(mesh);
       this.obstacles.push({ mesh, box, isCover: false, isGlass: true });
     });
 
-    // 7. INTERACTIVE TREEHOUSE BALCONY GLASS DOOR
-    const worldDoorPos = new THREE.Vector3(roomCenterX, deckH, roomCenterZ + roomD / 2)
+    // Interactive French Double Balcony Glass Door
+    const worldDoorPos = new THREE.Vector3(roomCenterX, deckH, roomCenterZ + cabinD / 2)
       .applyAxisAngle(yAxis, bRot)
       .add(group.position);
 
-    // French balcony glass door with timber frame
     const doorMat = new THREE.MeshStandardMaterial({
       color: 0x93c5fd,
       transparent: true,
@@ -3296,7 +3574,7 @@ export class ArenaManager {
 
     const door = new InteractiveDoor(
       `${options.id}-door`,
-      `${options.name} Door`,
+      `${options.name} French Door`,
       worldDoorPos,
       doorW - 0.08,
       doorH - 0.04,
@@ -3308,75 +3586,129 @@ export class ArenaManager {
     this.doors.push(door);
     this.obstacles.push(door.obstacle);
 
-    // 9. PITCHED TIMBER SHINGLE ROOF
-    const roofH = 1.6;
-    const roofShape = new THREE.Shape();
-    const halfRW = (roomW + 0.8) / 2;
-    roofShape.moveTo(-halfRW, 0);
-    roofShape.lineTo(0, roofH);
-    roofShape.lineTo(halfRW, 0);
-    roofShape.closePath();
+    // =========================================================================
+    // 8. CALMING INTERIOR LOUNGE FURNISHINGS & WARM AMBIANCE
+    // =========================================================================
+    // Plush L-Shaped Sectional Sofa (Forest-Green Velvet with Ivory Throw Pillows)
+    const sofaGroup = new THREE.Group();
+    sofaGroup.position.set(-cabinW / 2 + 1.4, 0, -cabinD / 2 + 1.3);
+    cabinGroup.add(sofaGroup);
 
-    const roofGeo = new THREE.ExtrudeGeometry(roofShape, { depth: roomD + 0.8, bevelEnabled: false });
-    roofGeo.translate(0, 0, -(roomD + 0.8) / 2);
-    const roofMat = new THREE.MeshStandardMaterial({
-      map: TextureGenerator.createRoofShingleTexture('#78350f'),
-      roughness: 0.85
+    const sofaMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.85 });
+    const pillowMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.75 });
+
+    const sofaMain = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.45, 0.8), sofaMat);
+    sofaMain.position.set(0, 0.45 / 2, 0);
+    sofaMain.castShadow = true;
+    sofaGroup.add(sofaMain);
+
+    const sofaBack = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.45, 0.2), sofaMat);
+    sofaBack.position.set(0, 0.45 + 0.45 / 2, -0.3);
+    sofaBack.castShadow = true;
+    sofaGroup.add(sofaBack);
+
+    // Pillows
+    [-0.6, 0.6].forEach(px => {
+      const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.12), pillowMat);
+      pillow.position.set(px, 0.55, -0.2);
+      pillow.rotation.x = -0.15;
+      sofaGroup.add(pillow);
     });
-    const roof = new THREE.Mesh(roofGeo, roofMat);
-    roof.position.y = roomH + 0.1;
-    roof.castShadow = true;
-    roof.receiveShadow = true;
-    cabinGroup.add(roof);
 
-    // Register Walkable Pitched Roof Floor Obstacle & Interior Ceiling Barrier
     group.updateMatrixWorld(true);
-    const roofBox = new THREE.Box3().setFromObject(roof);
-    const roofLocalCenter = new THREE.Vector3(roomCenterX, 0, roomCenterZ);
-    const roofCenterWorld = roofLocalCenter.clone().applyAxisAngle(yAxis, bRot).add(group.position);
-    const roofBaseY = deckH + roomH + 0.1;
+    const sofaBox = new THREE.Box3().setFromObject(sofaMain);
+    this.obstacles.push({ mesh: sofaMain, box: sofaBox, isCover: true });
 
-    this.obstacles.push({
-      mesh: roof,
-      box: roofBox,
-      isFloor: true,
-      isCover: false,
-      ceilingY: deckH + roomH,
-      floorPlane: {
-        center: roofCenterWorld,
-        halfW: halfRW,
-        halfD: (roomD + 0.8) / 2,
-        rotY: bRot,
-        topY: roofBaseY,
-        pitchHeight: roofH
-      }
-    });
+    // Low Walnut Tea / Coffee Table
+    const coffeeTable = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.38, 0.65), walnutFrameMat);
+    coffeeTable.position.set(-cabinW / 2 + 1.4, 0.38 / 2, -cabinD / 2 + 2.1);
+    coffeeTable.castShadow = true;
+    cabinGroup.add(coffeeTable);
 
-    // 10. WARM COZY INTERIOR LANTERN & TACTICAL LOOKOUT PROPS
-    const lanternGeo = new THREE.CylinderGeometry(0.12, 0.14, 0.28, 8);
-    const lanternMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.4, metalness: 0.8 });
-    const lantern = new THREE.Mesh(lanternGeo, lanternMat);
-    lantern.position.set(0, roomH - 0.35, 0);
-    cabinGroup.add(lantern);
+    // Ceramic Teapot & Cups on Coffee Table
+    const teapot = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08, 0.1, 0.14, 8),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.3 })
+    );
+    teapot.position.set(-cabinW / 2 + 1.4, 0.38 + 0.07, -cabinD / 2 + 2.1);
+    cabinGroup.add(teapot);
 
-    const lanternLight = new THREE.PointLight(0xfef08a, 1.4, 12);
-    lanternLight.position.set(0, roomH - 0.4, 0);
-    lanternLight.castShadow = false;
-    cabinGroup.add(lanternLight);
+    // Artisan Indoor Potted Bonsai Tree on Wood Pedestal
+    const bonsaiGroup = new THREE.Group();
+    bonsaiGroup.position.set(cabinW / 2 - 1.2, 0, -cabinD / 2 + 1.2);
+    cabinGroup.add(bonsaiGroup);
 
-    // Sniper Observation Table inside
-    const deskGeo = new THREE.BoxGeometry(1.8, 0.85, 0.9);
-    const deskMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
-    const desk = new THREE.Mesh(deskGeo, deskMat);
-    desk.position.set(0, 0.85 / 2, -roomD / 2 + 1.1);
+    const bonsaiPot = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.32, 0.24, 0.4, 8),
+      new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.8 })
+    );
+    bonsaiPot.position.y = 0.2;
+    bonsaiGroup.add(bonsaiPot);
+
+    const bonsaiTrunk = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 0.6, 6), barkMat);
+    bonsaiTrunk.position.y = 0.65;
+    bonsaiTrunk.rotation.z = 0.2;
+    bonsaiGroup.add(bonsaiTrunk);
+
+    const bonsaiFoliage = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35, 1), foliageMat);
+    bonsaiFoliage.position.set(-0.08, 1.0, 0);
+    bonsaiGroup.add(bonsaiFoliage);
+
+    // Tall Walnut Bookshelf with Antique Volumes & Field Scrolls
+    const bookshelf = new THREE.Mesh(new THREE.BoxGeometry(0.38, 2.2, 1.4), walnutFrameMat);
+    bookshelf.position.set(cabinW / 2 - 0.22, 1.1, 0);
+    bookshelf.castShadow = true;
+    cabinGroup.add(bookshelf);
+
+    group.updateMatrixWorld(true);
+    const bookBox = new THREE.Box3().setFromObject(bookshelf);
+    this.obstacles.push({ mesh: bookshelf, box: bookBox, isCover: true });
+
+    // Panoramic Observation Counter Overlooking Arena
+    const deskGeo = new THREE.BoxGeometry(2.2, 0.85, 0.8);
+    const desk = new THREE.Mesh(deskGeo, walnutFrameMat);
+    desk.position.set(0, 0.85 / 2, -cabinD / 2 + 1.1);
     desk.castShadow = true;
     cabinGroup.add(desk);
 
-    cabinGroup.updateMatrixWorld(true);
+    group.updateMatrixWorld(true);
     const deskBox = new THREE.Box3().setFromObject(desk);
     this.obstacles.push({ mesh: desk, box: deskBox, isCover: true });
 
-    // Tactical Ammo & Medkit Crates inside
+    // Brass Spotting Binoculars on Observation Desk
+    const bino = new THREE.Mesh(
+      new THREE.BoxGeometry(0.24, 0.1, 0.22),
+      new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.35, metalness: 0.85 })
+    );
+    bino.position.set(0, 0.85 + 0.06, -cabinD / 2 + 1.1);
+    cabinGroup.add(bino);
+
+    // Warm Ambient Hanging Pendant Chandelier Lantern
+    const lanternGeo = new THREE.CylinderGeometry(0.14, 0.16, 0.32, 8);
+    const lanternMat = new THREE.MeshStandardMaterial({
+      color: 0xd97706,
+      roughness: 0.4,
+      metalness: 0.8
+    });
+    const lantern = new THREE.Mesh(lanternGeo, lanternMat);
+    lantern.position.set(0, cabinH - 0.35, 0);
+    cabinGroup.add(lantern);
+
+    const lanternLight = new THREE.PointLight(0xfef08a, 1.5, 14);
+    lanternLight.position.set(0, cabinH - 0.4, 0);
+    cabinGroup.add(lanternLight);
+
+    // Solid Interior Ceiling Slab Under Level 3 Rooftop
+    const ceilingGeo = new THREE.BoxGeometry(cabinW + 0.4, slabThick, cabinD + 0.4);
+    const ceiling = new THREE.Mesh(ceilingGeo, deckFloorMat);
+    ceiling.position.set(0, cabinH + slabThick / 2, 0);
+    ceiling.castShadow = true;
+    ceiling.receiveShadow = true;
+    cabinGroup.add(ceiling);
+
+    // =========================================================================
+    // 9. LEVEL 2 RICH TACTICAL LOOT BOXES & NOVA BOMB PACKS
+    // =========================================================================
     const spawnTreehouseProp = (
       type: DestructibleType,
       lx: number,
@@ -3402,14 +3734,265 @@ export class ArenaManager {
       this.obstacles.push(prop.obstacle);
     };
 
-    spawnTreehouseProp('loot_crate', roomCenterX - 1.4, deckH, roomCenterZ - 0.8, 0.2, 'ammo_pack', 'tree-ammo');
-    spawnTreehouseProp('tech_safe', roomCenterX + 1.4, deckH, roomCenterZ - 0.8, -0.3, 'health_pack', 'tree-medkit');
-    spawnTreehouseProp('loot_crate', roomCenterX, deckH, roomCenterZ - 1.2, 0, 'bomb_pack', 'tree-bomb');
+    // Level 2 Interior Loot Containers: Ammo, Medkit, Armor, Bombs, Coins
+    spawnTreehouseProp('loot_crate', roomCenterX - 2.0, deckH, roomCenterZ - 1.2, 0.25, 'ammo_pack', 'tree-ammo');
+    spawnTreehouseProp('tech_safe', roomCenterX - 2.2, deckH, roomCenterZ + 0.8, -0.3, 'health_pack', 'tree-medkit');
+    spawnTreehouseProp('tech_safe', roomCenterX + 2.0, deckH, roomCenterZ - 1.2, 0.15, 'armor_pack', 'tree-armor');
+    spawnTreehouseProp('loot_crate', roomCenterX + 2.2, deckH, roomCenterZ + 0.8, -0.2, 'bomb_pack', 'tree-bomb');
+    spawnTreehouseProp('tech_safe', roomCenterX + 0.8, deckH, roomCenterZ - 1.2, 0, 'coin_pack', 'tree-coins');
 
-    // 11. REGISTER INTERIOR SANCTUARY ZONE
+    // =========================================================================
+    // 10. LEVEL 2 -> LEVEL 3 TIMBER STAIRWAY TO OPEN ROOFTOP
+    // =========================================================================
+    // Ascends along the East side of the glass cabin up to the 3rd Floor Rooftop Deck
+    const stair2W = 1.4;
+    const stair2Run = 4.8;
+    const stair2Rise = roofDeckH - deckH; // 3.4m rise
+    const stair2X = roomCenterX + cabinW / 2 + 0.85; // +4.35m
+    const stair2ZBottom = roomCenterZ + 1.8;
+    const stair2ZTop = stair2ZBottom - stair2Run; // arrives at -3.0m
+
+    const stair2Group = new THREE.Group();
+    const numSteps2 = 15;
+    const stepDepth2 = stair2Run / numSteps2;
+    const stepHeight2 = stair2Rise / numSteps2;
+    const step2PlankGeo = new THREE.BoxGeometry(stair2W, 0.08, stepDepth2 + 0.06);
+
+    for (let i = 0; i < numSteps2; i++) {
+      const stepY = deckH + i * stepHeight2 + stepHeight2 / 2;
+      const stepZ = stair2ZBottom - i * stepDepth2 - stepDepth2 / 2;
+      const stepMesh = new THREE.Mesh(step2PlankGeo, timberMat);
+      stepMesh.position.set(stair2X, stepY, stepZ);
+      stepMesh.castShadow = true;
+      stepMesh.receiveShadow = true;
+      stair2Group.add(stepMesh);
+    }
+
+    const stair2Hypot = Math.hypot(stair2Run, stair2Rise);
+    const stair2Angle = Math.atan2(stair2Rise, stair2Run);
+    const stringer2Geo = new THREE.BoxGeometry(0.12, 0.24, stair2Hypot);
+
+    const s2LeftStringer = new THREE.Mesh(stringer2Geo, timberMat);
+    s2LeftStringer.rotation.x = -stair2Angle;
+    s2LeftStringer.position.set(stair2X - stair2W / 2 + 0.04, deckH + stair2Rise / 2, (stair2ZBottom + stair2ZTop) / 2);
+    stair2Group.add(s2LeftStringer);
+
+    const s2RightStringer = new THREE.Mesh(stringer2Geo, timberMat);
+    s2RightStringer.rotation.x = -stair2Angle;
+    s2RightStringer.position.set(stair2X + stair2W / 2 - 0.04, deckH + stair2Rise / 2, (stair2ZBottom + stair2ZTop) / 2);
+    stair2Group.add(s2RightStringer);
+
+    // Handrails on Level 2 -> Level 3 stairs
+    const s2HandrailGeo = new THREE.BoxGeometry(0.08, 0.08, stair2Hypot);
+    const s2HandrailL = new THREE.Mesh(s2HandrailGeo, timberMat);
+    s2HandrailL.rotation.x = -stair2Angle;
+    s2HandrailL.position.set(stair2X - stair2W / 2 + 0.04, deckH + stair2Rise / 2 + 1.0, (stair2ZBottom + stair2ZTop) / 2);
+    stair2Group.add(s2HandrailL);
+
+    const s2HandrailR = new THREE.Mesh(s2HandrailGeo, timberMat);
+    s2HandrailR.rotation.x = -stair2Angle;
+    s2HandrailR.position.set(stair2X + stair2W / 2 - 0.04, deckH + stair2Rise / 2 + 1.0, (stair2ZBottom + stair2ZTop) / 2);
+    stair2Group.add(s2HandrailR);
+
+    group.add(stair2Group);
+
+    // Register Level 2 -> Level 3 StairRamp Physics
+    const s2p1Local = new THREE.Vector3(stair2X, deckH, stair2ZBottom);
+    const s2p2Local = new THREE.Vector3(stair2X, roofDeckH, stair2ZTop);
+    const s2p1World = s2p1Local.clone().applyAxisAngle(yAxis, bRot).add(group.position);
+    const s2p2World = s2p2Local.clone().applyAxisAngle(yAxis, bRot).add(group.position);
+
+    const roofStairRamp: StairRamp = {
+      p1: s2p1World,
+      p2: s2p2World,
+      width: stair2W + 0.35,
+      bottomY: deckH,
+      topY: roofDeckH
+    };
+    stair2Group.updateMatrixWorld(true);
+    const s2Box = new THREE.Box3().setFromObject(stair2Group);
+    this.obstacles.push({
+      mesh: stair2Group,
+      box: s2Box,
+      isCover: false,
+      stairRamp: roofStairRamp
+    });
+
+    // =========================================================================
+    // 11. LEVEL 3 OPEN ROOFTOP OBSERVATION DECK (Walkable Floor at Y=roofDeckH)
+    // =========================================================================
+    // Open to the sky and tree canopy with NO ceiling!
+    const roofGroup = new THREE.Group();
+    roofGroup.position.set(roofCenterX, roofDeckH, roofCenterZ);
+    group.add(roofGroup);
+
+    const roofFloorGeo = new THREE.BoxGeometry(roofDeckW, slabThick, roofDeckD);
+    const roofFloor = new THREE.Mesh(roofFloorGeo, deckFloorMat);
+    roofFloor.position.y = -slabThick / 2;
+    roofFloor.castShadow = true;
+    roofFloor.receiveShadow = true;
+    roofGroup.add(roofFloor);
+
+    // Register 3rd Floor Walkable Rooftop FloorPlane
+    group.updateMatrixWorld(true);
+    const roofFloorCenterLocal = new THREE.Vector3(roofCenterX, roofDeckH, roofCenterZ);
+    const roofFloorCenterWorld = roofFloorCenterLocal.clone().applyAxisAngle(yAxis, bRot).add(group.position);
+    const roofFloorBox = new THREE.Box3().setFromObject(roofFloor);
+
+    this.obstacles.push({
+      mesh: roofFloor,
+      box: roofFloorBox,
+      isFloor: true,
+      isCover: false,
+      ceilingY: roofDeckH - slabThick,
+      floorPlane: {
+        center: roofFloorCenterWorld,
+        halfW: roofDeckW / 2,
+        halfD: roofDeckD / 2,
+        rotY: bRot,
+        topY: roofDeckH
+      }
+    });
+
+    // Rustic Perimeter Railings on Open Rooftop
+    addRailing(group, roofDeckD, roofCenterX - roofDeckW / 2, roofDeckH, roofCenterZ, Math.PI / 2); // West
+    addRailing(group, roofDeckW, roofCenterX, roofDeckH, roofCenterZ - roofDeckD / 2, 0); // North
+    addRailing(group, roofDeckW, roofCenterX, roofDeckH, roofCenterZ + roofDeckD / 2, 0); // South
+
+    // East side railing (leaving 1.6m landing gap for stair arrival)
+    const stairGapZ = (stair2ZTop + stair2ZBottom) / 2;
+    const eastRailLen = (roofDeckD - stair2W - 0.4) / 2;
+    if (eastRailLen > 0.4) {
+      addRailing(
+        group,
+        eastRailLen,
+        roofCenterX + roofDeckW / 2,
+        roofDeckH,
+        roofCenterZ + roofDeckD / 2 - eastRailLen / 2,
+        Math.PI / 2
+      );
+      addRailing(
+        group,
+        eastRailLen,
+        roofCenterX + roofDeckW / 2,
+        roofDeckH,
+        roofCenterZ - roofDeckD / 2 + eastRailLen / 2,
+        Math.PI / 2
+      );
+    }
+
+    // Heavy Brass Long-Range Astronomical / Spotting Telescope on Tripod
+    const telescopeGroup = new THREE.Group();
+    telescopeGroup.position.set(roofCenterX - 1.8, roofDeckH, roofCenterZ + roofDeckD / 2 - 0.9);
+    telescopeGroup.rotation.y = -Math.PI / 4;
+    group.add(telescopeGroup);
+
+    // Wooden Tripod Legs
+    const tripodLegGeo = new THREE.CylinderGeometry(0.04, 0.05, 1.25, 6);
+    [-0.35, 0.35].forEach(tx => {
+      const leg = new THREE.Mesh(tripodLegGeo, timberMat);
+      leg.position.set(tx, 0.6, 0.15);
+      leg.rotation.z = tx > 0 ? -0.25 : 0.25;
+      leg.rotation.x = -0.15;
+      telescopeGroup.add(leg);
+    });
+    const legRear = new THREE.Mesh(tripodLegGeo, timberMat);
+    legRear.position.set(0, 0.6, -0.35);
+    legRear.rotation.x = 0.28;
+    telescopeGroup.add(legRear);
+
+    // Brass Barrel & Eyepiece
+    const brassMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.25, metalness: 0.9 });
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.07, 1.4, 10), brassMat);
+    barrel.rotation.x = Math.PI / 2 - 0.2;
+    barrel.position.set(0, 1.25, 0);
+    telescopeGroup.add(barrel);
+
+    group.updateMatrixWorld(true);
+    const teleBox = new THREE.Box3().setFromObject(barrel);
+    this.obstacles.push({ mesh: barrel, box: teleBox, isCover: true });
+
+    // Weathered Timber Rooftop Observation Bench
+    const roofBenchGroup = new THREE.Group();
+    roofBenchGroup.position.set(roofCenterX - 2.2, roofDeckH, roofCenterZ - 1.4);
+    roofBenchGroup.rotation.y = Math.PI / 2;
+    group.add(roofBenchGroup);
+
+    const rbSeat = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.55), timberMat);
+    rbSeat.position.y = 0.48;
+    roofBenchGroup.add(rbSeat);
+
+    const rbBack = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.42, 0.06), timberMat);
+    rbBack.position.set(0, 0.78, -0.24);
+    roofBenchGroup.add(rbBack);
+
+    [-0.75, 0.75].forEach(lx => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.48, 0.5), timberMat);
+      leg.position.set(lx, 0.24, 0);
+      roofBenchGroup.add(leg);
+    });
+
+    group.updateMatrixWorld(true);
+    const rbBox = new THREE.Box3().setFromObject(rbSeat);
+    this.obstacles.push({ mesh: rbSeat, box: rbBox, isCover: true });
+
+    // 4 Corner Cedar Posts with Warm Glowing Fairy Lanterns on Rooftop
+    [
+      [-roofDeckW / 2 + 0.1, -roofDeckD / 2 + 0.1],
+      [roofDeckW / 2 - 0.1, -roofDeckD / 2 + 0.1],
+      [-roofDeckW / 2 + 0.1, roofDeckD / 2 - 0.1],
+      [roofDeckW / 2 - 0.1, roofDeckD / 2 - 0.1]
+    ].forEach(([cx, cz]) => {
+      const rPost = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.8, 0.12), timberMat);
+      rPost.position.set(roofCenterX + cx, roofDeckH + 0.9, roofCenterZ + cz);
+      group.add(rPost);
+
+      const fairyLightMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.1, 8, 8),
+        new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xf59e0b, emissiveIntensity: 1.0 })
+      );
+      fairyLightMesh.position.set(roofCenterX + cx, roofDeckH + 1.8, roofCenterZ + cz);
+      group.add(fairyLightMesh);
+
+      const fLight = new THREE.PointLight(0xfef08a, 0.9, 9);
+      fLight.position.set(roofCenterX + cx, roofDeckH + 1.8, roofCenterZ + cz);
+      group.add(fLight);
+    });
+
+    // 3rd Floor Rooftop Loot Crates: High-Ground Sniper Crate, Bombs & Medkit
+    spawnTreehouseProp('loot_crate', roofCenterX - 1.5, roofDeckH, roofCenterZ - 2.0, 0.3, 'ammo_pack', 'roof-sniper');
+    spawnTreehouseProp('loot_crate', roofCenterX + 1.8, roofDeckH, roofCenterZ - 2.0, -0.2, 'bomb_pack', 'roof-bomb');
+    spawnTreehouseProp('tech_safe', roofCenterX + 2.0, roofDeckH, roofCenterZ + 1.6, 0.1, 'health_pack', 'roof-medkit');
+
+    // =========================================================================
+    // 12. OVERARCHING ANCIENT CATHEDRAL TREE CANOPY (High Overhead Vault)
+    // =========================================================================
+    // Soaring high above 3rd floor rooftop (Y=12m to 16.5m) to frame the open sky
+    const canopyClusters = [
+      { x: trunkLocalX, y: roofDeckH + 6.2, z: trunkLocalZ, r: 5.2 },
+      { x: trunkLocalX - 4.2, y: roofDeckH + 5.5, z: trunkLocalZ + 3.4, r: 4.4 },
+      { x: trunkLocalX + 3.8, y: roofDeckH + 5.8, z: trunkLocalZ - 3.2, r: 4.2 },
+      { x: trunkLocalX - 3.2, y: roofDeckH + 4.8, z: trunkLocalZ - 4.2, r: 3.8 },
+      { x: trunkLocalX + 4.4, y: roofDeckH + 4.6, z: trunkLocalZ + 3.8, r: 4.0 },
+      { x: trunkLocalX - 5.5, y: roofDeckH + 6.0, z: trunkLocalZ - 1.2, r: 4.2 },
+      { x: trunkLocalX + 5.2, y: roofDeckH + 5.6, z: trunkLocalZ + 1.4, r: 4.0 }
+    ];
+    canopyClusters.forEach(cc => {
+      const cGeo = new THREE.DodecahedronGeometry(cc.r, 1);
+      const foliage = new THREE.Mesh(cGeo, foliageMat);
+      foliage.position.set(cc.x, cc.y, cc.z);
+      foliage.scale.set(1.0, 0.75, 1.0);
+      foliage.castShadow = true;
+      foliage.receiveShadow = true;
+      group.add(foliage);
+    });
+
+    // =========================================================================
+    // 13. REGISTER INTERIOR SANCTUARY ZONE
+    // =========================================================================
     const cabinWorldCenter = new THREE.Vector3(roomCenterX, deckH, roomCenterZ).applyAxisAngle(yAxis, bRot).add(group.position);
-    const doorApproachLocal = new THREE.Vector3(roomCenterX, deckH, roomCenterZ + roomD / 2 + 1.4);
-    const doorInsideLocal = new THREE.Vector3(roomCenterX, deckH, roomCenterZ + roomD / 2 - 1.2);
+    const doorApproachLocal = new THREE.Vector3(roomCenterX, deckH, roomCenterZ + cabinD / 2 + 1.4);
+    const doorInsideLocal = new THREE.Vector3(roomCenterX, deckH, roomCenterZ + cabinD / 2 - 1.2);
     const doorApproachPos = doorApproachLocal.applyAxisAngle(yAxis, bRot).add(group.position);
     const doorInsidePos = doorInsideLocal.applyAxisAngle(yAxis, bRot).add(group.position);
 
@@ -3417,15 +4000,187 @@ export class ArenaManager {
       id: options.id,
       name: options.name,
       center: cabinWorldCenter,
-      width: roomW,
-      depth: roomD,
-      height: roomH,
+      width: cabinW,
+      depth: cabinD,
+      height: cabinH,
       rotY: bRot,
       door,
       doorWorldPos: worldDoorPos,
       doorApproachPos,
       doorInsidePos
     });
+
+    return group;
+  }
+
+  /**
+   * Builds a picturesque botanical orchard garden & wooden pergola pavilion
+   * Replaces duplicate treehouse so the Grand Canopy Sanctuary is the sole iconic treehouse in the arena.
+   */
+  public createOrchardGarden(x: number, z: number): THREE.Group {
+    const group = new THREE.Group();
+    group.position.set(x, 0, z);
+    this.arenaGroup.add(group);
+
+    const stoneMat = new THREE.MeshStandardMaterial({
+      map: TextureGenerator.createSidewalkTexture(),
+      roughness: 0.88,
+      metalness: 0.02
+    });
+
+    const timberMat = new THREE.MeshStandardMaterial({
+      color: 0x854d0e,
+      roughness: 0.82,
+      metalness: 0.05
+    });
+
+    const foliageMat = new THREE.MeshStandardMaterial({
+      map: TextureGenerator.createFoliageTexture('#15803d', '#4ade80'),
+      roughness: 0.85
+    });
+
+    const flowerMat = new THREE.MeshStandardMaterial({
+      color: 0xf472b6, // Blossoming sakura / apple blossom pink
+      roughness: 0.7
+    });
+
+    // Circular Flagstone Courtyard Terrace
+    const terrace = new THREE.Mesh(new THREE.CylinderGeometry(7.2, 7.5, 0.08, 16), stoneMat);
+    terrace.position.y = 0.04;
+    terrace.receiveShadow = true;
+    group.add(terrace);
+
+    // Central Timber Pergola Gazebo
+    const pergH = 3.2;
+    const pergW = 4.4;
+    const pergD = 4.4;
+    const postGeo = new THREE.BoxGeometry(0.2, pergH, 0.2);
+
+    [
+      [-pergW / 2, -pergD / 2],
+      [pergW / 2, -pergD / 2],
+      [-pergW / 2, pergD / 2],
+      [pergW / 2, pergD / 2]
+    ].forEach(([px, pz]) => {
+      const post = new THREE.Mesh(postGeo, timberMat);
+      post.position.set(px, pergH / 2, pz);
+      post.castShadow = true;
+      group.add(post);
+
+      group.updateMatrixWorld(true);
+      const postBox = new THREE.Box3().setFromObject(post);
+      this.obstacles.push({ mesh: post, box: postBox, isCover: true });
+    });
+
+    // Overhead Pergola Trellis Beams
+    const beamGeo = new THREE.BoxGeometry(pergW + 0.8, 0.14, 0.12);
+    for (let i = 0; i < 5; i++) {
+      const bz = -pergD / 2 + (i / 4) * pergD;
+      const beam = new THREE.Mesh(beamGeo, timberMat);
+      beam.position.set(0, pergH + 0.07, bz);
+      beam.castShadow = true;
+      group.add(beam);
+    }
+
+    // Climbing Ivy / Vines on Pergola Roof
+    const vineGeo = new THREE.DodecahedronGeometry(1.6, 1);
+    const vines = new THREE.Mesh(vineGeo, foliageMat);
+    vines.position.set(0, pergH + 0.4, 0);
+    vines.scale.set(1.4, 0.4, 1.4);
+    group.add(vines);
+
+    // Carved Stone Sundial / Birdbath in Courtyard Center
+    const dialBase = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.55, 0.9, 8), stoneMat);
+    dialBase.position.y = 0.45;
+    dialBase.castShadow = true;
+    group.add(dialBase);
+
+    const dialTop = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.45, 0.12, 12), stoneMat);
+    dialTop.position.y = 0.96;
+    group.add(dialTop);
+
+    group.updateMatrixWorld(true);
+    const dialBox = new THREE.Box3().setFromObject(dialBase);
+    this.obstacles.push({ mesh: dialBase, box: dialBox, isCover: true });
+
+    // Weathered Wooden Garden Benches
+    const addOrchardBench = (bx: number, bz: number, brot: number) => {
+      const bGroup = new THREE.Group();
+      bGroup.position.set(bx, 0, bz);
+      bGroup.rotation.y = brot;
+
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.55), timberMat);
+      seat.position.y = 0.48;
+      seat.castShadow = true;
+      bGroup.add(seat);
+
+      const back = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.45, 0.06), timberMat);
+      back.position.set(0, 0.82, -0.24);
+      back.castShadow = true;
+      bGroup.add(back);
+
+      [-0.75, 0.75].forEach(lx => {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.48, 0.52), timberMat);
+        leg.position.set(lx, 0.24, 0);
+        bGroup.add(leg);
+      });
+
+      group.add(bGroup);
+
+      group.updateMatrixWorld(true);
+      const bBox = new THREE.Box3().setFromObject(seat);
+      this.obstacles.push({ mesh: seat, box: bBox, isCover: true });
+    };
+
+    addOrchardBench(0, -pergD / 2 + 0.6, 0);
+    addOrchardBench(0, pergD / 2 - 0.6, Math.PI);
+
+    // Flowering Apple & Cherry Trees Around the Courtyard
+    const orchardTrees: [number, number, number][] = [
+      [-5.5, -4.5, 0.95],
+      [5.5, -4.5, 1.05],
+      [-5.5, 4.5, 1.0],
+      [5.5, 4.5, 0.95]
+    ];
+    orchardTrees.forEach(([tx, tz, sc]) => {
+      const treeGroup = new THREE.Group();
+      treeGroup.position.set(tx, 0, tz);
+
+      const tTrunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22 * sc, 0.38 * sc, 3.8 * sc, 8),
+        new THREE.MeshStandardMaterial({
+          map: TextureGenerator.createBarkTexture('#451a03', '#1c0d02'),
+          roughness: 0.9
+        })
+      );
+      tTrunk.position.y = (3.8 * sc) / 2;
+      tTrunk.castShadow = true;
+      treeGroup.add(tTrunk);
+
+      const tFoliage = new THREE.Mesh(new THREE.DodecahedronGeometry(2.2 * sc, 1), foliageMat);
+      tFoliage.position.y = 3.8 * sc + 0.6;
+      tFoliage.scale.set(1.0, 0.8, 1.0);
+      treeGroup.add(tFoliage);
+
+      const blossoms = new THREE.Mesh(new THREE.DodecahedronGeometry(1.6 * sc, 1), flowerMat);
+      blossoms.position.set(0.4, 3.8 * sc + 1.2, 0.3);
+      treeGroup.add(blossoms);
+
+      group.add(treeGroup);
+
+      group.updateMatrixWorld(true);
+      const tBox = new THREE.Box3().setFromObject(tTrunk);
+      this.obstacles.push({ mesh: tTrunk, box: tBox, isCover: true });
+    });
+
+    // Garden Pathway Lanterns
+    const lanternPost = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 2.2, 8), timberMat);
+    lanternPost.position.set(0, 1.1, pergD / 2 + 1.6);
+    group.add(lanternPost);
+
+    const lLight = new THREE.PointLight(0xfef08a, 1.0, 10);
+    lLight.position.set(0, 2.3, pergD / 2 + 1.6);
+    group.add(lLight);
 
     return group;
   }
