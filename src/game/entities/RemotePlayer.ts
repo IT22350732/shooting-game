@@ -327,7 +327,17 @@ export class RemotePlayer {
         new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 1.5 })
       );
       coil.position.set(0, 0, 0.3);
-      group.add(barrel, coil);
+    } else if (weaponId === 'bomb') {
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.75, 12), bodyMat);
+      barrel.rotation.x = Math.PI / 2;
+      barrel.position.set(0, 0, 0.2);
+      const ring = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.075, 0.075, 0.2, 12),
+        new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xea580c, emissiveIntensity: 1.2 })
+      );
+      ring.rotation.x = Math.PI / 2;
+      ring.position.set(0, 0, 0.15);
+      group.add(barrel, ring);
     } else {
       // Assault rifle / SMG
       const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.08, 0.8), bodyMat);

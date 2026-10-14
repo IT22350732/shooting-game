@@ -57,10 +57,41 @@ export class SoundManager {
   }
 
   // --- WEAPON SOUNDS ---
-  public playGunshot(type: 'rifle' | 'shotgun' | 'smg' | 'sniper' | 'plasma') {
+  public playGunshot(type: 'rifle' | 'shotgun' | 'smg' | 'sniper' | 'plasma' | 'bomb') {
     this.initContext();
     if (!this.ctx || !this.sfxGain) return;
     const now = this.ctx.currentTime;
+
+    if (type === 'bomb') {
+      // Heavy pneumatic ordnance thump + sub-bass propellant release
+      const subOsc = this.ctx.createOscillator();
+      const subGain = this.ctx.createGain();
+      subOsc.type = 'triangle';
+      subOsc.frequency.setValueAtTime(160, now);
+      subOsc.frequency.exponentialRampToValueAtTime(28, now + 0.35);
+      subGain.gain.setValueAtTime(0.85, now);
+      subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      subOsc.connect(subGain);
+      subGain.connect(this.sfxGain);
+      subOsc.start(now);
+      subOsc.stop(now + 0.38);
+
+      // Pneumatic pressure hiss and mechanical chamber cycle
+      this.playNoiseBurst(0.28, 1800, 160, 0.75);
+
+      const clickOsc = this.ctx.createOscillator();
+      const clickGain = this.ctx.createGain();
+      clickOsc.type = 'sine';
+      clickOsc.frequency.setValueAtTime(740, now + 0.04);
+      clickOsc.frequency.exponentialRampToValueAtTime(220, now + 0.12);
+      clickGain.gain.setValueAtTime(0.4, now + 0.04);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      clickOsc.connect(clickGain);
+      clickGain.connect(this.sfxGain);
+      clickOsc.start(now + 0.04);
+      clickOsc.stop(now + 0.14);
+      return;
+    }
 
     if (type === 'plasma') {
       // Futuristic FM synthesized laser
@@ -582,6 +613,41 @@ export class SoundManager {
     gain.connect(this.sfxGain);
     osc.start(now);
     osc.stop(now + 0.25);
+  }
+
+  public playBombPickup() {
+    this.initContext();
+    if (!this.ctx || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+    // Heavy tactical ordnance arming sequence: low sub punch + double mechanical lock
+    const subOsc = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(90, now);
+    subOsc.frequency.exponentialRampToValueAtTime(180, now + 0.15);
+    subGain.gain.setValueAtTime(0.45, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    subOsc.connect(subGain);
+    subGain.connect(this.sfxGain);
+    subOsc.start(now);
+    subOsc.stop(now + 0.24);
+
+    // Double metallic latch clicks
+    [0.05, 0.14].forEach((offset, idx) => {
+      if (!this.ctx || !this.sfxGain) return;
+      const t = now + offset;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(idx === 0 ? 540 : 880, t);
+      osc.frequency.exponentialRampToValueAtTime(idx === 0 ? 320 : 1200, t + 0.08);
+      gain.gain.setValueAtTime(0.35, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(t);
+      osc.stop(t + 0.09);
+    });
   }
 
   public playDeflect() {

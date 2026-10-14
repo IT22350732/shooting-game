@@ -225,6 +225,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({ engine }) => {
       else if (wId === 'smg') setCurrentWeaponTag('SMG');
       else if (wId === 'sniper') setCurrentWeaponTag('SNP');
       else if (wId === 'plasma_rifle') setCurrentWeaponTag('PLS');
+      else if (wId === 'bomb') setCurrentWeaponTag('BOMB');
 
       // Update zoom level
       const z = engine.getZoomLevel();

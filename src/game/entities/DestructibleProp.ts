@@ -4,7 +4,7 @@ import { soundManager } from '../../audio/SoundManager';
 import { ParticleSystem } from '../world/ParticleSystem';
 
 export type DestructibleType = 'clay_pot' | 'loot_crate' | 'tech_safe';
-export type LootType = 'coin_pack' | 'health_pack' | 'armor_pack' | 'ammo_pack';
+export type LootType = 'coin_pack' | 'health_pack' | 'armor_pack' | 'ammo_pack' | 'bomb_pack';
 
 export interface DestructibleHitResult {
   hit: boolean;
@@ -47,7 +47,7 @@ export class DestructibleProp {
     if (lootType) {
       this.lootType = lootType;
     } else {
-      const lootPool: LootType[] = ['coin_pack', 'health_pack', 'armor_pack', 'ammo_pack'];
+      const lootPool: LootType[] = ['coin_pack', 'health_pack', 'armor_pack', 'ammo_pack', 'bomb_pack'];
       this.lootType = lootPool[Math.floor(Math.random() * lootPool.length)];
     }
 

@@ -23,6 +23,7 @@ export const KillFeed: React.FC<KillFeedProps> = ({ entries, isMobile }) => {
       case 'smg': return 'VECTOR';
       case 'sniper': return 'BARRETT';
       case 'plasma_rifle': return 'PLASMA';
+      case 'bomb': return 'NOVA BOMB';
       default: return 'WEAPON';
     }
   };

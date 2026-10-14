@@ -103,6 +103,26 @@ export const BASE_WEAPONS: Record<WeaponId, WeaponConfig> = {
     description: 'Experimental superheated ionized plasma projector with thermo-kinetic burst dispersal.',
     unlocked: false,
     unlockCost: 500
+  },
+  bomb: {
+    id: 'bomb',
+    name: 'Goliath Nova Bomb Launcher',
+    category: 'Heavy Explosive',
+    damage: 175,
+    fireRate: 1.6,
+    magSize: 6,
+    reloadTime: 2.4,
+    spread: 0.008,
+    range: 120,
+    critMultiplier: 2.0,
+    pellets: 1,
+    bulletSpeed: 45,
+    projectileColor: '#f97316',
+    recoilKick: 0.16,
+    soundType: 'bomb',
+    description: 'Devastating pneumatic ordnance launcher firing pressurized cluster bombs with wide area-of-effect blast damage.',
+    unlocked: true,
+    unlockCost: 0
   }
 };
 
@@ -318,6 +338,134 @@ export class WeaponInstance {
       grip.position.set(0, -0.07, 0.09);
       this.meshGroup.add(grip);
 
+    } else if (this.config.id === 'bomb') {
+      // Goliath Nova Bomb Launcher: Heavy-duty pneumatic ordnance projector
+      const amberGlowMat = new THREE.MeshStandardMaterial({
+        color: 0xf97316,
+        roughness: 0.15,
+        metalness: 0.85,
+        emissive: 0xea580c,
+        emissiveIntensity: 0.95
+      });
+
+      const darkGunmetal = new THREE.MeshStandardMaterial({
+        color: 0x1e293b,
+        roughness: 0.25,
+        metalness: 0.9
+      });
+
+      const hazardYellow = new THREE.MeshStandardMaterial({
+        color: 0xfbbf24,
+        roughness: 0.35,
+        metalness: 0.4
+      });
+
+      // 1. Heavy cylindrical cannon barrel (wide bore 0.048m)
+      const barrelGeo = new THREE.CylinderGeometry(0.046, 0.048, 0.52, 16);
+      barrelGeo.rotateX(Math.PI / 2);
+      const barrel = new THREE.Mesh(barrelGeo, darkGunmetal);
+      barrel.position.set(0, 0.035, -0.28);
+      barrel.castShadow = true;
+      this.meshGroup.add(barrel);
+
+      // Barrel reinforcement sleeve with amber heat sink vents
+      const sleeveGeo = new THREE.CylinderGeometry(0.054, 0.054, 0.22, 16);
+      sleeveGeo.rotateX(Math.PI / 2);
+      const sleeve = new THREE.Mesh(sleeveGeo, hazardYellow);
+      sleeve.position.set(0, 0.035, -0.24);
+      this.meshGroup.add(sleeve);
+
+      // Heavy ported muzzle brake at the front
+      const muzzleBrakeGeo = new THREE.BoxGeometry(0.105, 0.105, 0.08);
+      const muzzleBrake = new THREE.Mesh(muzzleBrakeGeo, darkGunmetal);
+      muzzleBrake.position.set(0, 0.035, -0.54);
+      this.meshGroup.add(muzzleBrake);
+
+      const brakePortGeo = new THREE.BoxGeometry(0.115, 0.04, 0.04);
+      const brakePort = new THREE.Mesh(brakePortGeo, amberGlowMat);
+      brakePort.position.set(0, 0.035, -0.54);
+      this.meshGroup.add(brakePort);
+
+      // 2. Revolving 6-Chamber Bomb Cylinder
+      const cylinderGeo = new THREE.CylinderGeometry(0.076, 0.076, 0.22, 18);
+      cylinderGeo.rotateX(Math.PI / 2);
+      const cylinder = new THREE.Mesh(cylinderGeo, brushedTitanium);
+      cylinder.position.set(0, 0.02, 0.04);
+      cylinder.castShadow = true;
+      this.meshGroup.add(cylinder);
+
+      // Cylinder outer cage / frame
+      const cageGeo = new THREE.BoxGeometry(0.165, 0.165, 0.24);
+      const cage = new THREE.Mesh(cageGeo, darkGunmetal);
+      cage.position.set(0, 0.02, 0.04);
+      this.meshGroup.add(cage);
+
+      // 6 Mini Bomb Warheads loaded in cylinder
+      const miniBombGeo = new THREE.SphereGeometry(0.022, 10, 10);
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i;
+        const bx = Math.cos(angle) * 0.05;
+        const by = Math.sin(angle) * 0.05;
+        const miniBomb = new THREE.Mesh(miniBombGeo, amberGlowMat);
+        miniBomb.position.set(bx, 0.02 + by, 0.14);
+        this.meshGroup.add(miniBomb);
+      }
+
+      // 3. Underbarrel Pneumatic Pressure Canister
+      const canisterGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.34, 16);
+      canisterGeo.rotateX(Math.PI / 2);
+      const canister = new THREE.Mesh(canisterGeo, brushedTitanium);
+      canister.position.set(0, -0.055, -0.22);
+      this.meshGroup.add(canister);
+
+      // Glowing pressure conduit tube
+      const conduitGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.36, 8);
+      conduitGeo.rotateX(Math.PI / 2);
+      const conduit = new THREE.Mesh(conduitGeo, amberGlowMat);
+      conduit.position.set(0.036, -0.045, -0.22);
+      this.meshGroup.add(conduit);
+
+      // 4. Heavy Angled Grip & Tactical Stock
+      const gripGeo = new THREE.BoxGeometry(0.048, 0.15, 0.07);
+      gripGeo.rotateX(-0.25);
+      const grip = new THREE.Mesh(gripGeo, carbonFiberMat);
+      grip.position.set(0, -0.11, 0.14);
+      this.meshGroup.add(grip);
+
+      const foregripGeo = new THREE.BoxGeometry(0.044, 0.12, 0.05);
+      foregripGeo.rotateX(0.15);
+      const foregrip = new THREE.Mesh(foregripGeo, carbonFiberMat);
+      foregrip.position.set(0, -0.12, -0.16);
+      this.meshGroup.add(foregrip);
+
+      const stockGeo = new THREE.BoxGeometry(0.055, 0.13, 0.26);
+      const stock = new THREE.Mesh(stockGeo, darkGunmetal);
+      stock.position.set(0, -0.03, 0.28);
+      stock.castShadow = true;
+      this.meshGroup.add(stock);
+
+      // 5. Top Sighting Rail & Holographic Optic Lens
+      const railGeo = new THREE.BoxGeometry(0.045, 0.025, 0.44);
+      const topRail = new THREE.Mesh(railGeo, darkGunmetal);
+      topRail.position.set(0, 0.115, -0.08);
+      this.meshGroup.add(topRail);
+
+      const holoSightGeo = new THREE.BoxGeometry(0.05, 0.065, 0.1);
+      const holoSight = new THREE.Mesh(holoSightGeo, hazardYellow);
+      holoSight.position.set(0, 0.15, -0.04);
+      this.meshGroup.add(holoSight);
+
+      const reticleGeo = new THREE.PlaneGeometry(0.032, 0.032);
+      const reticleMat = new THREE.MeshBasicMaterial({
+        color: 0xf97316,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.85
+      });
+      const reticle = new THREE.Mesh(reticleGeo, reticleMat);
+      reticle.position.set(0, 0.15, -0.04);
+      this.meshGroup.add(reticle);
+
     } else {
       // Assault Rifle: Sleek Hyperion style
       const bodyGeo = new THREE.BoxGeometry(0.06, 0.085, 0.44);
@@ -371,9 +519,10 @@ export class WeaponInstance {
     this.meshGroup.add(this.ammoScreenMesh);
 
     // Dynamic Muzzle Flash Effect & Point Light
-    const flashGeo = new THREE.OctahedronGeometry(0.07, 0);
+    const isBomb = this.config.id === 'bomb';
+    const flashGeo = new THREE.OctahedronGeometry(isBomb ? 0.12 : 0.07, 0);
     const flashMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
+      color: isBomb ? 0xf97316 : 0x38bdf8,
       transparent: true,
       opacity: 0
     });
@@ -381,7 +530,7 @@ export class WeaponInstance {
     this.muzzleFlashMesh.position.set(0, 0.03, this.getMuzzleOffsetZ());
     this.meshGroup.add(this.muzzleFlashMesh);
 
-    this.muzzleFlashLight = new THREE.PointLight(0x0ea5e9, 0, 7);
+    this.muzzleFlashLight = new THREE.PointLight(isBomb ? 0xf97316 : 0x0ea5e9, 0, isBomb ? 9 : 7);
     this.muzzleFlashLight.position.set(0, 0.03, this.getMuzzleOffsetZ());
     this.meshGroup.add(this.muzzleFlashLight);
 
@@ -394,6 +543,7 @@ export class WeaponInstance {
       case 'shotgun': return -0.58;
       case 'plasma_rifle': return -0.52;
       case 'smg': return -0.45;
+      case 'bomb': return -0.58;
       default: return -0.62;
     }
   }

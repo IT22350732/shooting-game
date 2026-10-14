@@ -10,13 +10,15 @@ export class LootDrop {
   public position: THREE.Vector3;
   public mesh: THREE.Group;
   public isCollected: boolean = false;
+  public isPersistent: boolean = false;
   private lifeTime: number = 45; // 45s despawn timer
   private bobTime: number = Math.random() * Math.PI * 2;
   private baseY: number;
 
-  constructor(id: string, type: LootType, worldPos: THREE.Vector3) {
+  constructor(id: string, type: LootType, worldPos: THREE.Vector3, isPersistent: boolean = false) {
     this.id = id;
     this.type = type;
+    this.isPersistent = isPersistent;
     this.position = worldPos.clone();
     this.baseY = worldPos.y + 0.65;
     this.position.y = this.baseY;
@@ -129,6 +131,71 @@ export class LootDrop {
       return;
     }
 
+    if (this.type === 'bomb_pack') {
+      // Heavy Tactical Ordnance Munitions Pack (Nova Bomb Pack)
+      const caseMat = new THREE.MeshStandardMaterial({
+        color: 0x1e293b,
+        metalness: 0.85,
+        roughness: 0.25
+      });
+      const cautionMat = new THREE.MeshStandardMaterial({
+        color: 0xf59e0b,
+        roughness: 0.3,
+        emissive: 0xd97706,
+        emissiveIntensity: 0.4
+      });
+      const bombMat = new THREE.MeshStandardMaterial({
+        color: 0xea580c,
+        metalness: 0.9,
+        roughness: 0.2,
+        emissive: 0xc2410c,
+        emissiveIntensity: 0.5
+      });
+      const fuseMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+
+      // Armored munition case
+      const caseGeo = new THREE.BoxGeometry(0.44, 0.24, 0.32);
+      const caseMesh = new THREE.Mesh(caseGeo, caseMat);
+      this.mesh.add(caseMesh);
+
+      // Caution edge frame
+      const rimGeo = new THREE.BoxGeometry(0.46, 0.06, 0.34);
+      const rimMesh = new THREE.Mesh(rimGeo, cautionMat);
+      rimMesh.position.y = 0.08;
+      this.mesh.add(rimMesh);
+
+      // 3 High-explosive micro-bombs lined up inside
+      const bombGeo = new THREE.SphereGeometry(0.075, 12, 12);
+      const capGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.04, 8);
+      const ledGeo = new THREE.SphereGeometry(0.015, 8, 8);
+
+      [-0.12, 0, 0.12].forEach((bx) => {
+        const bomb = new THREE.Mesh(bombGeo, bombMat);
+        bomb.position.set(bx, 0.14, 0);
+
+        const cap = new THREE.Mesh(capGeo, cautionMat);
+        cap.position.set(bx, 0.22, 0);
+
+        const led = new THREE.Mesh(ledGeo, fuseMat);
+        led.position.set(bx, 0.25, 0);
+
+        this.mesh.add(bomb, cap, led);
+      });
+
+      // Fiery Orange/Amber Floor Ring
+      const ringGeo = new THREE.RingGeometry(0.40, 0.52, 16);
+      ringGeo.rotateX(-Math.PI / 2);
+      const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xf97316, side: THREE.DoubleSide, transparent: true, opacity: 0.75 }));
+      ring.position.y = -0.55;
+      this.mesh.add(ring);
+
+      // Ambient warm light glow
+      const light = new THREE.PointLight(0xf97316, 1.2, 3.5);
+      light.position.y = 0.2;
+      this.mesh.add(light);
+      return;
+    }
+
     // Ammo Pack
     const ammoMat = new THREE.MeshStandardMaterial({
       color: 0x3f4f3a, // Military olive drab
@@ -162,8 +229,10 @@ export class LootDrop {
   }
 
   public update(delta: number, playerPos: THREE.Vector3): boolean {
-    this.lifeTime -= delta;
-    if (this.lifeTime <= 0) return true; // Expired
+    if (!this.isPersistent) {
+      this.lifeTime -= delta;
+      if (this.lifeTime <= 0) return true; // Expired
+    }
 
     this.bobTime += delta * 3.5;
     this.mesh.rotation.y += delta * 2.2;
@@ -203,6 +272,10 @@ export class LootDrop {
       soundManager.playArmorPack();
       particles.spawnSparks(this.position, new THREE.Vector3(0, 1, 0), 0x38bdf8, 22);
       label = `+${amount} ARMOR REPAIRED`;
+    } else if (this.type === 'bomb_pack') {
+      soundManager.playBombPickup();
+      particles.spawnSparks(this.position, new THREE.Vector3(0, 1, 0), 0xf97316, 26);
+      label = `+4 NOVA BOMBS ACQUIRED`;
     } else {
       soundManager.playReload();
       particles.spawnSparks(this.position, new THREE.Vector3(0, 1, 0), 0xf59e0b, 18);

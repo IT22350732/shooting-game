@@ -19,7 +19,7 @@ const DEFAULT_SAVE: SaveData = {
   coins: 50, // Starting bonus
   highestScore: 0,
   highestWave: 1,
-  unlockedWeapons: ['assault_rifle', 'shotgun', 'smg', 'sniper', 'plasma_rifle'],
+  unlockedWeapons: ['assault_rifle', 'shotgun', 'smg', 'sniper', 'plasma_rifle', 'bomb'],
   unlockedArenas: ['industrial', 'desert', 'neon_city', 'space_station'],
   completedMissions: [],
   unlockedMissions: ['mission_1_suburb_recon'],

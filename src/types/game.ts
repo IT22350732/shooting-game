@@ -44,7 +44,7 @@ export type GameState = 'MENU' | 'PLAYING' | 'PAUSED' | 'GAME_OVER' | 'VICTORY';
 
 export type ArenaId = 'industrial' | 'desert' | 'neon_city' | 'space_station';
 
-export type WeaponId = 'assault_rifle' | 'shotgun' | 'smg' | 'sniper' | 'plasma_rifle';
+export type WeaponId = 'assault_rifle' | 'shotgun' | 'smg' | 'sniper' | 'plasma_rifle' | 'bomb';
 
 export interface WeaponConfig {
   id: WeaponId;
@@ -61,7 +61,7 @@ export interface WeaponConfig {
   bulletSpeed: number; // 0 means hitscan/instant raycast
   projectileColor: string;
   recoilKick: number;
-  soundType: 'rifle' | 'shotgun' | 'smg' | 'sniper' | 'plasma';
+  soundType: 'rifle' | 'shotgun' | 'smg' | 'sniper' | 'plasma' | 'bomb';
   description: string;
   unlocked: boolean;
   unlockCost: number;

@@ -169,6 +169,7 @@ export class GameEngine {
   private isRunning: boolean = false;
   private animFrameId: number | null = null;
   private killsSinceHealthPack: number = 0;
+  private buildingBombPackRespawnTimer: number = 0;
 
   // Mission Tracking
   public currentMission: MissionConfig | null = null;
@@ -224,6 +225,7 @@ export class GameEngine {
     this.arena.loadArena(this.currentArenaId, this.graphicsQuality);
     this.particles.initAtmosphere(this.currentArenaId);
     this.applyGraphicsQuality(this.graphicsQuality, false);
+    this.populateBuildingBombPacks();
 
     // Initialize Unlocked Weapons
     this.initWeapons();
@@ -295,6 +297,7 @@ export class GameEngine {
     this.arena.loadArena(arenaId, this.graphicsQuality);
     this.particles.initAtmosphere(arenaId);
     this.applyGraphicsQuality(this.graphicsQuality, false);
+    this.populateBuildingBombPacks();
 
     // Spawn player at valid team spawn point with proper ground eye-height
     let spawn: THREE.Vector3;
@@ -399,7 +402,7 @@ export class GameEngine {
 
         const dist = this.player.position.distanceTo(originVec);
         if (dist < 80) {
-          soundManager.playGunshot(weaponId === 'plasma_rifle' ? 'plasma' : weaponId === 'sniper' ? 'sniper' : weaponId === 'shotgun' ? 'shotgun' : 'rifle');
+          soundManager.playGunshot(weaponId === 'bomb' ? 'bomb' : weaponId === 'plasma_rifle' ? 'plasma' : weaponId === 'sniper' ? 'sniper' : weaponId === 'shotgun' ? 'shotgun' : 'rifle');
         }
       },
       onRemotePlayerHit: (shooterId, targetId, damage, isHeadshot, hitPoint) => {
@@ -608,6 +611,7 @@ export class GameEngine {
     this.arena.loadArena(arenaId, this.graphicsQuality);
     this.particles.initAtmosphere(arenaId);
     this.applyGraphicsQuality(this.graphicsQuality, false);
+    this.populateBuildingBombPacks();
 
     // Wave Manager
     this.waveManager.reset(mode, this.currentMission);
@@ -734,11 +738,27 @@ export class GameEngine {
     this.remotePlayers.clear();
   }
 
-  public spawnLootDrop(pos: THREE.Vector3, type: LootType) {
-    const loot = new LootDrop(`loot-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`, type, pos);
+  public spawnLootDrop(pos: THREE.Vector3, type: LootType, isPersistent: boolean = false) {
+    const loot = new LootDrop(`loot-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`, type, pos, isPersistent);
     this.lootDrops.push(loot);
     this.scene.add(loot.mesh);
-    this.particles.spawnSparks(pos, new THREE.Vector3(0, 1, 0), 0xfacc15, 16);
+    this.particles.spawnSparks(pos, new THREE.Vector3(0, 1, 0), type === 'bomb_pack' ? 0xf97316 : 0xfacc15, 16);
+  }
+
+  public populateBuildingBombPacks() {
+    if (!this.arena || !this.arena.interiorZones) return;
+    for (const zone of this.arena.interiorZones) {
+      // Check if a bomb pack already exists in this building
+      const exists = this.lootDrops.some(d => d.type === 'bomb_pack' && d.position.distanceTo(zone.center) < 9.0);
+      if (!exists) {
+        const rotY = zone.rotY || 0;
+        // Placed on top of the interior table/desk inside the building
+        const v = new THREE.Vector3(0.5, 0.95, -zone.depth / 2 + 1.35);
+        v.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
+        v.add(zone.center);
+        this.spawnLootDrop(v, 'bomb_pack', true);
+      }
+    }
   }
 
   // --- INPUT HANDLING ---
@@ -778,6 +798,8 @@ export class GameEngine {
         case 'Digit3': this.switchWeapon('smg'); break;
         case 'Digit4': this.switchWeapon('sniper'); break;
         case 'Digit5': this.switchWeapon('plasma_rifle'); break;
+        case 'Digit6': this.switchWeapon('bomb'); break;
+        case 'KeyG': this.switchWeapon('bomb'); break;
         case 'Escape':
           this.togglePause();
           break;
@@ -1516,6 +1538,7 @@ export class GameEngine {
     this.arena.loadArena(arenaId, this.graphicsQuality);
     this.particles.initAtmosphere(arenaId);
     this.applyGraphicsQuality(this.graphicsQuality, false);
+    this.populateBuildingBombPacks();
   }
 
   public showMenu() {
@@ -1584,7 +1607,22 @@ export class GameEngine {
         );
       }
 
-      if (this.currentWeapon.config.id === 'plasma_rifle') {
+      if (this.currentWeapon.config.id === 'bomb') {
+        // Spawn Bomb Projectile with physical trajectory & gravity
+        const isLow = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
+        const proj = new Projectile(
+          shootData.origin,
+          shootData.direction,
+          this.currentWeapon.config.bulletSpeed,
+          this.currentWeapon.config.damage * (hasDamageBoost ? 2.0 : 1.0),
+          true,
+          false,
+          !isLow,
+          true // isBomb
+        );
+        this.projectiles.push(proj);
+        this.scene.add(proj.mesh);
+      } else if (this.currentWeapon.config.id === 'plasma_rifle') {
         // Spawn Plasma Projectile
         const isLow = this.graphicsQuality === 'low' || this.graphicsQuality === 'normal';
         const proj = new Projectile(
@@ -1882,6 +1920,124 @@ export class GameEngine {
         const res = this.boss.takeDamage(Math.round(barrel.damage * factor * 1.5), true);
         this.triggerHitFeedback(this.boss.position, res.finalDamage, true);
         if (res.killed) this.handleBossDefeat();
+      }
+    }
+  }
+
+  public detonateBomb(pos: THREE.Vector3, baseDamage: number, isPlayerBomb: boolean = true) {
+    const blastRadius = 7.5;
+    this.particles.spawnExplosion(pos, 85);
+    soundManager.playExplosion();
+
+    // Trauma screen shake
+    const distToPlayer = this.player.position.distanceTo(pos);
+    if (distToPlayer < 25) {
+      const traumaAmount = THREE.MathUtils.clamp((1 - distToPlayer / 25) * 0.7, 0.1, 0.7);
+      this.player.addTrauma(traumaAmount);
+    }
+
+    // Damage Player if in self-damage range (unless free mode)
+    if (distToPlayer <= blastRadius && this.mode !== 'free_mode') {
+      const factor = 1 - (distToPlayer / blastRadius);
+      const playerDmg = Math.round(baseDamage * 0.45 * factor);
+      if (this.player.isSheltered) {
+        soundManager.playDeflect();
+      } else {
+        const dead = this.player.takeDamage(playerDmg, pos);
+        if (dead) this.triggerGameOver();
+      }
+    }
+
+    // Damage Enemies in blast radius
+    for (const enemy of this.enemies) {
+      if (!enemy.isDead) {
+        const dist = enemy.position.distanceTo(pos);
+        if (dist <= blastRadius) {
+          const factor = 1 - (dist / blastRadius);
+          const dmg = Math.round(baseDamage * Math.max(0.35, factor));
+          const res = enemy.takeDamage(dmg, false);
+          this.triggerHitFeedback(enemy.position, res.finalDamage, false);
+
+          if (this.isMultiplayer) {
+            multiplayerService.reportEnemyHit(
+              enemy.id,
+              res.finalDamage,
+              false,
+              { x: enemy.position.x, y: enemy.position.y, z: enemy.position.z }
+            );
+          }
+
+          if (res.killed) {
+            if (this.isMultiplayer) {
+              this.handleMultiplayerEnemyKilled(enemy, multiplayerService.localPlayerId, false);
+            } else {
+              this.handleEnemyKill(enemy, false);
+            }
+          }
+        }
+      }
+    }
+
+    // Damage Boss if in blast radius
+    if (this.boss && !this.boss.isDead) {
+      const dist = this.boss.position.distanceTo(pos);
+      if (dist <= blastRadius + 3.0) {
+        const factor = 1 - (dist / (blastRadius + 3.0));
+        const dmg = Math.round(baseDamage * Math.max(0.5, factor) * 1.4);
+        const res = this.boss.takeDamage(dmg, true);
+        this.triggerHitFeedback(this.boss.position, res.finalDamage, true);
+        if (res.killed) this.handleBossDefeat();
+      }
+    }
+
+    // Damage Practice Targets (Free Mode)
+    for (const pt of this.practiceTargets) {
+      if (!pt.isDead && pt.position.distanceTo(pos) <= blastRadius) {
+        const factor = 1 - (pt.position.distanceTo(pos) / blastRadius);
+        const dmg = Math.round(baseDamage * factor);
+        const res = pt.takeDamage(dmg, false);
+        this.triggerHitFeedback(pt.position, res.finalDamage, false);
+        if (res.killed) this.handlePracticeTargetDestroyed(pt, false);
+      }
+    }
+
+    // Explode Barrels in radius
+    for (const barrel of this.arena.explosiveBarrels) {
+      if (!barrel.exploded && barrel.position.distanceTo(pos) <= blastRadius) {
+        this.detonateBarrel(barrel);
+      }
+    }
+
+    // Damage Destructibles (crates, pots, safes)
+    for (const prop of this.arena.destructibles) {
+      if (!prop.isDestroyed && prop.position.distanceTo(pos) <= blastRadius) {
+        const res = prop.takeDamage(baseDamage, this.particles);
+        this.triggerHitFeedback(prop.position, res.damageDealt, res.destroyed);
+        if (res.destroyed && res.lootType && res.position) {
+          this.spawnLootDrop(res.position, res.lootType);
+        }
+      }
+    }
+
+    // Multiplayer: Damage remote players
+    if (this.isMultiplayer && isPlayerBomb) {
+      for (const [, remote] of this.remotePlayers) {
+        if (!remote.isAlive) continue;
+        if (this.mode === 'multiplayer_tdm' && remote.team === multiplayerService.localPlayer?.team) continue;
+        const dist = remote.position.distanceTo(pos);
+        if (dist <= blastRadius) {
+          const factor = 1 - (dist / blastRadius);
+          const dmg = Math.round(baseDamage * factor);
+          const res = remote.takeDamage(dmg, false);
+          this.triggerHitFeedback(remote.position, res.finalDamage, false);
+          multiplayerService.reportHit(remote.id, res.finalDamage, false, { x: pos.x, y: pos.y, z: pos.z });
+          if (res.killed) {
+            soundManager.playKillConfirmed();
+            this.player.stats.kills++;
+            this.player.stats.score += 100;
+            multiplayerService.reportKill(remote.id, 'bomb', false);
+          }
+        }
       }
     }
   }
@@ -2545,6 +2701,9 @@ export class GameEngine {
       const expired = proj.update(delta);
 
       if (expired) {
+        if (proj.isBomb) {
+          this.detonateBomb(proj.position, proj.damage, proj.isPlayerProjectile);
+        }
         this.scene.remove(proj.mesh);
         proj.dispose();
         this.projectiles.splice(i, 1);
@@ -2553,93 +2712,156 @@ export class GameEngine {
 
       // Check collision
       if (proj.isPlayerProjectile) {
-        // Player Plasma Projectile hits Practice Target (Free Mode)
-        for (const pt of this.practiceTargets) {
-          if (!pt.isDead && pt.position.distanceTo(proj.position) < 1.4) {
-            const res = pt.takeDamage(proj.damage, false);
-            this.particles.spawnExplosion(proj.position, 18);
-            this.triggerHitFeedback(proj.position, res.finalDamage, false);
-            if (res.killed) this.handlePracticeTargetDestroyed(pt, false);
-            proj.isDead = true;
-            break;
+        if (proj.isBomb) {
+          // Check bomb impact against ground, enemies, boss, props, obstacles, and remote players
+          let detonated = false;
+          if (proj.position.y <= 0.22) {
+            detonated = true;
           }
-        }
-
-        // Player Plasma Projectile hits remote player (Multiplayer)
-        if (!proj.isDead && this.isMultiplayer) {
-          for (const [, remote] of this.remotePlayers) {
-            if (!remote.isAlive) continue;
-            if (this.mode === 'multiplayer_tdm' && remote.team === multiplayerService.localPlayer?.team) continue;
-            if (remote.position.distanceTo(proj.position) < (1.2 + proj.radius)) {
-              const res = remote.takeDamage(proj.damage, false);
-              this.particles.spawnExplosion(proj.position, 20);
-              this.triggerHitFeedback(proj.position, res.finalDamage, false);
-              multiplayerService.reportHit(remote.id, res.finalDamage, false, { x: proj.position.x, y: proj.position.y, z: proj.position.z });
-              if (res.killed) {
-                soundManager.playKillConfirmed();
-                this.player.stats.kills++;
-                this.player.stats.score += 100;
-                multiplayerService.reportKill(remote.id, 'plasma_rifle', false);
+          if (!detonated) {
+            for (const enemy of this.enemies) {
+              if (!enemy.isDead && enemy.position.distanceTo(proj.position) < (enemy.getHeight() * 0.75 + proj.radius)) {
+                detonated = true;
+                break;
               }
+            }
+          }
+          if (!detonated && this.boss && !this.boss.isDead) {
+            if (this.boss.position.distanceTo(proj.position) < (3.2 + proj.radius)) {
+              detonated = true;
+            }
+          }
+          if (!detonated) {
+            for (const prop of this.arena.destructibles) {
+              if (!prop.isDestroyed && prop.position.distanceTo(proj.position) < (1.2 + proj.radius)) {
+                detonated = true;
+                break;
+              }
+            }
+          }
+          if (!detonated && this.isMultiplayer) {
+            for (const [, remote] of this.remotePlayers) {
+              if (!remote.isAlive) continue;
+              if (this.mode === 'multiplayer_tdm' && remote.team === multiplayerService.localPlayer?.team) continue;
+              if (remote.position.distanceTo(proj.position) < (1.3 + proj.radius)) {
+                detonated = true;
+                break;
+              }
+            }
+          }
+          if (!detonated) {
+            for (const pt of this.practiceTargets) {
+              if (!pt.isDead && pt.position.distanceTo(proj.position) < 1.5) {
+                detonated = true;
+                break;
+              }
+            }
+          }
+          if (!detonated) {
+            for (const obs of this.arena.obstacles) {
+              if (obs.box.containsPoint(proj.position)) {
+                detonated = true;
+                break;
+              }
+            }
+          }
+
+          if (detonated) {
+            this.detonateBomb(proj.position, proj.damage, true);
+            this.scene.remove(proj.mesh);
+            proj.dispose();
+            this.projectiles.splice(i, 1);
+            continue;
+          }
+        } else {
+          // Player Plasma Projectile hits Practice Target (Free Mode)
+          for (const pt of this.practiceTargets) {
+            if (!pt.isDead && pt.position.distanceTo(proj.position) < 1.4) {
+              const res = pt.takeDamage(proj.damage, false);
+              this.particles.spawnExplosion(proj.position, 18);
+              this.triggerHitFeedback(proj.position, res.finalDamage, false);
+              if (res.killed) this.handlePracticeTargetDestroyed(pt, false);
               proj.isDead = true;
               break;
             }
           }
-        }
 
-        // Player Plasma Projectile hits enemy
-        if (!proj.isDead) {
-          for (const enemy of this.enemies) {
-            if (!enemy.isDead && enemy.position.distanceTo(proj.position) < (enemy.getHeight() * 0.7 + proj.radius)) {
-              const res = enemy.takeDamage(proj.damage, false);
-              this.particles.spawnExplosion(proj.position, 20);
-              this.triggerHitFeedback(proj.position, res.finalDamage, false);
-              proj.isDead = true;
-
-              if (this.isMultiplayer) {
-                multiplayerService.reportEnemyHit(
-                  enemy.id,
-                  res.finalDamage,
-                  false,
-                  { x: proj.position.x, y: proj.position.y, z: proj.position.z }
-                );
-              }
-
-              if (res.killed) {
-                if (this.isMultiplayer) {
-                  this.handleMultiplayerEnemyKilled(enemy, multiplayerService.localPlayerId, false);
-                } else {
-                  this.handleEnemyKill(enemy, false);
+          // Player Plasma Projectile hits remote player (Multiplayer)
+          if (!proj.isDead && this.isMultiplayer) {
+            for (const [, remote] of this.remotePlayers) {
+              if (!remote.isAlive) continue;
+              if (this.mode === 'multiplayer_tdm' && remote.team === multiplayerService.localPlayer?.team) continue;
+              if (remote.position.distanceTo(proj.position) < (1.2 + proj.radius)) {
+                const res = remote.takeDamage(proj.damage, false);
+                this.particles.spawnExplosion(proj.position, 20);
+                this.triggerHitFeedback(proj.position, res.finalDamage, false);
+                multiplayerService.reportHit(remote.id, res.finalDamage, false, { x: proj.position.x, y: proj.position.y, z: proj.position.z });
+                if (res.killed) {
+                  soundManager.playKillConfirmed();
+                  this.player.stats.kills++;
+                  this.player.stats.score += 100;
+                  multiplayerService.reportKill(remote.id, 'plasma_rifle', false);
                 }
+                proj.isDead = true;
+                break;
               }
-              break;
             }
           }
-        }
 
-        // Player Plasma Projectile hits Boss
-        if (!proj.isDead && this.boss && !this.boss.isDead) {
-          if (this.boss.position.distanceTo(proj.position) < (3.2 + proj.radius)) {
-            const res = this.boss.takeDamage(proj.damage, false);
-            this.particles.spawnExplosion(proj.position, 25);
-            this.triggerHitFeedback(proj.position, res.finalDamage, false);
-            if (res.killed) this.handleBossDefeat();
-            proj.isDead = true;
-          }
-        }
+          // Player Plasma Projectile hits enemy
+          if (!proj.isDead) {
+            for (const enemy of this.enemies) {
+              if (!enemy.isDead && enemy.position.distanceTo(proj.position) < (enemy.getHeight() * 0.7 + proj.radius)) {
+                const res = enemy.takeDamage(proj.damage, false);
+                this.particles.spawnExplosion(proj.position, 20);
+                this.triggerHitFeedback(proj.position, res.finalDamage, false);
+                proj.isDead = true;
 
-        // Player Projectile hits Destructible Indoor Prop
-        if (!proj.isDead) {
-          for (const prop of this.arena.destructibles) {
-            if (!prop.isDestroyed && prop.position.distanceTo(proj.position) < (1.1 + proj.radius)) {
-              const res = prop.takeDamage(proj.damage, this.particles);
-              this.particles.spawnExplosion(proj.position, 16);
-              this.triggerHitFeedback(proj.position, res.damageDealt, res.destroyed);
-              if (res.destroyed && res.lootType && res.position) {
-                this.spawnLootDrop(res.position, res.lootType);
+                if (this.isMultiplayer) {
+                  multiplayerService.reportEnemyHit(
+                    enemy.id,
+                    res.finalDamage,
+                    false,
+                    { x: proj.position.x, y: proj.position.y, z: proj.position.z }
+                  );
+                }
+
+                if (res.killed) {
+                  if (this.isMultiplayer) {
+                    this.handleMultiplayerEnemyKilled(enemy, multiplayerService.localPlayerId, false);
+                  } else {
+                    this.handleEnemyKill(enemy, false);
+                  }
+                }
+                break;
               }
+            }
+          }
+
+          // Player Plasma Projectile hits Boss
+          if (!proj.isDead && this.boss && !this.boss.isDead) {
+            if (this.boss.position.distanceTo(proj.position) < (3.2 + proj.radius)) {
+              const res = this.boss.takeDamage(proj.damage, false);
+              this.particles.spawnExplosion(proj.position, 25);
+              this.triggerHitFeedback(proj.position, res.finalDamage, false);
+              if (res.killed) this.handleBossDefeat();
               proj.isDead = true;
-              break;
+            }
+          }
+
+          // Player Projectile hits Destructible Indoor Prop
+          if (!proj.isDead) {
+            for (const prop of this.arena.destructibles) {
+              if (!prop.isDestroyed && prop.position.distanceTo(proj.position) < (1.1 + proj.radius)) {
+                const res = prop.takeDamage(proj.damage, this.particles);
+                this.particles.spawnExplosion(proj.position, 16);
+                this.triggerHitFeedback(proj.position, res.damageDealt, res.destroyed);
+                if (res.destroyed && res.lootType && res.position) {
+                  this.spawnLootDrop(res.position, res.lootType);
+                }
+                proj.isDead = true;
+                break;
+              }
             }
           }
         }
@@ -2709,11 +2931,32 @@ export class GameEngine {
       // Proximity collect
       const dist = drop.position.distanceTo(this.player.position);
       if (dist < 1.35 && !drop.isCollected) {
+        const dropType = drop.type;
         drop.collect(this.player, this.particles);
+        if (dropType === 'bomb_pack') {
+          const bombWeapon = this.weapons.get('bomb');
+          if (bombWeapon) {
+            bombWeapon.currentAmmo = Math.min(bombWeapon.maxAmmo + 4, bombWeapon.currentAmmo + 4);
+            bombWeapon.isReloading = false;
+            bombWeapon.reloadProgress = 0;
+            // Ensure unlocked
+            const saved = saveManager.getData();
+            if (!saved.unlockedWeapons.includes('bomb')) {
+              saveManager.unlockWeapon('bomb', 0);
+            }
+          }
+        }
         this.scene.remove(drop.mesh);
         drop.dispose();
         this.lootDrops.splice(i, 1);
       }
+    }
+
+    // 8c. Building Bomb Packs periodic restock
+    this.buildingBombPackRespawnTimer += delta;
+    if (this.buildingBombPackRespawnTimer >= 22) {
+      this.buildingBombPackRespawnTimer = 0;
+      this.populateBuildingBombPacks();
     }
 
     // 9. Particle System Update

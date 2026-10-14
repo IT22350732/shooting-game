@@ -2013,6 +2013,9 @@ export class ArenaManager {
     // Prop 2: Armored Tech Safe on the platform
     spawnPlatformProp('tech_safe', 0.2, h, -d / 2 + 1.1, -0.3, 'armor_pack', 'deck-safe');
 
+    // Prop 3: Ordnance Bomb Crate on the platform
+    spawnPlatformProp('loot_crate', w / 2 - 1.2, h, -d / 2 + 1.1, -0.2, 'bomb_pack', 'deck-bomb');
+
     return group;
   }
 
@@ -2581,6 +2584,9 @@ export class ArenaManager {
 
     // Prop 5: Extra Clay Pot near front corner (drops coins)
     spawnBuildingProp('clay_pot', w / 2 - 1.25, 0.08, d / 2 - 1.6, 0.4, 'coin_pack', 'pot-2');
+
+    // Prop 6: Heavy Ordnance Munitions Crate (drops bomb pack)
+    spawnBuildingProp('loot_crate', w / 2 - 1.25, 0.08, -d / 2 + 2.5, 0.2, 'bomb_pack', 'bomb-crate');
 
     // Tactical Screen / Whiteboard on back interior wall
     const screenGeo = new THREE.BoxGeometry(2.2, 1.2, 0.06);
@@ -3398,6 +3404,7 @@ export class ArenaManager {
 
     spawnTreehouseProp('loot_crate', roomCenterX - 1.4, deckH, roomCenterZ - 0.8, 0.2, 'ammo_pack', 'tree-ammo');
     spawnTreehouseProp('tech_safe', roomCenterX + 1.4, deckH, roomCenterZ - 0.8, -0.3, 'health_pack', 'tree-medkit');
+    spawnTreehouseProp('loot_crate', roomCenterX, deckH, roomCenterZ - 1.2, 0, 'bomb_pack', 'tree-bomb');
 
     // 11. REGISTER INTERIOR SANCTUARY ZONE
     const cabinWorldCenter = new THREE.Vector3(roomCenterX, deckH, roomCenterZ).applyAxisAngle(yAxis, bRot).add(group.position);

@@ -119,7 +119,7 @@ export const HUD: React.FC<HUDProps> = ({
   const [hitmarkerCrit, setHitmarkerCrit] = useState(false);
   const lastCycleTimeRef = useRef<number>(0);
 
-  const WEAPON_LIST: WeaponId[] = ['assault_rifle', 'shotgun', 'smg', 'sniper', 'plasma_rifle'];
+  const WEAPON_LIST: WeaponId[] = ['assault_rifle', 'shotgun', 'smg', 'sniper', 'plasma_rifle', 'bomb'];
 
   const isMobileView = Boolean(isMobile) || (typeof window !== 'undefined' && (
     ('ontouchstart' in window) ||
@@ -1464,7 +1464,7 @@ export const HUD: React.FC<HUDProps> = ({
               <RotateCw size={13} color="#38bdf8" strokeWidth={2.5} />
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.52rem', fontFamily: 'var(--font-display)', fontWeight: 700, color: '#94a3b8' }}>
-                  WEAPON [{currentWeaponIdx + 1}/5]
+                  WEAPON [{currentWeaponIdx + 1}/{WEAPON_LIST.length}]
                 </span>
                 <span style={{ fontSize: '0.74rem', fontFamily: 'var(--font-display)', fontWeight: 900, color: '#ffffff' }}>
                   {activeWeapon.name.split(' ')[0]}
