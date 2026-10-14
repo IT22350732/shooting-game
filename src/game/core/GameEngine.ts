@@ -2297,10 +2297,13 @@ export class GameEngine {
       this.currentInteractionPrompt = null;
     }
 
-    // 0.06 Check Sanctuary Indoor Immunity State (Active when inside building AND door is closed)
+    // 0.06 Check Sanctuary Indoor Immunity & High-Ground Rooftop / Treehouse Bullet Immunity
     const currentBuilding = this.arena.getBuildingAtPosition(this.player.position);
     const isDoorClosed = currentBuilding ? !currentBuilding.door.isOpen : false;
-    this.player.isSheltered = currentBuilding !== null && isDoorClosed;
+    const isIndoorSheltered = currentBuilding !== null && isDoorClosed;
+    const isHighGroundSheltered = this.arena.isPlayerOnRooftopOrTreehouse(this.player.position, this.player.eyeHeight);
+
+    this.player.isSheltered = isIndoorSheltered || isHighGroundSheltered;
 
     // 0.1 Target Acquisition & Tactical Assist
     this.targetLock = this.updateTargetAcquisition();
@@ -2496,7 +2499,8 @@ export class GameEngine {
       playerBuilding: currentBuilding,
       arenaSize: this.arena.arenaSize,
       isInsideBuilding: (pos: THREE.Vector3) => this.arena.isPositionInsideBuilding(pos),
-      getBuildingAtPosition: (pos: THREE.Vector3) => this.arena.getBuildingAtPosition(pos)
+      getBuildingAtPosition: (pos: THREE.Vector3) => this.arena.getBuildingAtPosition(pos),
+      isPlayerSheltered: this.player.isSheltered
     };
 
     // 5a. Inter-enemy separation pass: prevents swarms from clipping into each other while allowing fluid doorway funnels
@@ -2973,7 +2977,9 @@ export class GameEngine {
         armor: this.player.stats.armor,
         maxArmor: this.player.stats.maxArmor,
         isSheltered: this.player.isSheltered,
-        shelterName: currentBuilding?.name,
+        shelterName: isHighGroundSheltered
+          ? (this.arena.isPlayerInTreehouseZone(this.player.position, this.player.eyeHeight) ? 'TREEHOUSE SANCTUARY' : 'ROOFTOP HIGH GROUND')
+          : currentBuilding?.name,
         isInsideBuilding: currentBuilding !== null,
         isBuildingDoorOpen: currentBuilding ? currentBuilding.door.isOpen : false,
         ammo: this.currentWeapon.currentAmmo,

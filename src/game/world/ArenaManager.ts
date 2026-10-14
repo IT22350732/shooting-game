@@ -46,6 +46,17 @@ export interface InteriorZone {
   doorInsidePos: THREE.Vector3;
 }
 
+export interface TreehouseZone {
+  id: string;
+  name: string;
+  center: THREE.Vector3;
+  deckH: number;
+  roofDeckH: number;
+  width: number;
+  depth: number;
+  stairZBottom: number;
+}
+
 export interface SpawnPoint {
   position: THREE.Vector3;
   name: string;
@@ -180,6 +191,7 @@ export class ArenaManager {
   public explosiveBarrels: ExplosiveBarrel[] = [];
   public doors: InteractiveDoor[] = [];
   public interiorZones: InteriorZone[] = [];
+  public treehouseZones: TreehouseZone[] = [];
   public destructibles: DestructibleProp[] = [];
   public arenaSize = 130; // Expanded 130x130m realistic neighborhood / city block
   public graphicsQuality: GraphicsQuality = 'high';
@@ -222,8 +234,8 @@ export class ArenaManager {
         local.x <= halfW &&
         local.z >= -halfD &&
         local.z <= halfD &&
-        pos.y >= -0.5 &&
-        pos.y <= z.height + 1.2
+        pos.y >= z.center.y - 0.5 &&
+        pos.y <= z.center.y + z.height + 1.5
       ) {
         return true;
       }
@@ -245,13 +257,82 @@ export class ArenaManager {
         local.x <= halfW &&
         local.z >= -halfD &&
         local.z <= halfD &&
-        pos.y >= -0.5 &&
-        pos.y <= z.height + 1.2
+        pos.y >= z.center.y - 0.5 &&
+        pos.y <= z.center.y + z.height + 1.5
       ) {
         return z;
       }
     }
     return null;
+  }
+
+  /**
+   * Checks if player position is within any Treehouse structure (deck, stairs, cabin, or rooftop)
+   */
+  public isPlayerInTreehouseZone(pos: THREE.Vector3, eyeHeight: number = 1.7): boolean {
+    const feetY = pos.y - eyeHeight;
+    for (let i = 0; i < this.treehouseZones.length; i++) {
+      const tz = this.treehouseZones[i];
+      const dx = pos.x - tz.center.x;
+      const dz = pos.z - tz.center.z;
+      const maxDistX = tz.width / 2 + 2.0;
+      const maxDistZ = tz.depth / 2 + (tz.stairZBottom - tz.depth / 2) + 2.0;
+      const radius = Math.max(maxDistX, maxDistZ);
+      if (Math.hypot(dx, dz) <= radius) {
+        // Player is within the treehouse structure footprint
+        if (feetY >= 1.8 || pos.y >= 3.2) {
+          return true; // Protected on elevated stairs, deck, cabin, or rooftop
+        }
+        if (Math.abs(dx) <= tz.width / 2 + 1.0 && Math.abs(dz) <= tz.depth / 2 + 1.0) {
+          return true; // Inside treehouse ground perimeter
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Checks if player is on ANY elevated rooftop or high observation deck
+   */
+  public isPlayerOnRooftop(pos: THREE.Vector3, eyeHeight: number = 1.7): boolean {
+    const feetY = pos.y - eyeHeight;
+    if (feetY < 3.0) return false;
+
+    for (let i = 0; i < this.obstacles.length; i++) {
+      const obs = this.obstacles[i];
+      if (obs.isFloor && obs.floorPlane) {
+        const fp = obs.floorPlane;
+        if (fp.topY >= 3.0 && feetY >= fp.topY - 0.6) {
+          const lx = pos.x - fp.center.x;
+          const lz = pos.z - fp.center.z;
+          const rx = lx * Math.cos(-fp.rotY) - lz * Math.sin(-fp.rotY);
+          const rz = lx * Math.sin(-fp.rotY) + lz * Math.cos(-fp.rotY);
+          if (Math.abs(rx) <= fp.halfW + 0.45 && Math.abs(rz) <= fp.halfD + 0.45) {
+            return true;
+          }
+        }
+      }
+      if (obs.stairRamp) {
+        const sr = obs.stairRamp;
+        if (sr.topY >= 3.0 && feetY >= 3.0) {
+          const midX = (sr.p1.x + sr.p2.x) / 2;
+          const midZ = (sr.p1.z + sr.p2.z) / 2;
+          const stairLen = sr.p1.distanceTo(sr.p2);
+          if (Math.hypot(pos.x - midX, pos.z - midZ) <= stairLen * 0.75 + 1.2) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Unified check: returns true if player is on a rooftop OR in the treehouse
+   */
+  public isPlayerOnRooftopOrTreehouse(pos: THREE.Vector3, eyeHeight: number = 1.7): boolean {
+    return this.isPlayerInTreehouseZone(pos, eyeHeight) || this.isPlayerOnRooftop(pos, eyeHeight);
   }
 
   public loadArena(arenaId: ArenaId, quality?: GraphicsQuality) {
@@ -269,6 +350,7 @@ export class ArenaManager {
     this.destructibles.forEach(d => d.dispose());
     this.destructibles = [];
     this.interiorZones = [];
+    this.treehouseZones = [];
 
     switch (arenaId) {
       case 'desert':
@@ -492,7 +574,7 @@ export class ArenaManager {
     this.createGardenFence(10, -12, 14, 0);
     this.createGardenFence(-10, 12, 14, 0);
     this.createGardenFence(10, 12, 14, 0);
-    this.createGardenFence(-36, -20, 14, 0);
+    // Note: NW fence at (-36, -20) removed because Grand Canopy Sanctuary Treehouse has its own dedicated rustic boundary fences
     this.createGardenFence(36, -20, 14, 0);
     this.createGardenFence(-36, 20, 14, 0);
     this.createGardenFence(36, 20, 14, 0);
@@ -522,7 +604,7 @@ export class ArenaManager {
 
     this.createDumpster(-16, -10, 0.2);
     this.createDumpster(16, 10, -0.3);
-    this.createDumpster(-36, -10, 0);
+    this.createDumpster(-48, -10, 0); // Repositioned to outer boundary so Grand Canopy Sanctuary Treehouse entrance walkway is fully clear
     this.createDumpster(36, 10, Math.PI);
 
     // Explosive barrels in driveways/alleys
@@ -530,7 +612,7 @@ export class ArenaManager {
     this.addExplosiveBarrel(13, 0, 8);
     this.addExplosiveBarrel(-14, 0, 14);
     this.addExplosiveBarrel(14, 0, -14);
-    this.addExplosiveBarrel(-34, 0, -14);
+    this.addExplosiveBarrel(-26, 0, -10); // Safely placed in alley away from wooden treehouse stairs
     this.addExplosiveBarrel(34, 0, 14);
     this.addExplosiveBarrel(-14, 0, 34);
     // OUTDOOR ELEVATED PLATFORMS ("UPSTAIRS" & "UPFLOOR" OBSERVATION GANTRIES)
@@ -585,10 +667,10 @@ export class ArenaManager {
 
     // Suburban Landscape Trees across front lawns, yards, and parkways
     const suburbTrees: [number, number, number, 'oak' | 'pine'][] = [
-      [-46, -24, 1.1, 'oak'],
+      [-48, -26, 1.0, 'oak'],
       [-48, -44, 1.25, 'pine'],
       [-28, -46, 1.05, 'oak'],
-      [-36, -14, 0.95, 'oak'],
+      // [-36, -14] oak tree removed: trunk was penetrating treehouse stairs and severed branches hovered in mid-air
       [46, -24, 1.1, 'oak'],
       [46, -44, 1.2, 'pine'],
       [28, -46, 1.0, 'oak'],
@@ -844,7 +926,7 @@ export class ArenaManager {
 
     this.createDumpster(-16, -11, 0);
     this.createDumpster(16, 11, Math.PI);
-    this.createDumpster(-36, -11, 0);
+    this.createDumpster(-48, -11, 0); // Positioned away from Park Eco-Treehouse entrance path
     this.createDumpster(36, 11, Math.PI);
 
     this.addExplosiveBarrel(-12, 0, -6);
@@ -3168,40 +3250,40 @@ export class ArenaManager {
       group.add(rootMesh);
     });
 
-    // Solid tree trunk cover obstacle at ground level
+    // Solid tree trunk cover obstacle spanning the full height through ground, Level 2 floor, and Level 3 rooftop!
     group.updateMatrixWorld(true);
-    const trunkWorldPos = new THREE.Vector3(trunkLocalX, deckH / 2, trunkLocalZ).applyAxisAngle(yAxis, bRot).add(group.position);
+    const trunkWorldPos = new THREE.Vector3(trunkLocalX, trunkH / 2, trunkLocalZ).applyAxisAngle(yAxis, bRot).add(group.position);
     const trunkBox = new THREE.Box3().setFromCenterAndSize(
       trunkWorldPos,
-      new THREE.Vector3(3.4, deckH, 3.4)
+      new THREE.Vector3(2.6, trunkH, 2.6)
     );
     this.obstacles.push({ mesh: trunk, box: trunkBox, isCover: true });
 
-    // Giant Supporting Tree Boughs - Bracing East and North Deck (Zero limbs crossing the West stairs)
+    // Giant Supporting Tree Boughs - Bracing East and North Deck (Cleanly underneath Level 2 floor and high above rooftop)
     const boughAngles = [0.4, 1.8, 3.2];
     boughAngles.forEach(ang => {
-      // Lower boughs bracing Level 2 deck
-      const boughGeo = new THREE.CylinderGeometry(0.38, 0.54, 5.8, 8);
+      // Lower boughs bracing Level 2 deck cleanly from underneath (below Y=deckH)
+      const boughGeo = new THREE.CylinderGeometry(0.32, 0.46, 5.0, 8);
       const bough = new THREE.Mesh(boughGeo, barkMat);
       bough.position.set(
-        trunkLocalX + Math.sin(ang) * 2.0,
-        deckH * 0.85,
-        trunkLocalZ + Math.cos(ang) * 2.0
+        trunkLocalX + Math.sin(ang) * 1.8,
+        deckH - 1.5,
+        trunkLocalZ + Math.cos(ang) * 1.8
       );
       bough.rotation.y = ang;
-      bough.rotation.z = 0.58;
+      bough.rotation.z = 0.55;
       bough.castShadow = true;
       group.add(bough);
 
-      // Upper boughs cradling 3rd Floor Rooftop high overhead (Y > 9.5m)
-      const upperBough = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.44, 6.8, 8), barkMat);
+      // Upper boughs cradling 3rd Floor Rooftop high overhead (soaring high above rooftop deck at Y > 11.5m)
+      const upperBough = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.42, 6.2, 8), barkMat);
       upperBough.position.set(
-        trunkLocalX + Math.sin(ang + 0.2) * 2.6,
-        roofDeckH + 1.8,
-        trunkLocalZ + Math.cos(ang + 0.2) * 2.6
+        trunkLocalX + Math.sin(ang + 0.2) * 2.4,
+        roofDeckH + 3.8,
+        trunkLocalZ + Math.cos(ang + 0.2) * 2.4
       );
       upperBough.rotation.y = ang + 0.2;
-      upperBough.rotation.z = 0.52;
+      upperBough.rotation.z = 0.48;
       upperBough.castShadow = true;
       group.add(upperBough);
     });
@@ -3752,15 +3834,15 @@ export class ArenaManager {
     // =========================================================================
     // Relocated to the West (-X) side where there are ZERO tree trunks or branches!
     // The staircase ascends smoothly from Level 2 deck to Level 3 rooftop.
-    const stair2W = 1.6;
-    const stair2Run = 5.6;
+    const stair2W = 2.0; // Widened for generous, grand staircase
+    const stair2Run = 5.8;
     const stair2Rise = roofDeckH - deckH; // 3.4m rise
     const stair2X = -5.0; // Positioned cleanly on the West deck terrace
     const stair2ZBottom = 2.4; // Starts comfortably on the front-west terrace
-    const stair2ZTop = stair2ZBottom - stair2Run; // Arrives flush onto Level 3 rooftop at Z = -3.2m
+    const stair2ZTop = stair2ZBottom - stair2Run; // Arrives flush onto Level 3 rooftop at Z = -3.4m
 
     const stair2Group = new THREE.Group();
-    const numSteps2 = 16;
+    const numSteps2 = 18;
     const stepDepth2 = stair2Run / numSteps2;
     const stepHeight2 = stair2Rise / numSteps2;
     const step2PlankGeo = new THREE.BoxGeometry(stair2W, 0.08, stepDepth2 + 0.06);
@@ -3780,26 +3862,53 @@ export class ArenaManager {
     const stringer2Geo = new THREE.BoxGeometry(0.12, 0.24, stair2Hypot);
 
     const s2LeftStringer = new THREE.Mesh(stringer2Geo, timberMat);
-    s2LeftStringer.rotation.x = -stair2Angle;
+    s2LeftStringer.rotation.x = stair2Angle;
     s2LeftStringer.position.set(stair2X - stair2W / 2 + 0.04, deckH + stair2Rise / 2, (stair2ZBottom + stair2ZTop) / 2);
     stair2Group.add(s2LeftStringer);
 
     const s2RightStringer = new THREE.Mesh(stringer2Geo, timberMat);
-    s2RightStringer.rotation.x = -stair2Angle;
+    s2RightStringer.rotation.x = stair2Angle;
     s2RightStringer.position.set(stair2X + stair2W / 2 - 0.04, deckH + stair2Rise / 2, (stair2ZBottom + stair2ZTop) / 2);
     stair2Group.add(s2RightStringer);
 
-    // Handrails on Level 2 -> Level 3 stairs
+    // Handrails on Level 2 -> Level 3 stairs (correctly angled along the stair incline)
     const s2HandrailGeo = new THREE.BoxGeometry(0.08, 0.08, stair2Hypot);
     const s2HandrailL = new THREE.Mesh(s2HandrailGeo, timberMat);
-    s2HandrailL.rotation.x = -stair2Angle;
-    s2HandrailL.position.set(stair2X - stair2W / 2 + 0.04, deckH + stair2Rise / 2 + 1.0, (stair2ZBottom + stair2ZTop) / 2);
+    s2HandrailL.rotation.x = stair2Angle;
+    s2HandrailL.position.set(stair2X - stair2W / 2 + 0.04, deckH + stair2Rise / 2 + 0.9, (stair2ZBottom + stair2ZTop) / 2);
     stair2Group.add(s2HandrailL);
 
     const s2HandrailR = new THREE.Mesh(s2HandrailGeo, timberMat);
-    s2HandrailR.rotation.x = -stair2Angle;
-    s2HandrailR.position.set(stair2X + stair2W / 2 - 0.04, deckH + stair2Rise / 2 + 1.0, (stair2ZBottom + stair2ZTop) / 2);
+    s2HandrailR.rotation.x = stair2Angle;
+    s2HandrailR.position.set(stair2X + stair2W / 2 - 0.04, deckH + stair2Rise / 2 + 0.9, (stair2ZBottom + stair2ZTop) / 2);
     stair2Group.add(s2HandrailR);
+
+    // Vertical balusters connecting handrails down to stringers
+    const balusterCount2 = 8;
+    for (let b = 0; b <= balusterCount2; b++) {
+      const bFrac = b / balusterCount2;
+      const bY = deckH + bFrac * stair2Rise + 0.45;
+      const bZ = stair2ZBottom - bFrac * stair2Run;
+      [-stair2W / 2 + 0.04, stair2W / 2 - 0.04].forEach(bx => {
+        const balMesh = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.9, 0.06), timberMat);
+        balMesh.position.set(stair2X + bx, bY, bZ);
+        stair2Group.add(balMesh);
+      });
+    }
+
+    // Physical lateral handrail colliders along left and right stringers to physically block falling off
+    [-stair2W / 2 - 0.08, stair2W / 2 + 0.08].forEach(hx => {
+      const railWallGeo = new THREE.BoxGeometry(0.18, stair2Rise + 1.2, stair2Hypot);
+      const railWallMat = new THREE.MeshBasicMaterial({ visible: false });
+      const railWall = new THREE.Mesh(railWallGeo, railWallMat);
+      railWall.rotation.x = stair2Angle;
+      railWall.position.set(stair2X + hx, deckH + stair2Rise / 2 + 0.5, (stair2ZBottom + stair2ZTop) / 2);
+      group.add(railWall);
+
+      group.updateMatrixWorld(true);
+      const rwBox = new THREE.Box3().setFromObject(railWall);
+      this.obstacles.push({ mesh: railWall, box: rwBox, isCover: false });
+    });
 
     group.add(stair2Group);
 
@@ -3843,15 +3952,13 @@ export class ArenaManager {
     mainRoofFloor.receiveShadow = true;
     roofGroup.add(mainRoofFloor);
 
-    // West Landing Platform behind the stairs (from Z = -3.2m to North edge)
-    const westLandingD = (roofDeckD / 2 - Math.abs(roofCenterZ - stair2ZTop));
-    if (westLandingD > 0.4) {
-      const westFloor = new THREE.Mesh(new THREE.BoxGeometry(2.8, slabThick, westLandingD), deckFloorMat);
-      westFloor.position.set(-roofDeckW / 2 + 1.4, -slabThick / 2, -roofDeckD / 2 + westLandingD / 2);
-      westFloor.castShadow = true;
-      westFloor.receiveShadow = true;
-      roofGroup.add(westFloor);
-    }
+    // West Landing Platform behind the stairs (from Z = stair2ZTop to North edge)
+    const westLandingD = Math.max(1.8, roofDeckD / 2 - Math.abs(roofCenterZ - stair2ZTop));
+    const westFloor = new THREE.Mesh(new THREE.BoxGeometry(3.2, slabThick, westLandingD), deckFloorMat);
+    westFloor.position.set(-roofDeckW / 2 + 1.6, -slabThick / 2, -roofDeckD / 2 + westLandingD / 2);
+    westFloor.castShadow = true;
+    westFloor.receiveShadow = true;
+    roofGroup.add(westFloor);
 
     // Register 3rd Floor Walkable Rooftop FloorPlane
     group.updateMatrixWorld(true);
@@ -3874,29 +3981,40 @@ export class ArenaManager {
       }
     });
 
-    // Rustic Perimeter Railings on Open Rooftop with 1.8m Open Entryway for the West Stairs
-    addRailing(group, roofDeckW, roofCenterX, roofDeckH, roofCenterZ - roofDeckD / 2, 0); // North edge
-    addRailing(group, roofDeckD, roofCenterX + roofDeckW / 2, roofDeckH, roofCenterZ, Math.PI / 2); // East edge
-    addRailing(group, roofDeckW, roofCenterX, roofDeckH, roofCenterZ + roofDeckD / 2, 0); // South edge
+    // Rustic Perimeter Railings on Open Rooftop with Open Stairwell at West
+    // 1. North Edge (spans full width 12.8m across landing and main roof)
+    addRailing(group, roofDeckW, roofCenterX, roofDeckH, roofCenterZ - roofDeckD / 2, 0);
 
-    // West Railings: Leaves a clean 1.8m open gap at the stair arrival (Z = -3.2m)
-    const westNorthRailLen = Math.max(0.4, (roofDeckD / 2 - Math.abs(roofCenterZ - stair2ZTop) - 0.4));
+    // 2. East Edge (spans full depth 11.0m)
+    addRailing(group, roofDeckD, roofCenterX + roofDeckW / 2, roofDeckH, roofCenterZ, Math.PI / 2);
+
+    // 3. South Edge (spans 10.0m from X = -3.6 to X = +6.4 along the walkable floor)
+    const southRailW = roofDeckW / 2 + 3.6; // 6.4 + 3.6 = 10.0m
+    const southRailCenterX = (-3.6 + roofDeckW / 2) / 2; // (-3.6 + 6.4) / 2 = +1.4m
+    addRailing(group, southRailW, southRailCenterX, roofDeckH, roofCenterZ + roofDeckD / 2, 0);
+
+    // 4. Stairwell Opening Railing (placed EXACTLY at the floor ending area at X = -3.6)
+    // Directly protects the floor edge and runs from Z = stair2ZTop to South edge
+    const stairwellRailLen = (roofCenterZ + roofDeckD / 2) - stair2ZTop; // 5.2 - (-3.4) = 8.6m
+    const stairwellRailCenterZ = (stair2ZTop + (roofCenterZ + roofDeckD / 2)) / 2; // (-3.4 + 5.2) / 2 = +0.9m
     addRailing(
       group,
-      westNorthRailLen,
-      roofCenterX - roofDeckW / 2,
+      stairwellRailLen,
+      -3.6,
       roofDeckH,
-      roofCenterZ - roofDeckD / 2 + westNorthRailLen / 2,
+      stairwellRailCenterZ,
       Math.PI / 2
     );
 
-    const westSouthRailLen = Math.max(0.4, (roofDeckD - westNorthRailLen - 1.8));
+    // 5. West Landing Railing (placed along west edge of landing floor at X = -6.4, from North edge to stair arrival)
+    const landingRailLen = Math.abs(stair2ZTop - (roofCenterZ - roofDeckD / 2)); // -3.4 - (-5.8) = 2.4m
+    const landingRailCenterZ = ((roofCenterZ - roofDeckD / 2) + stair2ZTop) / 2; // (-5.8 + -3.4) / 2 = -4.6m
     addRailing(
       group,
-      westSouthRailLen,
+      landingRailLen,
       roofCenterX - roofDeckW / 2,
       roofDeckH,
-      roofCenterZ + roofDeckD / 2 - westSouthRailLen / 2,
+      landingRailCenterZ,
       Math.PI / 2
     );
 
@@ -3955,12 +4073,12 @@ export class ArenaManager {
     const rbBox = new THREE.Box3().setFromObject(rbSeat);
     this.obstacles.push({ mesh: rbSeat, box: rbBox, isCover: true });
 
-    // 4 Corner Cedar Posts with Warm Glowing Fairy Lanterns on Rooftop
+    // Corner Cedar Posts with Warm Glowing Fairy Lanterns on Rooftop (solidly grounded on the floor)
     [
-      [-roofDeckW / 2 + 0.12, -roofDeckD / 2 + 0.12],
-      [roofDeckW / 2 - 0.12, -roofDeckD / 2 + 0.12],
-      [-roofDeckW / 2 + 0.12, roofDeckD / 2 - 0.12],
-      [roofDeckW / 2 - 0.12, roofDeckD / 2 - 0.12]
+      [-roofDeckW / 2 + 0.12, -roofDeckD / 2 + 0.12], // North-West corner (on landing platform)
+      [roofDeckW / 2 - 0.12, -roofDeckD / 2 + 0.12],  // North-East corner (on main roof)
+      [-3.6 + 0.12, roofDeckD / 2 - 0.12],            // South-West floor corner (at floor edge X = -3.6)
+      [roofDeckW / 2 - 0.12, roofDeckD / 2 - 0.12]    // South-East corner (on main roof)
     ].forEach(([cx, cz]) => {
       const rPost = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.8, 0.12), timberMat);
       rPost.position.set(roofCenterX + cx, roofDeckH + 0.9, roofCenterZ + cz);
@@ -3986,15 +4104,15 @@ export class ArenaManager {
     // =========================================================================
     // 12. OVERARCHING ANCIENT CATHEDRAL TREE CANOPY (High Overhead Vault)
     // =========================================================================
-    // Soaring high above 3rd floor rooftop (Y=12.5m to 17m) to frame the open sky
+    // Soaring high above 3rd floor rooftop (Y=14m to 18m) to frame the open sky cleanly above player head
     const canopyClusters = [
-      { x: trunkLocalX, y: roofDeckH + 6.5, z: trunkLocalZ, r: 5.6 },
-      { x: trunkLocalX - 3.8, y: roofDeckH + 5.8, z: trunkLocalZ + 3.8, r: 4.6 },
-      { x: trunkLocalX + 4.2, y: roofDeckH + 6.0, z: trunkLocalZ - 3.4, r: 4.4 },
-      { x: trunkLocalX - 2.8, y: roofDeckH + 5.2, z: trunkLocalZ - 4.5, r: 4.0 },
-      { x: trunkLocalX + 4.8, y: roofDeckH + 4.8, z: trunkLocalZ + 4.0, r: 4.2 },
-      { x: trunkLocalX - 5.8, y: roofDeckH + 6.2, z: trunkLocalZ - 1.0, r: 4.4 },
-      { x: trunkLocalX + 5.5, y: roofDeckH + 5.8, z: trunkLocalZ + 1.8, r: 4.2 }
+      { x: trunkLocalX, y: roofDeckH + 7.8, z: trunkLocalZ, r: 5.4 },
+      { x: trunkLocalX - 3.8, y: roofDeckH + 7.2, z: trunkLocalZ + 3.8, r: 4.4 },
+      { x: trunkLocalX + 4.2, y: roofDeckH + 7.4, z: trunkLocalZ - 3.4, r: 4.2 },
+      { x: trunkLocalX - 2.8, y: roofDeckH + 6.8, z: trunkLocalZ - 4.5, r: 3.8 },
+      { x: trunkLocalX + 4.8, y: roofDeckH + 6.6, z: trunkLocalZ + 4.0, r: 4.0 },
+      { x: trunkLocalX - 5.8, y: roofDeckH + 7.5, z: trunkLocalZ - 1.0, r: 4.2 },
+      { x: trunkLocalX + 5.5, y: roofDeckH + 7.2, z: trunkLocalZ + 1.8, r: 4.0 }
     ];
     canopyClusters.forEach(cc => {
       const cGeo = new THREE.DodecahedronGeometry(cc.r, 1);
@@ -4027,6 +4145,17 @@ export class ArenaManager {
       doorWorldPos: worldDoorPos,
       doorApproachPos,
       doorInsidePos
+    });
+
+    this.treehouseZones.push({
+      id: options.id,
+      name: options.name,
+      center: new THREE.Vector3(options.x, 0, options.z),
+      deckH,
+      roofDeckH,
+      width: deckW,
+      depth: deckD,
+      stairZBottom: deckD / 2 + stairRun
     });
 
     return group;

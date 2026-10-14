@@ -693,7 +693,7 @@ export const HUD: React.FC<HUDProps> = ({
             <>
               <Shield size={16} color="#34d399" />
               <span style={{ textTransform: 'uppercase', color: '#6ee7b7' }}>
-                {stats.shelterName ? stats.shelterName.toUpperCase() : 'BUILDING'} • SAFE (DOOR CLOSED)
+                {stats.shelterName ? stats.shelterName.toUpperCase() : 'SANCTUARY'} • PROTECTED
               </span>
               <span
                 style={{
@@ -706,7 +706,7 @@ export const HUD: React.FC<HUDProps> = ({
                   letterSpacing: '1px'
                 }}
               >
-                ENEMIES CANNOT ENTER
+                BULLET IMMUNITY
               </span>
             </>
           ) : (

@@ -18,6 +18,7 @@ export interface EnemyBuildingContext {
   arenaSize?: number;
   isInsideBuilding?: (pos: THREE.Vector3) => boolean;
   getBuildingAtPosition?: (pos: THREE.Vector3) => InteriorZone | null;
+  isPlayerSheltered?: boolean;
 }
 
 interface HumanTheme {
@@ -1600,7 +1601,7 @@ export class Enemy {
     this.weaponTuck = THREE.MathUtils.lerp(this.weaponTuck, targetTuck, Math.min(1.0, delta * 14));
 
     // Close-range emergency melee strike if player is within 1.8m and line of sight is clear
-    const canMelee = (!isPlayerInBuilding || isEnemyInPlayerBuilding || isDoorOpen) && hasLineOfSight;
+    const canMelee = (!isPlayerInBuilding || isEnemyInPlayerBuilding || isDoorOpen) && !buildingContext?.isPlayerSheltered && hasLineOfSight;
     if (distToPlayer < 1.8 && this.attackCooldown <= 0 && canMelee) {
       this.attackCooldown = 0.8;
       if (onPlayerHit) {
@@ -1608,8 +1609,8 @@ export class Enemy {
       }
     }
 
-    // Ranged Fire Attack (Shooting at player only with clear line of sight and non-obstructed barrel)
-    const canShoot = (!isPlayerInBuilding || isEnemyInPlayerBuilding || isDoorOpen) && hasLineOfSight && this.weaponTuck < 0.45;
+    // Ranged Fire Attack (Shooting at player only with clear line of sight, sheltered immunity check, and non-obstructed barrel)
+    const canShoot = (!isPlayerInBuilding || isEnemyInPlayerBuilding || isDoorOpen) && !buildingContext?.isPlayerSheltered && hasLineOfSight && this.weaponTuck < 0.45;
     if (canShoot && this.attackCooldown <= 0 && distToPlayer <= this.attackRange) {
       this.attackCooldown = this.attackInterval + (Math.random() * 0.3 - 0.15);
 

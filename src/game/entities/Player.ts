@@ -381,8 +381,8 @@ export class Player {
           const proposedFeetY = newPos.y - this.eyeHeight;
 
           // Authentic geometric stair boundaries
-          const stairHalfW = Math.max(0.45, (sr.width - 0.3) / 2);
-          const maxFenceAcross = Math.max(0.40, stairHalfW - 0.06);
+          const stairHalfW = Math.max(0.60, (sr.width - 0.2) / 2);
+          const maxFenceAcross = Math.max(0.50, stairHalfW - 0.04);
 
           // Step height at player's previous and current location along ramp
           const prevT = Math.max(0, Math.min(1, prevAlong / len));
@@ -391,50 +391,52 @@ export class Player {
           const stepY = sr.bottomY + t * (sr.topY - sr.bottomY);
 
           // Did the player start this frame already walking/standing on this staircase?
-          const wasAtStairHeight = Math.abs(prevFeetY - prevStepY) <= 0.45;
+          // Generous tolerance ensures turning left or right never breaks stair tracking
+          const wasAtStairHeight = Math.abs(prevFeetY - prevStepY) <= 0.65;
           const wasInsideStairs =
             this.onStairRamp &&
             wasAtStairHeight &&
-            Math.abs(prevAcross) <= maxFenceAcross + 0.08 &&
-            prevAlong >= -0.35 &&
-            prevAlong <= len + 0.45;
+            Math.abs(prevAcross) <= maxFenceAcross + 0.35 &&
+            prevAlong >= -0.45 &&
+            prevAlong <= len + 0.55;
 
           // Legitimate entry conditions:
           // 1. Walking into bottom entrance from ground level
           const entersBottom =
-            Math.abs(prevFeetY - sr.bottomY) <= 0.45 &&
-            along >= -0.40 && along <= 0.45 &&
-            Math.abs(across) <= maxFenceAcross;
+            Math.abs(prevFeetY - sr.bottomY) <= 0.55 &&
+            along >= -0.45 && along <= 0.50 &&
+            Math.abs(across) <= maxFenceAcross + 0.15;
 
           // 2. Walking into top entrance from elevated deck level
           const entersTop =
-            Math.abs(prevFeetY - sr.topY) <= 0.45 &&
-            along >= len - 0.45 && along <= len + 0.50 &&
-            Math.abs(across) <= maxFenceAcross;
+            Math.abs(prevFeetY - sr.topY) <= 0.55 &&
+            along >= len - 0.50 && along <= len + 0.55 &&
+            Math.abs(across) <= maxFenceAcross + 0.15;
 
           // 3. Falling / landing from above directly onto the stair treads
           const landsFromAbove =
             this.velocity.y <= 0 &&
-            along >= 0.0 && along <= len &&
-            Math.abs(across) <= maxFenceAcross &&
-            prevFeetY >= stepY - 0.15 && proposedFeetY <= stepY + 0.25;
-
-          const isJumping = !this.isGrounded || this.velocity.y > 0;
+            along >= -0.10 && along <= len + 0.10 &&
+            Math.abs(across) <= maxFenceAcross + 0.15 &&
+            prevFeetY >= stepY - 0.25 && proposedFeetY <= stepY + 0.35;
 
           if (wasInsideStairs || entersBottom || entersTop || landsFromAbove) {
             // Player is legitimately navigating the staircase!
-            if (wasInsideStairs) {
-              if (!isJumping && Math.abs(across) > maxFenceAcross) {
-                // While walking, retain player between handrails
-                across = Math.sign(across) * maxFenceAcross;
-                newPos.x = sr.p1.x + along * uX + across * perpX;
-                newPos.z = sr.p1.z + along * uZ + across * perpZ;
+            // Firmly retain player between handrails so turning left or right NEVER drops the user:
+            if (Math.abs(across) > maxFenceAcross) {
+              across = Math.sign(across) * maxFenceAcross;
+              newPos.x = sr.p1.x + along * uX + across * perpX;
+              newPos.z = sr.p1.z + along * uZ + across * perpZ;
+
+              // Cancel velocity component moving outward through the handrails so player slides smoothly
+              const vAcross = this.velocity.x * perpX + this.velocity.z * perpZ;
+              if ((across >= maxFenceAcross && vAcross > 0) || (across <= -maxFenceAcross && vAcross < 0)) {
+                this.velocity.x -= vAcross * perpX;
+                this.velocity.z -= vAcross * perpZ;
               }
             }
 
-            const jumpedOutside = isJumping && Math.abs(across) > maxFenceAcross;
-
-            if (!jumpedOutside && along >= -0.40 && along <= len + 0.50 && Math.abs(across) <= maxFenceAcross + 0.10) {
+            if (along >= -0.45 && along <= len + 0.55) {
               const stairEyeY = stepY + this.eyeHeight;
               if (stairEyeY > groundY) {
                 groundY = stairEyeY;
