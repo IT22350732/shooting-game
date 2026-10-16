@@ -29,7 +29,7 @@ import { MISSIONS } from '../game/missions/MissionData';
 import { saveManager } from '../game/managers/SaveManager';
 import { userManager } from '../game/managers/UserManager';
 import { AVATAR_OPTIONS } from '../types/user';
-import { useFullscreen } from '../utils/fullscreen';
+import { useFullscreen, enterFullscreen, isFullscreenActive } from '../utils/fullscreen';
 import { soundManager } from '../audio/SoundManager';
 
 interface MainMenuProps {
@@ -685,7 +685,12 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
           {/* MAIN DEPLOY BUTTON WITH INTEGRATED MISSION/MODE SUMMARY */}
           <button
-            onClick={() => onStartGame(selectedMission ? 'mission' : selectedMode, selectedMission ? selectedMission.arena : selectedArena, selectedMission || undefined)}
+            onClick={() => {
+              if (!isFullscreenActive()) {
+                enterFullscreen();
+              }
+              onStartGame(selectedMission ? 'mission' : selectedMode, selectedMission ? selectedMission.arena : selectedArena, selectedMission || undefined);
+            }}
             className="btn-cyber btn-cyber-primary pulse-glow menu-deploy-btn"
             style={{
               padding: '8px 18px',
@@ -1065,6 +1070,9 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (!isFullscreenActive()) {
+                                enterFullscreen();
+                              }
                               setSelectedMission(mission);
                               setSelectedArena(mission.arena);
                               setShowMissionSelect(false);

@@ -36,9 +36,9 @@ import { MISSIONS, getMissionById } from '../missions/MissionData';
 import { multiplayerService } from '../multiplayer/MultiplayerService';
 import { voiceChatService } from '../multiplayer/VoiceChatService';
 import { RemotePlayer } from '../entities/RemotePlayer';
-import { NetworkPlayerState } from '../multiplayer/MultiplayerTypes';
 import { RadarPing } from '../../ui/multiplayer/TacticalRadar';
 import { ArenaBuildingInfo } from '../../ui/ArenaMiniMap';
+import { enterFullscreen, isFullscreenActive } from '../../utils/fullscreen';
 
 export interface HUDStats {
   health: number;
@@ -959,6 +959,9 @@ export class GameEngine {
   public resumeGame() {
     if (this.state === 'PAUSED') {
       this.state = 'PLAYING';
+      if (!isFullscreenActive()) {
+        enterFullscreen();
+      }
       if (!this.isTouchDevice) {
         this.requestPointerLock();
       }

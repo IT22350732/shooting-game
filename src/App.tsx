@@ -312,6 +312,9 @@ export const App: React.FC = () => {
         <PauseModal
           onResume={() => {
             soundManager.playClick();
+            if (!isFullscreenActive()) {
+              enterFullscreen();
+            }
             engineRef.current?.resumeGame();
           }}
           onRestart={() => {
@@ -454,6 +457,9 @@ export const App: React.FC = () => {
           initialTab="login"
           onClose={() => {
             soundManager.playModalClose();
+            if (!isFullscreenActive()) {
+              enterFullscreen();
+            }
             setShowAuth(false);
           }}
           onUserChanged={() => {

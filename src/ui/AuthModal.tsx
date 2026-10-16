@@ -22,6 +22,7 @@ import {
 import { userManager } from '../game/managers/UserManager';
 import { AVATAR_OPTIONS, UserProfile } from '../types/user';
 import { soundManager } from '../audio/SoundManager';
+import { enterFullscreen, isFullscreenActive } from '../utils/fullscreen';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -73,11 +74,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
     setRememberedUsers(userManager.getRememberedUsers());
   };
 
+  const ensureFullscreen = () => {
+    if (!isFullscreenActive()) {
+      enterFullscreen();
+    }
+  };
+
   /**
    * One-click instant login: switches profile, confirms with audio, and enters game.
-   * No password typing needed!
+   * No password typing needed! Automatically activates fullscreen mode.
    */
   const handleOneClickLogin = (userId: string) => {
+    ensureFullscreen();
     soundManager.playPowerup();
     const res = userManager.quickLogin(userId);
     if (res.success && res.user) {
@@ -96,6 +104,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearMessages();
+    ensureFullscreen();
 
     if (!loginUsername.trim() || !loginPassword.trim()) {
       setErrorMsg('Please enter both codename and PIN/password.');
@@ -128,6 +137,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearMessages();
+    ensureFullscreen();
 
     const selectedAvatar = AVATAR_OPTIONS.find(a => a.id === selectedAvatarId);
     setIsSubmitting(true);
@@ -175,6 +185,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
   const handleImportPasskey = (e: React.FormEvent) => {
     e.preventDefault();
     clearMessages();
+    ensureFullscreen();
     if (!importKeyInput.trim()) {
       setErrorMsg('Please paste an Operative Key starting with CYBER_KEY_');
       return;
@@ -393,7 +404,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
           </div>
 
           <button
-            onClick={onClose}
+            onClick={() => {
+              ensureFullscreen();
+              onClose();
+            }}
             style={{
               background: 'none',
               border: 'none',
@@ -657,6 +671,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
+                          ensureFullscreen();
                           handleOneClickLogin(u.id);
                         }}
                         className="btn-cyber btn-cyber-primary"
@@ -725,7 +740,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
                     return (
                       <div
                         key={u.id}
-                        onClick={() => handleOneClickLogin(u.id)}
+                        onClick={() => {
+                          ensureFullscreen();
+                          handleOneClickLogin(u.id);
+                        }}
                         style={{
                           padding: '12px 16px',
                           borderRadius: 14,
@@ -798,6 +816,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
+                              ensureFullscreen();
                               handleOneClickLogin(u.id);
                             }}
                             className="btn-cyber btn-cyber-primary"
@@ -1052,7 +1071,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
 
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                  ensureFullscreen();
+                  onClose();
+                }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -1233,7 +1255,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onUserChanged, in
 
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                  ensureFullscreen();
+                  onClose();
+                }}
                 style={{
                   background: 'none',
                   border: 'none',

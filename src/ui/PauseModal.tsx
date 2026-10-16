@@ -1,6 +1,6 @@
 import React from 'react';
 import { Play, RotateCcw, Sliders, Home, Maximize, Minimize, HelpCircle } from 'lucide-react';
-import { useFullscreen } from '../utils/fullscreen';
+import { useFullscreen, enterFullscreen, isFullscreenActive } from '../utils/fullscreen';
 
 interface PauseModalProps {
   onResume: () => void;
@@ -61,7 +61,12 @@ export const PauseModal: React.FC<PauseModalProps> = ({
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
           <button
-            onClick={onResume}
+            onClick={() => {
+              if (!isFullscreenActive()) {
+                enterFullscreen();
+              }
+              onResume();
+            }}
             className="btn-cyber btn-cyber-primary"
             style={{ width: '100%', padding: '12px 18px', fontSize: '0.95rem' }}
           >
